@@ -1,0 +1,21 @@
+<package>
+  <description brief="ndt_map">
+
+     Contains the definitions of the 3D Normal Distributions Transform data structures, 
+     used for mapping, registration, etc
+
+  </description>
+  <author>Todor Stoyanov</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ndt_map</url>
+  <depend package="pcl" />
+  <depend package="pointcloud_vrml" />
+  <depend package="eigen" />
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib" />
+  </export>
+
+</package>
+
+
