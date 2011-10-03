@@ -1,0 +1,10 @@
+<launch>
+	<group ns="debug">
+	       <node pkg="pointcloud_vrml" name="pointcloud_vrml" 
+	       type="vrml_reader" 
+	       args="/home/dev/hallway.wrl"/>
+	       
+	       <node pkg="ndt_wavefront" name="ndtWavefrontTest" 
+	       launch-prefix="xterm -e gdb --args " type="ndtWavefrontTest" />
+	</group>
+</launch>

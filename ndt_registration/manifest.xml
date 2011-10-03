@@ -1,0 +1,21 @@
+<package>
+  <description brief="ndt_registration">
+
+    Contains a new implementation of 3D NDT registration. 
+    Used to find the relative positions of two point clouds.
+
+  </description>
+  <author>Todor Stoyanov</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ndt_registration</url>
+  <depend package="ndt_map"/>
+  <depend package="eigen"/>
+  <depend package="pcl"/>
+  <depend package="pointcloud_vrml"/>
+  <depend package="tf"/>
+  <depend package="tf_conversions"/>
+
+</package>
+
+
