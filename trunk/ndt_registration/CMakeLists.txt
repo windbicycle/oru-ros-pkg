@@ -35,22 +35,28 @@ rosbuild_add_library(${PROJECT_NAME} ${LIBRARY_SOURCES})
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 rosbuild_add_executable(ndt_registration_test test/ndt_registration_test.cc)
-target_link_libraries(ndt_registration_test ${PROJECT_NAME} ndt_map pointcloud_vrml config++)
+target_link_libraries(ndt_registration_test ${PROJECT_NAME} ndt_map pointcloud_vrml )
 
-rosbuild_add_executable(ndt_reconstruct test/reconstruct.cc)
-target_link_libraries(ndt_reconstruct ${PROJECT_NAME} ndt_map pointcloud_vrml config++)
+#rosbuild_add_executable(ndt_reconstruct test/reconstruct.cc)
+#target_link_libraries(ndt_reconstruct ${PROJECT_NAME} ndt_map pointcloud_vrml )
 
 rosbuild_add_executable(ndt_matcher_node test/ndt_matcher_node.cc)
-target_link_libraries(ndt_matcher_node ${PROJECT_NAME} ndt_map pointcloud_vrml config++)
+target_link_libraries(ndt_matcher_node ${PROJECT_NAME} ndt_map pointcloud_vrml )
 
 rosbuild_add_executable(batchTestRangerAccuracy test/batchTestRangerAccuracy.cc)
-target_link_libraries(batchTestRangerAccuracy ${PROJECT_NAME} ndt_map config++ pointcloud_vrml)
+target_link_libraries(batchTestRangerAccuracy ${PROJECT_NAME} ndt_map  pointcloud_vrml)
 
-rosbuild_add_executable(narf_keypoint_extraction test/narf_extraction.cc)
-target_link_libraries(narf_keypoint_extraction ${PROJECT_NAME} ndt_map pointcloud_vrml config++)
+#rosbuild_add_executable(narf_keypoint_extraction test/narf_extraction.cc)
+#target_link_libraries(narf_keypoint_extraction ${PROJECT_NAME} ndt_map pointcloud_vrml )
 
-rosbuild_add_executable(narf_registration test/narf_registration.cc)
-target_link_libraries(narf_registration ${PROJECT_NAME} ndt_map pointcloud_vrml config++)
+#rosbuild_add_executable(narf_registration test/narf_registration.cc)
+#target_link_libraries(narf_registration ${PROJECT_NAME} ndt_map pointcloud_vrml )
 
 rosbuild_add_executable(feature_registration test/feature_registration.cc)
-target_link_libraries(feature_registration ${PROJECT_NAME} ndt_map pointcloud_vrml config++)
+target_link_libraries(feature_registration ${PROJECT_NAME} ndt_map pointcloud_vrml )
+
+rosbuild_add_executable(ndt_histogram_registration test/ndt_histogram_registration.cc)
+target_link_libraries(ndt_histogram_registration ${PROJECT_NAME} ndt_map pointcloud_vrml )
+
+rosbuild_add_executable(test_covariance test/test_covariance.cc)
+target_link_libraries(test_covariance ${PROJECT_NAME} ndt_map pointcloud_vrml )

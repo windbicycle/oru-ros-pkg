@@ -36,7 +36,9 @@ main (int argc, char** argv)
 {
     
     pcl::PointCloud<pcl::PointXYZ> prev, thisone1, thisone, cloudFinal;
-    lslgeneric::NDTMatcherF2F matcher;
+    double []__res = {0.2, 0.4, 1, 2};
+    std::vector<double> resolutions (__res, __res+sizeof(__res)/sizeof(double));
+    lslgeneric::NDTMatcherF2F matcher(false, false, false, resolutions);
     //lslgeneric::NDTMatcher matcher;
     Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> Tprev, Tloc, Treg, Tglob;
 

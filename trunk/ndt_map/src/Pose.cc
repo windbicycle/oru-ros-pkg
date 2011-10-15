@@ -21,7 +21,7 @@ Pose3::Pose3(const Pose3& other) {
 
 /**
   */
-Pose3::Pose3(Eigen::Vector3d &_pos, Eigen::Quaternion<double> &_rot) {
+Pose3::Pose3(Eigen::Vector3d _pos, Eigen::Quaternion<double> _rot) {
     pos = _pos;
     rot = _rot;
 }
@@ -56,20 +56,21 @@ Pose3::add(const Pose3 &other) {
 }
 
 /// This and the other is given in 'global' cooridinats. The returned value is the relative pose how to reach 'other' from 'this'.
-/*
+
 Pose3
 Pose3::sub(const Pose3 &other) {
 
      Pose3 ret;
      Eigen::Quaterniond q;
      ret.rot = this->rot.inverse()*(other.rot);
-     q = ret.rot*(Quaternion(this->pos))*(ret.rot.inverse());
-     ret.pos = other.pos - q.getIm();
+
+     q = ret.rot*(Eigen::Quaterniond(0,this->pos(0),this->pos(1),this->pos(2)))*(ret.rot.inverse());
+     ret.pos = other.pos - Eigen::Vector3d(q.x(),q.y(),q.z());
 
      return ret;
 
 }
-*/
+
 /**
 Pose3Cov::Pose3Cov() {
     cov = Matrix(6,6);

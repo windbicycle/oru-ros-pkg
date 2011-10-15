@@ -47,7 +47,15 @@ namespace lslgeneric{
   class NDTMatcherF2F 
   {
   public:
-    NDTMatcherF2F();
+     /**
+      parametrized constructor. A default set is (false,false,true,empty_vector). parameters are:
+     \param _bNumeric --- experimental numeric derivatives, unstable
+     \param _isIrregularGrid --- experimental single pass through an irregular grid. also unstable
+     \param useDefaultGridResolutions --- if set, the following parameter is set to a preset value
+     \param _resolutions --- if previous bool is not set, these are the resolutions (in reverse order) that we will go through
+    */
+    NDTMatcherF2F(bool _bNumeric, bool _isIrregularGrid, 
+	          bool useDefaultGridResolutions, std::vector<double> &_resolutions);
     /**
      * Register two point clouds. This method builds an NDT
      * representation of the "fixed" point cloud and uses that for
@@ -94,7 +102,8 @@ namespace lslgeneric{
 	    //Eigen::Vector3d &eulerAngles,
 	    Eigen::Matrix<double,6,1> &score_gradient,
 	    Eigen::Matrix<double,6,6> &Hessian,
-	    bool computeHessian);
+	    bool computeHessian
+	    );
 
     void generateScoreDebug(const char* out, pcl::PointCloud<pcl::PointXYZ>& fixed, 
 			    pcl::PointCloud<pcl::PointXYZ>& moving);
@@ -111,7 +120,10 @@ namespace lslgeneric{
     double lfd1,lfd2;
     //bool useSimpleDerivatives;
     double current_resolution;
+    
     bool isIrregularGrid;
+    bool bNumeric;
+    std::vector<double> resolutions;
 
     //pre-computes the multipliers of the derivatives for all points
     void precomputeAngleDerivatives(Eigen::Vector3d &eulerAngles);
@@ -148,6 +160,14 @@ namespace lslgeneric{
 
     //perform a subsampling depending on user choice
     int NUMBER_OF_POINTS;
+    
+    void gradient_numeric( 
+	    std::vector<NDTCell*> &moving,
+	    NDTMap &fixed,
+	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &transform,
+	    //Eigen::Vector3d &eulerAngles,
+	    Eigen::Matrix<double,6,1> &score_gradient
+	    );
 
   private:
     //storage for pre-computed angular derivatives

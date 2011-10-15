@@ -81,24 +81,28 @@ void NDTMap::loadPointCloud(pcl::PointCloud<pcl::PointXYZ> pc) {
 	return;
     }
     
-    double maxDist = 0, distCeil = 40;
+    double maxDist = 0, distCeil = 200;
 
 
-    //cout<<"Points = " <<pc.points.size()<<endl;
+//    cout<<"Points = " <<pc.points.size()<<endl;
+    int ctr = 0;
     pcl::PointCloud<pcl::PointXYZ>::iterator it = pc.points.begin();
     while(it!=pc.points.end()) {
 	Eigen::Vector3d d;
 	d << it->x, it->y, it->z;
-	double dist = d.norm();
+/*	double dist = d.norm();
 	if(dist > distCeil || fabsf(it->x) > distCeil|| fabsf(it->y) > distCeil|| fabsf(it->z) > distCeil) {
 	    pcl::PointCloud<pcl::PointXYZ>::iterator itTMP = it;
 	    it++;
 	    pc.points.erase(itTMP);
 	} else {
-	    it++;
-	}
+*/	    it++;
+//	}
+	//ctr++;
+	//cout<<ctr<<".";
     }
-    
+    cout.flush();
+
     Eigen::Vector4f centroid(0,0,0,0);
     pcl::compute3DCentroid(pc,centroid);
     

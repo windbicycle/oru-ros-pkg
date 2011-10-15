@@ -61,6 +61,8 @@ namespace lslgeneric {
 	    const pcl::PointCloud<pcl::PointXYZ> &pc);
     void transformPointCloudInPlace(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, pcl::PointCloud<pcl::PointXYZ> &pc);
 
+    pcl::PointCloud<pcl::PointXYZI> transformPointCloud(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, 
+	    const pcl::PointCloud<pcl::PointXYZI> &pc);
 };
 
 #endif

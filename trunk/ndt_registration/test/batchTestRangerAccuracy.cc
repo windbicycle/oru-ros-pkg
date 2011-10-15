@@ -103,7 +103,10 @@ int main(int argc, char **argv) {
 
 	if(doMatch) {
 	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T;
-	    lslgeneric::NDTMatcherF2F matcher;
+	    //lslgeneric::NDTMatcherF2F matcher;
+	    double __res[] = {0.2, 0.4, 1, 2};
+	    std::vector<double> resolutions (__res, __res+sizeof(__res)/sizeof(double));
+	    lslgeneric::NDTMatcherF2F matcher(false, false, false, resolutions);
 	    
 	    pcl::PointCloud<pcl::PointXYZ> tmp;
 	    if(!doGroundTruth) {

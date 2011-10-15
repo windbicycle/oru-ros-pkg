@@ -261,7 +261,9 @@ main (int argc, char **argv)
     *cloudM = lslgeneric::readVRML(argv[1]);
     *cloudF = lslgeneric::readVRML(argv[2]);
     
-    lslgeneric::NDTMatcherF2F matcherF2F;
+    double __res[] = {0.2, 0.4, 1, 2};
+    std::vector<double> resolutions (__res, __res+sizeof(__res)/sizeof(double));
+    lslgeneric::NDTMatcherF2F matcherF2F(false, false, false, resolutions);
     bool ret = matcherF2F.match(*cloudF,*cloudM,ToutNDT);
     Final1 = lslgeneric::transformPointCloud(ToutNDT,*cloudM);
     

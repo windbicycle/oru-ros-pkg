@@ -45,9 +45,6 @@ bool matchICP(pcl::PointCloud<pcl::PointXYZ> &fixed,  pcl::PointCloud<pcl::Point
 
     gr1.filter(*cloud_in);
     gr2.filter(*cloud_out);
-    //*cloud_in = moving;
-    //*cloud_out= fixed;
-    
     
     pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
 
@@ -97,7 +94,9 @@ main (int argc, char** argv)
 
     pcl::PointCloud<pcl::PointXYZ> cloud, cloud_offset, cloud_OFF;
 
-    lslgeneric::NDTMatcherF2F matcherF2F;
+    double __res[] = {0.5, 1, 2, 4};
+    std::vector<double> resolutions (__res, __res+sizeof(__res)/sizeof(double));
+    lslgeneric::NDTMatcherF2F matcherF2F(false, false, false, resolutions);
     lslgeneric::NDTMatcher matcherP2F;
 
     Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> Tin, Tout; 
@@ -111,18 +110,7 @@ main (int argc, char** argv)
 	//we do a single scan to scan registration
 	cloud = lslgeneric::readVRML(argv[1]);
 	cloud_offset = lslgeneric::readVRML(argv[2]);
-/*
-	Tin = Eigen::Translation<double,3>(-0.15,0.17,0.44)*
-	    Eigen::AngleAxis<double>(0.06,Eigen::Vector3d::UnitX()) *
-	    Eigen::AngleAxis<double>(0.1,Eigen::Vector3d::UnitY()) *
-	    Eigen::AngleAxis<double>(-0.15,Eigen::Vector3d::UnitZ()) ;
-	lslgeneric::transformPointCloudInPlace(Tin, cloud);
-	Tin = Eigen::Translation<double,3>(-0.121,0.2278,0.514)*
-	    Eigen::AngleAxis<double>(0.066,Eigen::Vector3d::UnitX()) *
-	    Eigen::AngleAxis<double>(0.1098,Eigen::Vector3d::UnitY()) *
-	    Eigen::AngleAxis<double>(-0.0707,Eigen::Vector3d::UnitZ()) ;
-	lslgeneric::transformPointCloudInPlace(Tin, cloud_offset);
-	*/
+	
 	gettimeofday(&tv_start,NULL);
 	bool ret = matcherF2F.match(cloud,cloud_offset,Tout);
 	//bool ret = matchICP(cloud,cloud_offset,Tout);
@@ -149,8 +137,6 @@ main (int argc, char** argv)
 	    FILE *fout = fopen(fname,"w");
 	    fprintf(fout,"#VRML V2.0 utf8\n");
 
-//	    Tout.matrix()<<0.9984,-0.0548,0.01088,2.243, 0.05496,0.9984,-0.01413,-0.07253, -0.01009,0.01471,0.9998,-0.07586, 0,0,0,1;
-//	    Tout.matrix() = Tout.matrix().transpose();
 	    lslgeneric::writeToVRML(fout,cloud,Eigen::Vector3d(0,1,0));
 	    lslgeneric::writeToVRML(fout,cloud_offset,Eigen::Vector3d(1,0,0));
 	    lslgeneric::writeToVRML(fout,cloud_OFF,Eigen::Vector3d(1,1,1));
@@ -161,7 +147,7 @@ main (int argc, char** argv)
 
 	succ = true;
 	cloud_OFF = cloud_offset;
-	//return 0;
+	return 0;
     }
     
     if(!(argc == 2 || succ)) {
@@ -232,8 +218,8 @@ main (int argc, char** argv)
     fclose(fout);
 */
     gettimeofday(&tv_start,NULL);
-    //bool ret = matcherF2F.match(cloud,cloud_offset,Tout);
-    bool ret = matchICP(cloud,cloud_offset,Tout);
+    bool ret = matcherF2F.match(cloud,cloud_offset,Tout);
+    //bool ret = matchICP(cloud,cloud_offset,Tout);
     gettimeofday(&tv_end,NULL);
 
     double tim = (tv_end.tv_sec-tv_start.tv_sec)*1000.+(tv_end.tv_usec-tv_start.tv_usec)/1000.;
