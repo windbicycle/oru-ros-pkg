@@ -169,6 +169,8 @@ namespace lslgeneric {
 	    virtual NDTCell* getClosestNDTCell(const pcl::PointXYZ pt);
 
 	    friend class AdaptiveOctTree;
+	    friend class EllipsoidTree;
+	    friend class MultilayeredOcGrid;
 	public:
 	      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };

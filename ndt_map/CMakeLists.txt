@@ -27,7 +27,10 @@ set( LIBRARY_SOURCES
 	src/Cell.cc 
 	src/NDTCell.cc
 	src/NDTMap.cc
+	src/NDTHistogram.cc
 	src/AdaptiveOctTree.cc
+	src/EllipsoidTree.cc
+#	src/MultilayeredOcGrid.cc
 	src/Pose.cc
 	src/LazzyGrid.cc
 	)
@@ -37,17 +40,22 @@ rosbuild_add_library(${PROJECT_NAME} ${LIBRARY_SOURCES})
 
 #make a node that listens to point clouds and makes ndts
 rosbuild_add_executable(oct_builder test/octTreeBuilder.cc)
-target_link_libraries(oct_builder ${PROJECT_NAME} config++ pointcloud_vrml)
+target_link_libraries(oct_builder ${PROJECT_NAME}  pointcloud_vrml)
 
 rosbuild_add_executable(ndt_builder test/ndtMapBuilder.cc)
-target_link_libraries(ndt_builder ${PROJECT_NAME} config++ pointcloud_vrml)
+target_link_libraries(ndt_builder ${PROJECT_NAME}  pointcloud_vrml)
 
 rosbuild_add_executable(likelihood_test test/ndtLikelihoodTester.cc)
-target_link_libraries(likelihood_test ${PROJECT_NAME} config++ pointcloud_vrml)
+target_link_libraries(likelihood_test ${PROJECT_NAME}  pointcloud_vrml)
 
 rosbuild_add_executable(ltest test/likelihoodSingleScan.cc)
-target_link_libraries(ltest ${PROJECT_NAME} config++ pointcloud_vrml)
+target_link_libraries(ltest ${PROJECT_NAME}  pointcloud_vrml)
 
+rosbuild_add_executable(histTest test/test_ndt_histogram.cc)
+target_link_libraries(histTest ${PROJECT_NAME} pointcloud_vrml)
+
+rosbuild_add_executable(batchTestHist test/batchTesterHistogramFPFH.cc)
+target_link_libraries(batchTestHist ${PROJECT_NAME} pointcloud_vrml)
 #common commands for building c++ executables and libraries
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)

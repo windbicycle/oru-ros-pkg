@@ -179,9 +179,9 @@ bool NDTMatcher::match( pcl::PointCloud<pcl::PointXYZ>& fixed,
   
   } else {
       pcl::PointCloud<pcl::PointXYZ> moving = subsample(movingPC);
-      cout<<"subsampled points size is "<<moving.points.size()<<endl;
+      //cout<<"subsampled points size is "<<moving.points.size()<<endl;
       //iterative regular grid
-      for(current_resolution = 8; current_resolution >= 0.5; current_resolution = current_resolution/2) {
+      for(current_resolution = 2; current_resolution >= 0.5; current_resolution = current_resolution/2) {
 	  
 	  pcl::PointCloud<pcl::PointXYZ> cloud = moving;
 	  lslgeneric::transformPointCloudInPlace(T,cloud);
@@ -291,7 +291,7 @@ bool NDTMatcher::match( NDTMap& fixed,
 	derivativesPointCloud(prevCloud,fixed,TR,score_gradient,Hessian,true);
 
 	// TODO!!! - check this + what to do with the bool
-	Eigen::JacobiSVD<Eigen::Matrix<double,6,6> > sv (Hessian);
+	Eigen::JacobiSVD<Eigen::Matrix<double,6,6> > sv (Hessian, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	pose_increment_v = sv.solve(-score_gradient);
         //pose_increment_v = Hessian.svd().solve(-score_gradient);//,&pose_increment_v);
 	
@@ -369,7 +369,7 @@ bool NDTMatcher::match( NDTMap& fixed,
 	}
 	itr_ctr++;
     }
-    cout<<"res: "<<current_resolution<<" itr "<<itr_ctr<<endl;
+//    cout<<"res: "<<current_resolution<<" itr "<<itr_ctr<<endl;
 //    cout<<"T: \n t = "<<T.translation().transpose()<<endl;
 //    cout<<"r= \n"<<T.rotation()<<endl;
     return ret;
@@ -1229,10 +1229,10 @@ pcl::PointCloud<pcl::PointXYZ> NDTMatcher::subsample(pcl::PointCloud<pcl::PointX
       pcl::PointCloud<pcl::PointXYZ> res;
       //LazzyGrid prototype(subsampleRes);
       //NDTMap ndt( &prototype );
-      OctTree::BIG_CELL_SIZE = 4;
-      OctTree::SMALL_CELL_SIZE = 0.05;
     
       NDTMap ndt( new OctTree() );
+      OctTree::BIG_CELL_SIZE = 4;
+      OctTree::SMALL_CELL_SIZE = 0.05;
       ndt.loadPointCloud( original );
       ndt.computeNDTCells();
       std::vector<Cell*>::iterator it = ndt.getMyIndex()->begin();

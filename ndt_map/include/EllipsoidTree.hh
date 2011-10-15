@@ -32,59 +32,51 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef LSLPOSE_HH
-#define LSLPOSE_HH
+#ifndef ELLIPSOID_TREE_HH
+#define ELLIPSOID_TREE_HH
 
-#include <Eigen/Eigen>
+#include <OctTree.hh>
+#include <vector>
+#include <NDTCell.hh>
 
 namespace lslgeneric {
 
-/** \brief This class provides storage for an oriented point in 3D
- *  \details
- *  Internally, the location of the point is stored as a vector, 
- *  while the orientation is stored as a quaternion
- */  
-class Pose3 
-{
-public:
-     Eigen::Vector3d pos;
-     Eigen::Quaternion<double> rot;
-     
-     ///default empty constructor
-     Pose3();
-     ///copy constructor
-     Pose3(const Pose3& other);
-     ///parametrized constructor from vector and quaternion orientation
-     Pose3(Eigen::Vector3d _pos, Eigen::Quaternion<double> _ori);	
-     ///parametrized from 3 positions and yaw orientation
-     Pose3(double x, double y, double z, double yaw);
+    /** \brief Implements an OctTree with Ellipsoid conditions used for splitting 
+        \details 
+     */
+    class EllipsoidTree : public OctTree {
+	protected:
+	    std::vector<OctTree*> splitTree(OctTree *leaf);
+	    std::vector<OctTree*> myTreeLeafs;
+	    virtual void computeTreeLeafs();
+	    
+	    static double FLAT_FACTOR;
+	    static bool parametersSet;
 
-     static Pose3 from2d(double x, double y, double yaw);
-     static Pose3 from2d(const Eigen::Vector3d &vec);
+	public:
+	    static double MIN_CELL_SIZE;
+	    
+	    ///dummy default constructor
+	    EllipsoidTree();
+	    ///creates an oct tree node with known center and size
+	    EllipsoidTree(pcl::PointXYZ center, double xsize, double ysize, 
+		    double zsize, OctCell* type, OctTree *_parent=NULL, unsigned int _depth=0);
+	    virtual ~EllipsoidTree();
 
-     virtual double x() const { return pos(0); }
-     virtual double y() const { return pos(1); }
-     virtual double z() const { return pos(2); }
-     
-     virtual void setX(double v) { pos(0) = v; }
-     virtual void setY(double v) { pos(1) = v; }
-     virtual void setZ(double v) { pos(2) = v; }
-     
-     const Eigen::Vector3d& getPos() const { return pos; }
-     Eigen::Vector3d& getPos() { return pos; }
-     
-     const Eigen::Quaternion<double>& getRot() const { return rot; }
-     Eigen::Quaternion<double>& getRot() { return rot; }
-     
-     Pose3 add(const Pose3& other);
-     Pose3 sub(const Pose3& other);
-     
-     void writeToVRML(const char* filename);
-     virtual void writeToVRML(FILE* fout);
-    
-     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
+	    //addPoint now just saves the points in a vector (NDTCell)
+	    virtual void addPoint(pcl::PointXYZ point);
 
-}; //end of namespace
+	    //computes the actual tree
+	    virtual void postProcessPoints();
 
+	    virtual SpatialIndex* clone();
+
+	    ///use this to set the parameters for the OctTree. If not called before creating the
+	    ///first leaf, default parameters will be used. \note be careful, remember that the parameters are static, thus global
+	    static void setParameters(double _MIN_CELL_SIZE = 0.5,
+		    double _FLAT_FACTOR = 10
+		    ); 
+
+    };
+} //end namespace
 #endif

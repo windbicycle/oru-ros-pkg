@@ -228,6 +228,20 @@ pcl::PointCloud<pcl::PointXYZ> lslgeneric::transformPointCloud(Eigen::Transform<
     return cloud; 
 }
 
+pcl::PointCloud<pcl::PointXYZI> lslgeneric::transformPointCloud(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &Tr, const pcl::PointCloud<pcl::PointXYZI> &pc){
+    Eigen::Transform<float,3,Eigen::Affine,Eigen::ColMajor> T = Tr.cast<float>();
+    pcl::PointCloud<pcl::PointXYZI> cloud;  
+    for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
+	pcl::PointXYZI thisPoint = pc.points[pit];
+	Eigen::Map<Eigen::Vector3f> pt((float*)&thisPoint,3);
+	pt = T*pt;
+	cloud.points.push_back(thisPoint);
+    }
+    cloud.width = pc.width;
+    cloud.height = pc.height;
+    return cloud; 
+}
+
 void lslgeneric::transformPointCloudInPlace(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &Tr, pcl::PointCloud<pcl::PointXYZ> &pc) {
     Eigen::Transform<float,3,Eigen::Affine,Eigen::ColMajor> T = Tr.cast<float>();
     for(unsigned int pit=0; pit<pc.points.size(); ++pit) {

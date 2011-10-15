@@ -13,14 +13,27 @@
 using namespace std;
 using namespace lslgeneric;
 
-//#define DO_DEBUG_PROC
+#define DO_DEBUG_PROC
     
-NDTMatcherF2F::NDTMatcherF2F() {
+NDTMatcherF2F::NDTMatcherF2F(bool _bNumeric, bool _isIrregularGrid, 
+			     bool useDefaultGridResolutions, std::vector<double> &_resolutions){
     Jest.setZero();
     Jest.block<3,3>(0,0).setIdentity();
     Hest.setZero();
     Zest.setZero();
     ZHest.setZero();
+
+    bNumeric = _bNumeric;
+    //bNumeric = true;
+    isIrregularGrid = _isIrregularGrid;
+    if(useDefaultGridResolutions) {
+	resolutions.push_back(0.2);
+	resolutions.push_back(0.5);
+	resolutions.push_back(1);
+	resolutions.push_back(2);
+    } else {
+	resolutions = _resolutions;
+    }
 
 }
     
@@ -45,62 +58,79 @@ bool NDTMatcherF2F::match( pcl::PointCloud<pcl::PointXYZ>& fixed,
   fclose(fout);
 #endif
 
-  //iterative regular grid
-  for(current_resolution = 4; current_resolution >= 0.5; current_resolution = current_resolution/2) {
+  if(isIrregularGrid) {
 
-      pcl::PointCloud<pcl::PointXYZ> cloud = movingPC;
-      lslgeneric::transformPointCloudInPlace(T,cloud);
-      LazzyGrid prototype(current_resolution);
+      OctTree pr;
 
-      NDTMap ndt( &prototype );
+      NDTMap ndt( &pr );
       ndt.loadPointCloud( fixed );
       ndt.computeNDTCells();
 
-
- //     LazzyGrid prototypeCopy (dynamic_cast<LazzyGrid*>(ndt.getMyIndex()));
-      NDTMap mov( &prototype );
-      mov.loadPointCloud( cloud );
+      NDTMap mov( &pr );
+      mov.loadPointCloud( movingPC );
       mov.computeNDTCells();
 
-      ret = this->match( ndt, mov, Temp );
+      ret = this->match( ndt, mov, T );
 
-      //transform moving
-      T = Temp*T;
-      
-  //    char fname[50];
+  } else {
 
-    //  snprintf(fname,49,"/home/tsv/ndt_tmp/ndt%lf.wrl",current_resolution);
-    //  ndt.writeToVRML(fname);
+      //iterative regular grid
+      //TODO fix to be intuitative...
+      for(int r_ctr = resolutions.size()-1; r_ctr >=0;  r_ctr--) { //current_resolution >= 0.5; current_resolution = current_resolution/2) {
+
+	  current_resolution = resolutions[r_ctr];
+	  pcl::PointCloud<pcl::PointXYZ> cloud = lslgeneric::transformPointCloud(T,movingPC);
+	  LazzyGrid prototype(current_resolution);
+
+	  NDTMap ndt( &prototype );
+	  ndt.loadPointCloud( fixed );
+	  ndt.computeNDTCells();
+
+	  //     LazzyGrid prototypeCopy (dynamic_cast<LazzyGrid*>(ndt.getMyIndex()));
+	  NDTMap mov( &prototype );
+	  mov.loadPointCloud( cloud );
+	  mov.computeNDTCells();
+
+	  ret = this->match( ndt, mov, Temp );
+
+	  //transform moving
+	  T = Temp*T;
+
+	  //    char fname[50];
+
+	  //  snprintf(fname,49,"/home/tsv/ndt_tmp/ndt%lf.wrl",current_resolution);
+	  //  ndt.writeToVRML(fname);
 
 #ifdef DO_DEBUG_PROC
-      cout<<"RESOLUTION: "<<current_resolution<<endl;
-      Eigen::Vector3d out = Temp.rotation().eulerAngles(0,1,2);
-      cout<<"OUT: "<<out.transpose()<<endl;
-      cout<<"translation "<<Temp.translation().transpose()<<endl;
-      //cout<<"--------------------------------------------------------\n";
-      char fname[50];
-      snprintf(fname,49,"/home/tsv/ndt_tmp/inner_cloud%lf.wrl",current_resolution);
-      FILE *fout = fopen(fname,"w");
-      fprintf(fout,"#VRML V2.0 utf8\n");
+	  cout<<"RESOLUTION: "<<current_resolution<<endl;
+	  cout<<"rotation   : "<<Temp.rotation().eulerAngles(0,1,2).transpose()<<endl;
+	  cout<<"translation: "<<Temp.translation().transpose()<<endl;
+	  cout<<"--------------------------------------------------------\nOverall Transform:\n";
+	  cout<<"rotation   : "<<T.rotation().eulerAngles(0,1,2).transpose()<<endl;
+	  cout<<"translation: "<<T.translation().transpose()<<endl;
+	  char fname[50];
+	  snprintf(fname,49,"/home/tsv/ndt_tmp/inner_cloud%lf.wrl",current_resolution);
+	  FILE *fout = fopen(fname,"w");
+	  fprintf(fout,"#VRML V2.0 utf8\n");
 
-//      lslgeneric::writeToVRML(fout,cloud,Eigen::Vector3d(0,0,1));
-      lslgeneric::transformPointCloudInPlace(Temp,cloud);
-      std::vector<NDTCell*> nextNDT = mov.pseudoTransformNDT(Temp);
+	  //      lslgeneric::writeToVRML(fout,cloud,Eigen::Vector3d(0,0,1));
+	  lslgeneric::transformPointCloudInPlace(Temp,cloud);
+	  std::vector<NDTCell*> nextNDT = mov.pseudoTransformNDT(Temp);
 
-      ndt.writeToVRML(fout,Eigen::Vector3d(1,0,0));
-//      mov.writeToVRML(fout,Eigen::Vector3d(0,0,1));
-      
-      for(unsigned int i=0; i<nextNDT.size(); i++) {
-	  nextNDT[i]->writeToVRML(fout,Eigen::Vector3d(0,1,0));
-	  if(nextNDT[i]!=NULL) delete nextNDT[i];
-      }
-//      lslgeneric::writeToVRML(fout,fixed,Eigen::Vector3d(1,0,0));
-//      lslgeneric::writeToVRML(fout,cloud,Eigen::Vector3d(0,1,0));
-      fclose(fout);
+	  ndt.writeToVRML(fout,Eigen::Vector3d(1,0,0));
+	  //      mov.writeToVRML(fout,Eigen::Vector3d(0,0,1));
+
+	  for(unsigned int i=0; i<nextNDT.size(); i++) {
+	      nextNDT[i]->writeToVRML(fout,Eigen::Vector3d(0,1,0));
+	      if(nextNDT[i]!=NULL) delete nextNDT[i];
+	  }
+	  //      lslgeneric::writeToVRML(fout,fixed,Eigen::Vector3d(1,0,0));
+	  //      lslgeneric::writeToVRML(fout,cloud,Eigen::Vector3d(0,1,0));
+	  fclose(fout);
 #endif
 
+      }
   }
-
 
   return ret;
 }
@@ -177,10 +207,14 @@ bool NDTMatcherF2F::match( NDTMap& fixed,
 	}
 #endif
 
+	TR.setIdentity();
 	derivativesNDT(nextNDT,fixed,TR,score_gradient,Hessian,true);
 	
+	//cout<<"H  =  ["<<Hessian<<"]"<<endl;
+	//cout<<"grad= ["<<score_gradient.transpose()<<"]"<<endl;
+	//cout<<"dg    "<<pose_increment_v.dot(score_gradient)<<endl;
 	// TODO!!! - check this + what to do with the bool
-//	bool solved = ;
+//	bool solved = ;, if we use JavobiSVD, don't forget flags! Eigen::ComputeFullU | Eigen::ComputeFullV
 	pose_increment_v = Hessian.ldlt().solve(-score_gradient);
         //pose_increment_v = Hessian.svd().solve(-score_gradient);
 //	score = scoreNDT(nextNDT,fixed);
@@ -205,11 +239,12 @@ bool NDTMatcherF2F::match( NDTMap& fixed,
 	pose_increment_v(5) = normalizeAngle(pose_increment_v(5));
 	pose_increment_v(5) = (pose_increment_v(5) > ROT_MAX) ? ROT_MAX : pose_increment_v(5); 
 	pose_increment_v(5) = (pose_increment_v(5) < -ROT_MAX) ? -ROT_MAX : pose_increment_v(5);
-/*
+
 	cout<<"H  =  ["<<Hessian<<"]"<<endl;
 	cout<<"grad= ["<<score_gradient.transpose()<<"]"<<endl;
 	cout<<"dg    "<<pose_increment_v.dot(score_gradient)<<endl;
-*/
+	cout<<"incr= ["<<pose_increment_v.transpose()<<"]"<<endl;
+
 //	pose_increment_v = pow(alfa,itr_ctr)*pose_increment_v;
 	TR.setIdentity();
 	TR =  Eigen::Translation<double,3>(pose_increment_v(0),pose_increment_v(1),pose_increment_v(2))*
@@ -225,7 +260,6 @@ bool NDTMatcherF2F::match( NDTMap& fixed,
 	pose_increment_v = step_size*pose_increment_v;
 
 	
-//	cout<<"incr= ["<<pose_increment_v.transpose()<<"]"<<endl;
 	TR.setIdentity();
 	TR =  Eigen::Translation<double,3>(pose_increment_v(0),pose_increment_v(1),pose_increment_v(2))*
 	    Eigen::AngleAxis<double>(pose_increment_v(3),Eigen::Vector3d::UnitX()) *
@@ -240,10 +274,10 @@ bool NDTMatcherF2F::match( NDTMap& fixed,
 	nextNDT.clear();
 	nextNDT = moving.pseudoTransformNDT(T);
 
-//	scoreP = score;
-//	score = scoreNDT(nextNDT,fixed);
+	scoreP = score;
+	score = scoreNDT(nextNDT,fixed);
 	
-//	cout<<"iteration "<<itr_ctr<<" step "<<step_size<<" pose norm "<<(pose_increment_v.norm())<<" score_prev "<<scoreP<<" scoreN "<<score<<endl;
+	cout<<"iteration "<<itr_ctr<<" step "<<step_size<<" pose norm "<<(pose_increment_v.norm())<<" score_prev "<<scoreP<<" scoreN "<<score<<endl;
 	
 	if(itr_ctr>0) {
 	    convergence = ((pose_increment_v.norm()) < DELTA_SCORE);
@@ -490,74 +524,197 @@ void NDTMatcherF2F::derivativesNDT(
 	Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &transform,
 	Eigen::Matrix<double,6,1> &score_gradient,
 	Eigen::Matrix<double,6,6> &Hessian,
-	bool computeHessian) {
+	bool computeHessian
+	) {
     
-    NDTCell *cell;
-    Eigen::Vector3d transformed;
-    Eigen::Vector3d meanMoving, meanFixed;
-    Eigen::Matrix3d CMoving, CFixed, Cinv, R;
-    Eigen::Vector3d eulerAngles = transform.rotation().eulerAngles(0,1,2);
-    bool exists = false;
-    double det = 0;
+    if(!bNumeric) {
+	NDTCell *cell;
+	Eigen::Vector3d transformed;
+	Eigen::Vector3d meanMoving, meanFixed;
+	Eigen::Matrix3d CMoving, CFixed, Cinv, R;
+	Eigen::Vector3d eulerAngles = transform.rotation().eulerAngles(0,1,2);
+	bool exists = false;
+	double det = 0;
 
-    R = transform.rotation();
+	R = transform.rotation();
 
-    Jest.setZero();
-    Jest.block<3,3>(0,0).setIdentity();
-    Hest.setZero();
-    Zest.setZero();
-    ZHest.setZero();
-    
-    pcl::PointXYZ point;
-    score_gradient.setZero();
-    Hessian.setZero();
+	Jest.setZero();
+	Jest.block<3,3>(0,0).setIdentity();
+	Hest.setZero();
+	Zest.setZero();
+	ZHest.setZero();
 
-    //precompute angles for the derivative matrices
-    precomputeAngleDerivatives(eulerAngles);
+	pcl::PointXYZ point;
+	score_gradient.setZero();
+	Hessian.setZero();
 
+	//precompute angles for the derivative matrices
+	precomputeAngleDerivatives(eulerAngles);
 
-    for(unsigned int i=0; i<moving.size(); i++) {
-	meanMoving = moving[i]->getMean();
-	point.x = meanMoving(0); point.y = meanMoving(1); point.z = meanMoving(2);	
-	transformed = transform*meanMoving;
+	for(unsigned int i=0; i<moving.size(); i++) {
+	    meanMoving = moving[i]->getMean();
+	    point.x = meanMoving(0); point.y = meanMoving(1); point.z = meanMoving(2);	
+	    transformed = transform*meanMoving;
 
-	//vector<NDTCell*> cells = fixed.getCellsForPoint(point,current_resolution);
-	//for( int j=0; j<cells.size(); j++) {
-	//    cell = cells[j];
-        //
-	
-	if(!fixed.getCellForPoint(point,cell)) {
-	    continue;
-	}
-	{
+	    //vector<NDTCell*> cells = fixed.getCellsForPoint(point,current_resolution);
+	    //for( int j=0; j<cells.size(); j++) {
+	    //    cell = cells[j];
+	    //
 
-	    if(cell == NULL) {
+	    if(!fixed.getCellForPoint(point,cell)) {
 		continue;
 	    }
-	    if(cell->hasGaussian) {
-		meanFixed = cell->getMean();
-		transformed -= meanFixed;
-		CFixed = cell->getCov(); 
-		CMoving= moving[i]->getCov();
+	    {
 
-		(CFixed+CMoving).computeInverseAndDetWithCheck(Cinv,det,exists);
-		if(!exists) continue;
-
-		//compute Jest, Hest, Zest, ZHest
-		computeDerivatives(point, CMoving, R);
-
-		//update score gradient
-		if(!update_gradient_hessian(score_gradient, Hessian, transformed, Cinv)) {
+		if(cell == NULL) {
 		    continue;
 		}
+		if(cell->hasGaussian) {
+		    meanFixed = cell->getMean();
+		    transformed -= meanFixed;
+		    CFixed = cell->getCov(); 
+		    CMoving= moving[i]->getCov();
 
-		cell = NULL;
+		    (CFixed+CMoving).computeInverseAndDetWithCheck(Cinv,det,exists);
+		    if(!exists) continue;
+
+		    //compute Jest, Hest, Zest, ZHest
+		    computeDerivatives(point, CMoving, R);
+
+		    //update score gradient
+		    if(!update_gradient_hessian(score_gradient, Hessian, transformed, Cinv)) {
+			continue;
+		    }
+
+		    cell = NULL;
+		}
+	    }
+	}
+	//    score_gradient = -score_gradient;
+	//    Hessian = -Hessian;
+    } else {
+	//compute Hessiand and score gradient based on finite difference method.
+	score_gradient.setZero();
+	Hessian.setZero();
+   
+//        cout<<"computing numeric derivatives..\n";	
+	gradient_numeric(moving,fixed,transform,score_gradient);
+	if(computeHessian) {
+
+	    double epsilon = 10e-5;
+	    double h;
+	    volatile double zeta;
+
+	    //for each of the components of the pose vector (transform)
+	    Eigen::Matrix<double,6,1> pose, poseP;
+	    Eigen::Matrix<double,6,1> score_gradient_new;
+	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> transformNew;
+	    std::vector<NDTCell*> movingN;
+	    //construct pose from transform
+	    pose.block<3,1>(0,0) = transform.rotation().eulerAngles(0,1,2);
+	    pose.block<3,1>(3,0) = transform.translation();
+
+	    for(int i=0; i<pose.rows(); i++) {
+		//compute the delta
+		//compute value of function
+		double x = pose(i);
+		h = sqrt(epsilon)*(x+epsilon);
+		zeta = x+h;
+		h = zeta-x;
+
+		poseP = pose;
+		poseP(i) += h;
+
+		//construct transformNew from the new pose
+		transformNew.setIdentity();
+		transformNew =  Eigen::Translation<double,3>(poseP(0),poseP(1),poseP(2))*
+		    Eigen::AngleAxis<double>(poseP(3),Eigen::Vector3d::UnitX()) *
+		    Eigen::AngleAxis<double>(poseP(4),Eigen::Vector3d::UnitY()) *
+		    Eigen::AngleAxis<double>(poseP(5),Eigen::Vector3d::UnitZ()) ;
+
+		gradient_numeric(moving,fixed,transformNew,score_gradient_new);
+//		cout<<"sg_diff = "<<(score_gradient-score_gradient_new).transpose()<<endl;
+		Hessian.row(i) = (score_gradient-score_gradient_new)/h;
 	    }
 	}
     }
-//    score_gradient = -score_gradient;
-//    Hessian = -Hessian;
 }	
+    
+void NDTMatcherF2F::gradient_numeric( 
+	    std::vector<NDTCell*> &moving,
+	    NDTMap &fixed,
+	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &transform,
+	    Eigen::Matrix<double,6,1> &score_gradient
+	    ) {
+
+	double epsilon = 10e-5;
+	double h, score, scoreNew;
+	volatile double zeta;
+
+	//compute value at the current pose (transform)
+	score = scoreNDT(moving, fixed);
+
+//	cout<<"init gradient... score = "<<score<<endl;
+
+	//for each of the components of the pose vector (transform)
+	Eigen::Matrix<double,6,1> pose, poseP;
+	score_gradient.setZero();
+	Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> transformNew;
+	std::vector<NDTCell*> movingN;
+	//construct pose from transform
+	pose.block<3,1>(0,0) = transform.rotation().eulerAngles(0,1,2);
+	pose.block<3,1>(3,0) = transform.translation();
+	
+//	cout<<"Pose init: "<<pose.transpose()<<endl;
+
+	for(int i=0; i<pose.rows(); i++) {
+	    //compute the delta
+	    //compute value of function
+	    double x = pose(i);
+	    h = sqrt(epsilon)*(x+epsilon);
+	    zeta = x+h;
+	    h = zeta-x;
+
+	    poseP = pose;
+	    poseP(i) += h;
+	    
+//	    cout<<"i: "<<i<<" x "<<x<<" h "<<h<<" pose "<<poseP.transpose()<<endl;
+	    //construct transformNew from the new pose
+	    transformNew.setIdentity();
+	    transformNew =  Eigen::Translation<double,3>(poseP(0),poseP(1),poseP(2))*
+		Eigen::AngleAxis<double>(poseP(3),Eigen::Vector3d::UnitX()) *
+		Eigen::AngleAxis<double>(poseP(4),Eigen::Vector3d::UnitY()) *
+		Eigen::AngleAxis<double>(poseP(5),Eigen::Vector3d::UnitZ()) ;
+
+	    //transform moving
+	    for(int q=0; q<movingN.size(); q++) {
+		delete movingN[q];
+	    }
+	    movingN.clear();
+	    for(int q=0; q<moving.size(); q++) {
+		NDTCell *cell = moving[q];
+		if(cell!=NULL) {
+		    if(cell->hasGaussian) {
+			Eigen::Vector3d mean = cell->getMean();
+			Eigen::Matrix3d cov = cell->getCov();
+			mean = transformNew*mean;
+			cov = transformNew.rotation().transpose()*cov*transformNew.rotation();
+			NDTCell* nd = (NDTCell*)cell->clone();
+			nd->setMean(mean);
+			nd->setCov(cov);
+			movingN.push_back(nd);
+		    }
+		} 
+	    }
+
+	    scoreNew = scoreNDT(movingN, fixed);
+
+//	    cout<<"scoreNew "<<scoreNew<<endl;
+
+	    score_gradient(i) = (score-scoreNew)/h;
+	}
+
+}
 
 //perform line search to find the best descent rate (More&Thuente)
 double NDTMatcherF2F::lineSearchMT(  Eigen::Matrix<double,6,1> &score_gradient_init,
@@ -621,9 +778,10 @@ double NDTMatcherF2F::lineSearchMT(  Eigen::Matrix<double,6,1> &score_gradient_i
     
   if (dginit >= 0.0) 
   {
-    //cout << "MoreThuente::cvsrch - wrong direction (dginit = " << dginit << ")" << endl;
+    cout << "MoreThuente::cvsrch - wrong direction (dginit = " << dginit << ")" << endl;
     //return recoverystep; //TODO TSV -1; //
-    
+    //return -1;
+
     increment = -increment;
     dginit = -dginit;
     direction = -1;
@@ -730,6 +888,8 @@ double NDTMatcherF2F::lineSearchMT(  Eigen::Matrix<double,6,1> &score_gradient_i
 	if(ndtHere[i]!=NULL)
 	    delete ndtHere[i];
     }
+    
+    //transform ndt to it's new position
     ndtHere.clear();
     for(int i=0; i<moving.size(); i++) {
 	NDTCell *cell = moving[i];

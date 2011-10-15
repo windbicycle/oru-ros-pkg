@@ -35,3 +35,6 @@ target_link_libraries(vrml_reader ${PROJECT_NAME})
 
 rosbuild_add_executable(logConverter test/processLogDir.cc)
 target_link_libraries(logConverter ${PROJECT_NAME})
+
+rosbuild_add_executable(subsample test/subsampleRandom.cc)
+target_link_libraries(subsample ${PROJECT_NAME})
