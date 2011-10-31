@@ -11,6 +11,7 @@
   <depend package="pcl"/>
   <depend package="eigen"/>
   <depend package="tf"/>
+  <depend package="nav_msgs"/>
   <export> 
     <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib" />
   </export>

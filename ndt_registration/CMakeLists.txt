@@ -24,6 +24,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set ( LIBRARY_SOURCES
 	src/NDTMatcher.cc
 	src/NDTMatcherF2F.cc
+	src/NDTMapBuilder.cc
     )
 
 #add_definitions (-DEIGEN2_SUPPORT)
@@ -60,3 +61,6 @@ target_link_libraries(ndt_histogram_registration ${PROJECT_NAME} ndt_map pointcl
 
 rosbuild_add_executable(test_covariance test/test_covariance.cc)
 target_link_libraries(test_covariance ${PROJECT_NAME} ndt_map pointcloud_vrml )
+
+rosbuild_add_executable(test_ndt_mapper test/test_ndt_mapper.cc)
+target_link_libraries(test_ndt_mapper ${PROJECT_NAME} ndt_map pointcloud_vrml )

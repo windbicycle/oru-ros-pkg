@@ -88,7 +88,6 @@ namespace lslgeneric {
 
 	    /// @param maximum depth of the tree, after which no more splits
 	    static int MAX_DEPTH;
-	    static bool parametersSet;
 	    
 
 	    ///checks in which child node a point would belong
@@ -105,6 +104,7 @@ namespace lslgeneric {
 	    static double SMALL_CELL_SIZE;
 	    /// @param split tree up to this size before allocating a cell
 	    static double BIG_CELL_SIZE;
+	    static bool parametersSet;
 	    
 	    ///dummy default constructor
 	    OctTree();

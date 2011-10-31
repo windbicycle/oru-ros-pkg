@@ -27,14 +27,21 @@ int main(int argc, char ** argv) {
 
     int nFiles = atoi(argv[2]);
 
+    int off = 0;
     for(int fileno=0; fileno<nFiles; fileno++) {
+
+	if(fileno == 600) {
+	    fileno++;
+	    off=1;
+	}
+
 	char fname[300];
 	pcl::PointCloud<pcl::PointXYZ> cloud;
 	if(isBremen) {
 	    snprintf(fname,300,"%s%03d.txt",inDirName,fileno);
 	} 
 	if(isHanover) {
-	    snprintf(fname,300,"%s%03d.3d",inDirName,fileno+1);
+	    snprintf(fname,300,"%s%d.3d",inDirName,fileno+1);
 	} 
 	if(isMartin) {
 	    snprintf(fname,300,"%s%03d.wrl",inDirName,fileno);
@@ -60,6 +67,7 @@ int main(int argc, char ** argv) {
 		continue;
 	    }
 
+	    double MAX_RANGE = 25.0;
 	    while(getline(&line,&len,vrml) >0 ) {
 		if(first && isBremen) {
 		    first=false;
@@ -69,14 +77,17 @@ int main(int argc, char ** argv) {
 		    char *token = strtok(line," ");
 		    pcl::PointXYZ pt;
 		    if(token == NULL) continue;
-		    pt.x = atof(token)/100.;
+		    pt.x = atof(token)/1000.;
 		    token = strtok(NULL," ");
 		    if(token == NULL) continue;
-		    pt.z = atof(token)/100. - 1.5;
+		    pt.y = atof(token)/1000.;
 		    token = strtok(NULL," ");
 		    if(token == NULL) continue;
-		    pt.y = atof(token)/100.;
-		    cloud.points.push_back(pt);
+		    pt.z = 1 - atof(token)/1000.;
+		    double len = sqrt(pt.x*pt.x+pt.y*pt.y+pt.z*pt.z);
+		    if(len < MAX_RANGE) { 
+			cloud.points.push_back(pt);
+		    }
 		}
 	    }
 	    length = cloud.points.size();
@@ -84,7 +95,7 @@ int main(int argc, char ** argv) {
 	    cloud.height = 1;
 	}
 
-	snprintf(fname,300,"%s%03d.wrl",outName,fileno);
+	snprintf(fname,300,"%s%03d.wrl",outName,fileno-off);
 	FILE *fout = fopen(fname,"w");
 
 	fprintf(fout,"#VRML V2.0 utf8\n");

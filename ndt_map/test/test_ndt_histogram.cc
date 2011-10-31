@@ -11,6 +11,9 @@
 #include <cstdio>
 
 #include <LazzyGrid.hh>
+#include <fstream>
+
+#define FULLTESTER
 
 using namespace std;
 
@@ -25,14 +28,53 @@ main (int argc, char** argv)
     pcl::PointCloud<pcl::PointXYZ> cloud, cloud2, cloud3;
     pcl::PointCloud<pcl::PointXYZI> outCloud;
     
+    lslgeneric::OctTree tr;
+    lslgeneric::OctTree::BIG_CELL_SIZE = 2; 
+    lslgeneric::OctTree::SMALL_CELL_SIZE = 0.2; 
+//    lslgeneric::LazzyGrid tr(0.5);
+#ifdef FULLTESTER
+    std::string fname_str = argv[1];
+    int nclouds = atoi(argv[2]);
+    //lslgeneric::AdaptiveOctTree::MIN_CELL_SIZE = 0.01;
+
+   ofstream logger ("/home/tsv/ndt_tmp/similarity.m"); 
+    logger<< "S = [";
+    struct timeval tv_start, tv_end;
+    gettimeofday(&tv_start,NULL);
+    lslgeneric::NDTHistogram *array  = new lslgeneric::NDTHistogram[nclouds];
+    for(int i=0; i<nclouds; i++) {
+	char cloudname [500];
+	snprintf(cloudname, 499, "%s%03d.wrl", fname_str.c_str(),i);
+	cloud = lslgeneric::readVRML(cloudname);
+	lslgeneric::NDTMap nd(&tr);
+	nd.loadPointCloud(cloud);
+	nd.computeNDTCells();
+
+	array[i] = lslgeneric::NDTHistogram(nd);
+    }
+    gettimeofday(&tv_end,NULL);
+    double avg_build = (tv_end.tv_sec-tv_start.tv_sec)*1000.+(tv_end.tv_usec-tv_start.tv_usec)/1000.;
+    avg_build = avg_build/nclouds;
+    cout<<"building histograms took "<<avg_build<<" msec per scan\n";
+    
+    gettimeofday(&tv_start,NULL);
+    for(int i=0; i<nclouds; i++) {
+      for(int j=0; j<nclouds; j++) {
+	  logger<<array[j].getSimilarity(array[i])<<" "; 
+      }
+      logger<<";\n";
+      cout<<" I "<<i<<endl;
+    } 
+    
+    gettimeofday(&tv_end,NULL);
+    double avg_match = (tv_end.tv_sec-tv_start.tv_sec)*1000.+(tv_end.tv_usec-tv_start.tv_usec)/1000.;
+    avg_match = avg_match/(nclouds*nclouds);
+    cout<<"matching histograms took "<<avg_match<<" msec per scan\n";
+    
+    logger<<"];\n";    
+#else
     cloud = lslgeneric::readVRML(argv[1]);
     cloud2 = lslgeneric::readVRML(argv[2]);
-  
-    //lslgeneric::AdaptiveOctTree::MIN_CELL_SIZE = 0.01;
-    lslgeneric::OctTree tr;
-    lslgeneric::OctTree::BIG_CELL_SIZE = 4; 
-    lslgeneric::OctTree::SMALL_CELL_SIZE = 1; 
-    
     //lslgeneric::NDTMap nd(new lslgeneric::LazzyGrid(5));
     lslgeneric::NDTMap nd(&tr);
     nd.loadPointCloud(cloud);
@@ -52,9 +94,10 @@ main (int argc, char** argv)
     
     Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T;
 	
-    nh2.bestFitToHistogram(nh,T);
+    nh2.bestFitToHistogram(nh,T,true);
     cout<<" ==================== \n Transform R "<<T.rotation()<<"\nt "<<T.translation().transpose()<<endl; 
-    
+   
+    cout<<"scan similarity is "<<nh2.getSimilarity(nh)<<endl; 
     cloud3 = lslgeneric::transformPointCloud(T,cloud2);
     //lslgeneric::NDTMap nd3(new lslgeneric::LazzyGrid(5));
     lslgeneric::NDTMap nd3(&tr);
@@ -81,6 +124,7 @@ main (int argc, char** argv)
     lslgeneric::writeToVRML(f,cloud3,Eigen::Vector3d(1,1,1));
     fclose(f);
 
+#endif
     return (0);
 }
 

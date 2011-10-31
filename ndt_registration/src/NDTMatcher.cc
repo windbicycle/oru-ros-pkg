@@ -17,7 +17,8 @@ using namespace lslgeneric;
 
 //#define DO_DEBUG_PROC
     
-NDTMatcher::NDTMatcher() {
+void NDTMatcher::init(bool useDefaultGridResolutions, std::vector<double> _resolutions) {
+//NDTMatcher::NDTMatcher() {
     //for external users...
     ///////////
     double lfc1,lfc2,lfd3;
@@ -39,7 +40,16 @@ NDTMatcher::NDTMatcher() {
     Jest.setZero();
     Jest.block<3,3>(0,0).setIdentity();
     Hest.setZero();
+    NUMBER_OF_ACTIVE_CELLS = 0;
 
+    if(useDefaultGridResolutions) {
+	resolutions.push_back(0.2);
+	resolutions.push_back(0.5);
+	resolutions.push_back(1);
+	resolutions.push_back(2);
+    } else {
+        resolutions = _resolutions;
+    }	
 }
 
 void NDTMatcher::generateScoreDebug(const char* out, pcl::PointCloud<pcl::PointXYZ>& fixed, pcl::PointCloud<pcl::PointXYZ>& moving) {
@@ -49,7 +59,8 @@ void NDTMatcher::generateScoreDebug(const char* out, pcl::PointCloud<pcl::PointX
     int N_ROT	 = 100;
    
     cout<<"generating scores...\n"; 
-    for(current_resolution = 4; current_resolution>=0.5; current_resolution/=2) {
+    for(int q = resolutions.size()-1; q>=0; q--) {
+	current_resolution = resolutions[q];
 	cout<<"res "<<current_resolution<<endl;
 	double lfc1,lfc2,lfd3;
 	double integral, outlier_ratio, support_size;
@@ -217,6 +228,31 @@ bool NDTMatcher::match( pcl::PointCloud<pcl::PointXYZ>& fixed,
 
   return ret;
 }
+    
+bool NDTMatcher::covariance( pcl::PointCloud<pcl::PointXYZ>& fixed, 
+	        pcl::PointCloud<pcl::PointXYZ>& moving,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
+		Eigen::Matrix<double,6,6> &cov
+	    ) {
+
+    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> TR;
+    pcl::PointCloud<pcl::PointXYZ> cloud = moving;
+    lslgeneric::transformPointCloudInPlace(T,cloud);
+
+    LazzyGrid prototype(current_resolution);
+    NDTMap ndt( &prototype );
+    ndt.loadPointCloud( fixed );
+    ndt.computeNDTCells();
+
+    TR.setIdentity();
+    Eigen::Matrix<double,6,1> sc;
+    derivativesPointCloud(cloud,ndt,TR,sc,cov,true);
+    //cout<<"cov:"<<cov<<endl;
+    cov = 0.5*cov.inverse();
+    //cout<<"cov2:"<<cov<<endl;
+
+    return true;
+}
 
 bool NDTMatcher::match( NDTMap& fixed, 
 			pcl::PointCloud<pcl::PointXYZ>& moving,
@@ -246,12 +282,12 @@ bool NDTMatcher::match( NDTMap& fixed,
     //voxel subsample moving pc!
      
     //locals 
-    int ITR_MAX = 250;
+    int ITR_MAX = 100;
     bool convergence = false;
     double score=0;
-    double DELTA_SCORE = 0.001*current_resolution;
+    double DELTA_SCORE = 0.0001;
 //    double NORM_MAX = support_size/8, ROT_MAX = M_PI/18; //
-    double NORM_MAX = support_size, ROT_MAX = M_PI/4; //
+    double NORM_MAX = 4*support_size, ROT_MAX = M_PI/4; //
     int itr_ctr = 0;
     double step_size = 1;
     Eigen::Matrix<double,6,1> pose_increment_v, pose_increment_reg_v, score_gradient; //column vectors
@@ -267,14 +303,6 @@ bool NDTMatcher::match( NDTMap& fixed,
     TR.setIdentity();
     Eigen::Vector3d eulerAngles = T.rotation().eulerAngles(0,1,2);
    
-    /* 
-    if(fabsf(eulerAngles(0)) < 10e-5) eulerAngles(0) = 0;
-    if(fabsf(eulerAngles(1)) < 10e-5) eulerAngles(1) = 0;
-    if(fabsf(eulerAngles(2)) < 10e-5) eulerAngles(2) = 0;
-    cout<<"T:: \n";
-    cout<<"rot: "<<eulerAngles.transpose()<<endl;
-    cout<<"translation "<<T.translation().transpose()<<endl;
-    */
     double scoreP = 0;
     while(!convergence) {
 #ifdef DO_DEBUG_PROC
@@ -288,24 +316,18 @@ bool NDTMatcher::match( NDTMap& fixed,
 	score_gradient.setZero();
 	Hessian.setZero();
 	//derivativesPointCloud(moving,fixed,T,score_gradient,Hessian,true);
+	
+	TR.setIdentity();
 	derivativesPointCloud(prevCloud,fixed,TR,score_gradient,Hessian,true);
 
-	// TODO!!! - check this + what to do with the bool
-	Eigen::JacobiSVD<Eigen::Matrix<double,6,6> > sv (Hessian, Eigen::ComputeFullU | Eigen::ComputeFullV);
-	pose_increment_v = sv.solve(-score_gradient);
-        //pose_increment_v = Hessian.svd().solve(-score_gradient);//,&pose_increment_v);
+	// TODO!!! - check this
+	//Eigen::JacobiSVD<Eigen::Matrix<double,6,6> > sv (Hessian, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	//pose_increment_v = sv.solve(-score_gradient);
+	
+	pose_increment_v = Hessian.ldlt().solve(-score_gradient);
 	
 	score = scorePointCloud(prevCloud,fixed);
 	//cout<<"iteration "<<itr_ctr<<" pose norm "<<(pose_increment_v.norm())<<" score "<<score<<endl;
-
-/*	if(!(solution)) {
-	    cout<<"no solution to hessian step\n";
-	    ret = false;
-	    break;
-	}
-*/
-	//make the initial increment reasonable...
-	//cout<<"incr_init = ["<<pose_increment_v.transpose()<<"]"<<endl;
 
 //step control...
 	double pnorm = sqrt(pose_increment_v(0)*pose_increment_v(0) + pose_increment_v(1)*pose_increment_v(1) 
@@ -372,6 +394,8 @@ bool NDTMatcher::match( NDTMap& fixed,
 //    cout<<"res: "<<current_resolution<<" itr "<<itr_ctr<<endl;
 //    cout<<"T: \n t = "<<T.translation().transpose()<<endl;
 //    cout<<"r= \n"<<T.rotation()<<endl;
+    
+    this->finalscore = score/NUMBER_OF_ACTIVE_CELLS;
     return ret;
 }
 
@@ -519,6 +543,7 @@ double NDTMatcher::scorePointCloud(pcl::PointCloud<pcl::PointXYZ> &moving,
     Eigen::Matrix3d icov;
     Eigen::Vector3d mean;
     Eigen::Vector3d point;
+    NUMBER_OF_ACTIVE_CELLS = 0;
     for(unsigned int i=0; i<moving.points.size(); i++) {
 	    point<<moving.points[i].x,moving.points[i].y,moving.points[i].z;
 	    
@@ -557,10 +582,11 @@ double NDTMatcher::scorePointCloud(pcl::PointCloud<pcl::PointXYZ> &moving,
 
 		score_here += (lfd1*exp(-lfd2*l/2));
 		score_native += (fixed.getLikelihoodForPoint(moving.points[i]));
+		NUMBER_OF_ACTIVE_CELLS += 1;
 	    }
     }
 //    cout<<"here: "<<score_here<<" native: "<<score_native<<endl;
-//    score_here /= NUMBER_OF_POINTS; 
+//    score_here /= NUMBER_OF_POINTS;
     return score_here;
 }
 
@@ -650,7 +676,7 @@ double NDTMatcher::lineSearchMT(  Eigen::Matrix<double,6,1> &score_gradient_init
 
   // default params
   double stp = 4.0; //default step
-  double recoverystep = 0.01;
+  double recoverystep = 0.05;
   double dginit = 0.0;
   double ftol = 0.0001; //epsilon 1
   double gtol = 0.9999; //epsilon 2
@@ -797,7 +823,11 @@ double NDTMatcher::lineSearchMT(  Eigen::Matrix<double,6,1> &score_gradient_init
     double f = 0.0;
     f = scorePointCloud(cloudHere,ndt);
     score_gradient_here.setZero();
-    derivativesPointCloud(cloud,ndt,ps,score_gradient_here,pseudoH,false);
+    
+    ps2.setIdentity();
+    derivativesPointCloud(cloudHere,ndt,ps2,score_gradient_here,pseudoH,false);
+
+    //derivativesPointCloud(cloud,ndt,ps,score_gradient_here,pseudoH,false);
     
     //derivativesPointCloud(cloudHere,ndt,ps2,score_gradient_here,pseudoH,false);
     //negate score gradient
@@ -1232,7 +1262,7 @@ pcl::PointCloud<pcl::PointXYZ> NDTMatcher::subsample(pcl::PointCloud<pcl::PointX
     
       NDTMap ndt( new OctTree() );
       OctTree::BIG_CELL_SIZE = 4;
-      OctTree::SMALL_CELL_SIZE = 0.05;
+      OctTree::SMALL_CELL_SIZE = 0.1;
       ndt.loadPointCloud( original );
       ndt.computeNDTCells();
       std::vector<Cell*>::iterator it = ndt.getMyIndex()->begin();
