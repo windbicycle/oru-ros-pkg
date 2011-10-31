@@ -118,7 +118,6 @@ bool matchICP(pcl::PointCloud<pcl::PointXYZ> &fixed,  pcl::PointCloud<pcl::Point
 int
 main (int argc, char** argv)
 {
-    
     std::ofstream logger ("/home/tsv/ndt_tmp/covariance.m");
     cout.precision(15);
 
@@ -137,7 +136,7 @@ main (int argc, char** argv)
     gettimeofday(&tv_now, NULL);
     srand(tv_now.tv_usec);
 
-    int N_SAMPLES = 10;
+    int N_SAMPLES = 100;
 
     if(argc != 2) {
 	std::cout<<"Usage: "<<argv[0]<<" configFile\n";
@@ -145,7 +144,7 @@ main (int argc, char** argv)
     }
 
     FILE *fin = fopen(argv[1],"r");
-    double xd,yd,zd, r,p,y;
+    double xd,yd,zd, x,y,z,w, ts;
     string prefix;
     char *line = NULL;
     size_t len;
@@ -163,17 +162,33 @@ main (int argc, char** argv)
 
     while(getline(&line,&len,fin) > 0) {
 
-	int n = sscanf(line,"%lf %lf %lf %lf %lf %lf",
-		    &xd,&yd,&zd,&r,&p,&y);
-	if(n != 6) {
+	int n = sscanf(line,"%lf %lf %lf %lf %lf %lf %lf %lf",
+		    &ts,&xd,&yd,&zd,&x,&y,&z,&w);
+	if(n != 8) {
 	    cout<<"wrong format of pose at : "<<line<<endl;
 	    break;
 	}
+	
+	if(first) {
+	    //set previous pose to curent pose
+	    prevPose =Eigen::Translation<double,3>(xd,yd,zd)*
+		      Eigen::Quaternion<double>(w,x,y,z);
+	    first = false;
+	    ctr++;
+	    continue;
+	}
+	    
+
+	currPose =  Eigen::Translation<double,3>(xd,yd,zd)*
+		      Eigen::Quaternion<double>(w,x,y,z);
+
+	/*
 	r = M_PI*r/180; 	
 	p = M_PI*p/180;
         //due to the way we collected data, offset by 90, shouldn't matter
 	y = y+90;	
 	y = M_PI*y/180; 	
+
 	if(first) {
 	    //set previous pose to curent pose
 	    prevPose =Eigen::Translation<double,3>(xd,yd,zd)*
@@ -190,7 +205,9 @@ main (int argc, char** argv)
 	    Eigen::AngleAxis<double>(r,Eigen::Vector3d::UnitX())*
 	    Eigen::AngleAxis<double>(p,Eigen::Vector3d::UnitY())*
 	    Eigen::AngleAxis<double>(y,Eigen::Vector3d::UnitZ());
-	
+	*/
+
+
 	//compute ground truth relative pose
 	Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> P = prevPose.inverse()*currPose;
 	
@@ -217,11 +234,17 @@ main (int argc, char** argv)
 	    randPitch = box_muller(0,dev_pitch);
 	    randYaw = box_muller(0,dev_yaw);
 
+	    currPose =  Eigen::Translation<double,3>(xd+randX,yd+randY,zd+randZ)*
+		Eigen::Quaternion<double>(w,x,y,z)*
+		Eigen::AngleAxis<double>(randRoll,Eigen::Vector3d::UnitX())*
+		Eigen::AngleAxis<double>(randPitch,Eigen::Vector3d::UnitY())*
+		Eigen::AngleAxis<double>(randYaw,Eigen::Vector3d::UnitZ());
 	    //compute current pose
-	    currPose =Eigen::Translation<double,3>(xd+randX,yd+randY,zd+randZ)*
+	    /*currPose =Eigen::Translation<double,3>(xd+randX,yd+randY,zd+randZ)*
 		Eigen::AngleAxis<double>(r+randRoll,Eigen::Vector3d::UnitX())*
 		Eigen::AngleAxis<double>(p+randPitch,Eigen::Vector3d::UnitY())*
 		Eigen::AngleAxis<double>(y+randYaw,Eigen::Vector3d::UnitZ());
+	    */
 
 	    //compute relative pose
 	    Pr = prevPose.inverse()*currPose;
@@ -230,12 +253,15 @@ main (int argc, char** argv)
 	    cout<<"curr pose: "<<currPose.translation().transpose()<<" "<<r+randRoll<<" "<<p+randPitch<<" "<<y+randYaw<<endl;
 	    cout<<"diff: "<<Pr.translation().transpose()<<" rpy "<<Pr.rotation().eulerAngles(0,1,2).transpose()<<endl;
 #endif	    
+	    bool ret;
+	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> offset;
+/*
 	    //point2NDT
 	    //transform curr scan by Pr
 	    currHere = lslgeneric::transformPointCloud(Pr,curr);
-	    bool ret = matcherP2F.match(prev,currHere,R);
+	    ret = matcherP2F.match(prev,currHere,R);
 	    //compute P[-](Pr[+]R)
-	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> offset = P.inverse()*(R*Pr);
+	    offset = P.inverse()*(R*Pr);
 	    //that's the error! log it.
 	    logger<<"pnt2ndt("<<ctr<<","<<i+1<<",:) = ["<<offset.translation().transpose()<<" "<<offset.rotation().eulerAngles(0,1,2).transpose()<<"];\n";
 
@@ -247,7 +273,7 @@ main (int argc, char** argv)
 	    offset = P.inverse()*(R*Pr);
 	    //that's the error! log it.
 	    logger<<"icp("<<ctr<<","<<i+1<<",:) = ["<<offset.translation().transpose()<<" "<<offset.rotation().eulerAngles(0,1,2).transpose()<<"];\n";
-
+*/
 	    //NDT2NDT
 	    //transform curr scan by Pr
 	    currHere = lslgeneric::transformPointCloud(Pr,curr);
@@ -272,10 +298,14 @@ main (int argc, char** argv)
 
 	}
 	    
+	Eigen::Matrix<double,6,6> cov;
+//	matcherP2F.covariance(prev,curr,P,cov);
+//	logger<<"COVpnt2ndt("<<ctr<<",:,:) = ["<<cov.row(0)<<";\n"<<cov.row(1)<<";\n"<<cov.row(2)<<";\n"<<cov.row(3)<<";\n"<<cov.row(4)<<";\n"<<cov.row(5)<<"];\n";
+	matcherF2F.covariance(prev,curr,P,cov);
+	logger<<"COVndt2ndt("<<ctr<<",:,:) = ["<<cov.row(0)<<";\n"<<cov.row(1)<<";\n"<<cov.row(2)<<";\n"<<cov.row(3)<<";\n"<<cov.row(4)<<";\n"<<cov.row(5)<<"];\n";
+
 	prevPose =Eigen::Translation<double,3>(xd,yd,zd)*
-	    Eigen::AngleAxis<double>(r,Eigen::Vector3d::UnitX())*
-	    Eigen::AngleAxis<double>(p,Eigen::Vector3d::UnitY())*
-	    Eigen::AngleAxis<double>(y,Eigen::Vector3d::UnitZ());
+	    Eigen::Quaternion<double>(w,x,y,z);
 	ctr++;
     }
 

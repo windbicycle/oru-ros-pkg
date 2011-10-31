@@ -187,7 +187,7 @@ OctTree::OctTree(pcl::PointXYZ center, double xsize, double ysize,
     leafsCached = false;
     if(!OctTree::parametersSet) {
 	DBG(1,"using default config\n");
-	OctTree::setParameters(NULL);
+	OctTree::setParameters();
     }
 }
 

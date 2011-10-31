@@ -149,44 +149,60 @@ Cell* LazzyGrid::getCellForPoint(const pcl::PointXYZ point) {
 
 void LazzyGrid::addPoint(pcl::PointXYZ point) {
 
-    int indX,indY,indZ;
-    this->getIndexForPoint(point,indX,indY,indZ);
-    pcl::PointXYZ centerCell;
-
-    if(indX >= sizeX || indY >= sizeY || indZ >= sizeZ) {
-	return;
-    }
-    if(!initialized) return;
-    if(dataArray == NULL) return;
-    if(dataArray[indX] == NULL) return;
-    if(dataArray[indX][indY] == NULL) return;
-
-    if(dataArray[indX][indY][indZ]==NULL) {
-	//initialize cell
-	dataArray[indX][indY][indZ] = protoType->clone();
-	dataArray[indX][indY][indZ]->setDimensions(cellSizeX,cellSizeY,cellSizeZ);
-
-	int idcX, idcY, idcZ;
-	pcl::PointXYZ center;
-	center.x = centerX;
-	center.y = centerY;
-	center.z = centerZ;
-	this->getIndexForPoint(center, idcX,idcY,idcZ);	
-	centerCell.x = centerX + (indX-idcX)*cellSizeX;
-	centerCell.y = centerY + (indY-idcY)*cellSizeY;
-	centerCell.z = centerZ + (indZ-idcZ)*cellSizeZ;
-	dataArray[indX][indY][indZ]->setCenter(centerCell);
-/*
-	cout<<"center: "<<centerX<<" "<<centerY<<" "<<centerZ<<endl;
-	cout<<"size  : "<<sizeX<<" "<<sizeY<<" "<<sizeZ<<endl;
-	cout<<"p  : "<<point.x<<" "<<point.y<<" "<<point.z<<endl;
-	cout<<"c  : "<<centerCell.x<<" "<<centerCell.y<<" "<<centerCell.z<<endl;
-	cout<<"id : "<<indX<<" "<<indY<<" "<<indZ<<endl;
-	cout<<"cs : "<<cellSizeX<<" "<<cellSizeY<<" "<<cellSizeZ<<endl;
+/*    int *idX,*idY,*idZ;
+    idX = new int[4];
+    idY = new int[4];
+    idZ = new int[4];
+    
+    this->getIndexArrayForPoint(point,idX,idY,idZ);
 */
-	activeCells.push_back(dataArray[indX][indY][indZ]);
-    }
-    dataArray[indX][indY][indZ]->addPoint(point);
+   // for(int i=0; i<4; i++) {
+	int indX,indY,indZ;
+	//indX = idX[i]; indZ = idZ[i]; indY = idY[i];
+	this->getIndexForPoint(point,indX,indY,indZ);
+	pcl::PointXYZ centerCell;
+
+	if(indX >= sizeX || indY >= sizeY || indZ >= sizeZ) {
+	    //continue;
+	    return;
+	}
+
+	if(!initialized) return;
+	if(dataArray == NULL) return;
+	if(dataArray[indX] == NULL) return;
+	if(dataArray[indX][indY] == NULL) return;
+
+	if(dataArray[indX][indY][indZ]==NULL) {
+	    //initialize cell
+	    dataArray[indX][indY][indZ] = protoType->clone();
+	    dataArray[indX][indY][indZ]->setDimensions(cellSizeX,cellSizeY,cellSizeZ);
+
+	    int idcX, idcY, idcZ;
+	    pcl::PointXYZ center;
+	    center.x = centerX;
+	    center.y = centerY;
+	    center.z = centerZ;
+	    this->getIndexForPoint(center, idcX,idcY,idcZ);	
+	    centerCell.x = centerX + (indX-idcX)*cellSizeX;
+	    centerCell.y = centerY + (indY-idcY)*cellSizeY;
+	    centerCell.z = centerZ + (indZ-idcZ)*cellSizeZ;
+	    dataArray[indX][indY][indZ]->setCenter(centerCell);
+	    /*
+	       cout<<"center: "<<centerX<<" "<<centerY<<" "<<centerZ<<endl;
+	       cout<<"size  : "<<sizeX<<" "<<sizeY<<" "<<sizeZ<<endl;
+	       cout<<"p  : "<<point.x<<" "<<point.y<<" "<<point.z<<endl;
+	       cout<<"c  : "<<centerCell.x<<" "<<centerCell.y<<" "<<centerCell.z<<endl;
+	       cout<<"id : "<<indX<<" "<<indY<<" "<<indZ<<endl;
+	       cout<<"cs : "<<cellSizeX<<" "<<cellSizeY<<" "<<cellSizeZ<<endl;
+	     */
+	    activeCells.push_back(dataArray[indX][indY][indZ]);
+	}
+	dataArray[indX][indY][indZ]->addPoint(point);
+    //}
+    /*
+    delete []idX;
+    delete []idY;
+    delete []idZ; */
 }
 
 std::vector<Cell*>::iterator LazzyGrid::begin() {
@@ -248,7 +264,38 @@ void LazzyGrid::getIndexForPoint(const pcl::PointXYZ& point, int &indX, int &ind
     indY = floor((point.y - centerY)/cellSizeY+0.5) + sizeY/2;
     indZ = floor((point.z - centerZ)/cellSizeZ+0.5) + sizeZ/2;
 }
-	
+
+/*
+void LazzyGrid::getIndexArrayForPoint(const pcl::PointXYZ& point, int* &indX, int* &indY, int *&indZ) {
+    indX[0] = floor((point.x - centerX)/cellSizeX+0.5) + sizeX/2;
+    indY[0] = floor((point.y - centerY)/cellSizeY+0.5) + sizeY/2;
+    indZ[0] = floor((point.z - centerZ)/cellSizeZ+0.5) + sizeZ/2;
+
+    //get center of the cell    
+    int idcX, idcY, idcZ;
+    pcl::PointXYZ center;
+    center.x = centerX;
+    center.y = centerY;
+    center.z = centerZ;
+    this->getIndexForPoint(center, idcX,idcY,idcZ);	
+    double centerCellx = centerX + (indX[0]-idcX)*cellSizeX;
+    double centerCelly = centerY + (indY[0]-idcY)*cellSizeY;
+    double centerCellz = centerZ + (indZ[0]-idcZ)*cellSizeZ;
+    int pX,pY,pZ;
+    pX = point.x - centerCellx > 0? 1 : -1;
+    pY = point.y - centerCelly > 0? 1 : -1;
+    pZ = point.z - centerCellz > 0? 1 : -1;
+    indX[1] = indX[0]+pX;
+    indY[1] = indY[0];
+    indZ[1] = indZ[0];    
+    indX[2] = indX[0];
+    indY[2] = indY[0]+pY;
+    indZ[2] = indZ[0];    
+    indX[3] = indX[0];
+    indY[3] = indY[0];
+    indZ[3] = indZ[0]+pZ;    
+}
+*/	
 std::vector<NDTCell*> LazzyGrid::getClosestNDTCells(const pcl::PointXYZ point, double radius) {
     
     std::vector<int> id;

@@ -50,6 +50,11 @@ namespace lslgeneric {
     */
     class NDTMap {
 	public:
+	    NDTMap() {
+		parametersSet = false;
+		index = NULL;
+	    }
+
 	    NDTMap(SpatialIndex *idx);
 	    NDTMap(const NDTMap& other);
 	    virtual ~NDTMap();

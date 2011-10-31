@@ -107,6 +107,7 @@ class LazzyGrid : public SpatialIndex {
 	int sizeX,sizeY,sizeZ;
 
 	bool checkCellforNDT(int indX, int indY, int indZ);
+	//void getIndexArrayForPoint(const pcl::PointXYZ& pt, int *&idx, int *&idy, int *&idz);
 };
 
 

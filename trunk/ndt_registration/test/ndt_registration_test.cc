@@ -96,6 +96,9 @@ main (int argc, char** argv)
 
     double __res[] = {0.5, 1, 2, 4};
     std::vector<double> resolutions (__res, __res+sizeof(__res)/sizeof(double));
+    lslgeneric::NDTMatcherF2F matcherF2Finit(false, false, false, resolutions);
+    //std::vector<double> rr;
+    //rr.push_back(0.5);
     lslgeneric::NDTMatcherF2F matcherF2F(false, false, false, resolutions);
     lslgeneric::NDTMatcher matcherP2F;
 
@@ -112,7 +115,8 @@ main (int argc, char** argv)
 	cloud_offset = lslgeneric::readVRML(argv[2]);
 	
 	gettimeofday(&tv_start,NULL);
-	bool ret = matcherF2F.match(cloud,cloud_offset,Tout);
+	//bool ret = matcherP2F.match(cloud,cloud_offset,Tout);
+	bool ret = matcherF2Finit.match(cloud,cloud_offset,Tout);
 	//bool ret = matchICP(cloud,cloud_offset,Tout);
 	gettimeofday(&tv_end,NULL);
 	cloud_OFF = cloud_offset;
@@ -147,7 +151,7 @@ main (int argc, char** argv)
 
 	succ = true;
 	cloud_OFF = cloud_offset;
-	return 0;
+	//return 0;
     }
     
     if(!(argc == 2 || succ)) {
@@ -180,6 +184,7 @@ main (int argc, char** argv)
     //for(roll = -2*M_PI/5;roll<M_PI/2;roll+=M_PI/5) {
     //for(pitch = -2*M_PI/5;pitch<M_PI/2;pitch+=M_PI/5) {
     for(yaw = -30*M_PI/180;yaw<=35*M_PI/180;yaw+=10*M_PI/180) {
+    logger2<<"%";	
     for(xoffset=-1.5;xoffset<=1.5;xoffset+=0.5) {
     for(yoffset=-1.5;yoffset<=1.5;yoffset+=0.5) {
     /*
@@ -218,6 +223,7 @@ main (int argc, char** argv)
     fclose(fout);
 */
     gettimeofday(&tv_start,NULL);
+    //bool ret = matcherP2F.match(cloud,cloud_offset,Tout);
     bool ret = matcherF2F.match(cloud,cloud_offset,Tout);
     //bool ret = matchICP(cloud,cloud_offset,Tout);
     gettimeofday(&tv_end,NULL);
@@ -231,6 +237,9 @@ main (int argc, char** argv)
 	cout<<"NO SOLUTION\n";
 	logger2<<"N ";
 	N_FAIL++;
+	times.push_back(tim);
+	et.push_back(Tout.translation().norm());
+	er.push_back(Tout.rotation().eulerAngles(0,1,2).norm());
     } else {
 	/*logger<<"Input Transform: "<<endl;
 	logger<<"translation "<<Tin.translation()<<endl;
@@ -264,7 +273,7 @@ main (int argc, char** argv)
 	times.push_back(tim);
 	et.push_back(Tout.translation().norm());
 	er.push_back(Tout.rotation().eulerAngles(0,1,2).norm());
-	
+
 	if(Tout.translation().norm() < 0.2 && Tout.rotation().eulerAngles(0,1,2).norm() < 0.087) {
 	    logger<<"OK\n";
 	    logger2<<"O ";

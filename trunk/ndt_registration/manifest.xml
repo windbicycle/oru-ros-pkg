@@ -16,6 +16,11 @@
   <depend package="tf"/>
   <depend package="tf_conversions"/>
 
+  <export>
+  <cpp cflags="-I${prefix}/include" lflags="-lndt_registration -L${prefix}/lib" />
+  </export>
+
+
 </package>
 
 

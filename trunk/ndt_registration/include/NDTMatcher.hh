@@ -47,7 +47,15 @@ namespace lslgeneric{
   class NDTMatcher 
   {
   public:
-    NDTMatcher();
+    NDTMatcher(std::vector<double> _resolutions) {
+	this->init(false,_resolutions);
+    }
+    NDTMatcher() {
+	this->init(true,std::vector<double>());
+    }
+    NDTMatcher(const NDTMatcher& other) {
+	this->init(false,other.resolutions);
+    }
     /**
      * Register two point clouds. This method builds an NDT
      * representation of the "fixed" point cloud and uses that for
@@ -80,6 +88,17 @@ namespace lslgeneric{
 	        pcl::PointCloud<pcl::PointXYZ>& moving,
 		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T );
     
+    /**
+      * computes the covariance of the match between moving and fixed, at T.
+      * note --- computes NDT distributions based on the resolution in res
+      * result is returned in cov
+      */
+    bool covariance( pcl::PointCloud<pcl::PointXYZ>& fixed, 
+	        pcl::PointCloud<pcl::PointXYZ>& moving,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
+		Eigen::Matrix<double,6,6> &cov
+	    );
+
     //compute the score of a point cloud to an NDT
     double scorePointCloud(pcl::PointCloud<pcl::PointXYZ> &moving, 
 			   NDTMap &fixed);
@@ -98,6 +117,7 @@ namespace lslgeneric{
     void generateScoreDebug(const char* out, pcl::PointCloud<pcl::PointXYZ>& fixed, 
 			    pcl::PointCloud<pcl::PointXYZ>& moving);
 
+    double finalscore;
   private:
 
     Eigen::Matrix<double,3,6> Jest;
@@ -156,12 +176,16 @@ namespace lslgeneric{
     //perform a subsampling depending on user choice
     pcl::PointCloud<pcl::PointXYZ> subsample(pcl::PointCloud<pcl::PointXYZ>& original);
     int NUMBER_OF_POINTS;
+    int NUMBER_OF_ACTIVE_CELLS;
 
   private:
     //storage for pre-computed angular derivatives
     Eigen::Vector3d jest13, jest23, jest04, jest14, jest24, jest05, jest15, jest25;
     Eigen::Vector3d a2,a3, b2,b3, c2,c3, d1,d2,d3, e1,e2,e3, f1,f2,f3;
 
+    std::vector<double> resolutions;
+    //initializes stuff;
+    void init(bool useDefaultGridResolutions, std::vector<double> _resolutions);
     double normalizeAngle(double a);
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

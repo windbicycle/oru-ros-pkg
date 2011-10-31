@@ -39,6 +39,17 @@
 #include "pcl/point_cloud.h"
 #include "Eigen/Core"
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+
+//#define DNUMERICAL
+
+#ifdef DNUMERICAL
+#include "stdafx.h"
+#include "optimization.h"
+#endif
+
 namespace lslgeneric{
 
   /**
@@ -55,7 +66,16 @@ namespace lslgeneric{
      \param _resolutions --- if previous bool is not set, these are the resolutions (in reverse order) that we will go through
     */
     NDTMatcherF2F(bool _bNumeric, bool _isIrregularGrid, 
-	          bool useDefaultGridResolutions, std::vector<double> &_resolutions);
+	          bool useDefaultGridResolutions, std::vector<double> _resolutions) {
+	this->init(_bNumeric,_isIrregularGrid,useDefaultGridResolutions,_resolutions);
+    }
+    NDTMatcherF2F() {
+	this->init(false,false,true,std::vector<double>());
+    }
+    NDTMatcherF2F(const NDTMatcherF2F& other) {
+	this->init(other.bNumeric,other.isIrregularGrid,false,other.resolutions);
+    }
+
     /**
      * Register two point clouds. This method builds an NDT
      * representation of the "fixed" point cloud and uses that for
@@ -71,7 +91,7 @@ namespace lslgeneric{
      */
     bool match( pcl::PointCloud<pcl::PointXYZ>& fixed, 
 	        pcl::PointCloud<pcl::PointXYZ>& moving,
-		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T );
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T);
 
     /**
      * Registers a point cloud to an NDT structure.
@@ -86,8 +106,84 @@ namespace lslgeneric{
      */
     bool match( NDTMap& fixed, 
 	        NDTMap& moving,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T);
+   
+    /**
+      * computes the covariance of the match between moving and fixed, at T.
+      * note --- computes NDT distributions based on the resolution in res
+      * result is returned in cov
+      */
+    bool covariance( pcl::PointCloud<pcl::PointXYZ>& fixed, 
+	        pcl::PointCloud<pcl::PointXYZ>& moving,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
+		Eigen::Matrix<double,6,6> &cov
+	    );
+
+    /**
+      * computes the covariance of the match between moving and fixed, at T.
+      * result is returned in cov
+      */
+    bool covariance( NDTMap& fixed, 
+	        NDTMap& moving,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
+		Eigen::Matrix<double,6,6> &cov
+	    );
+
+#ifdef DNUMERICAL
+    //sets current fixed and current moving, sets-up optimization and runs it 
+    bool matchLBFGS( NDTMap* fixed, 
+	        NDTMap* moving,
 		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T );
     
+
+    static void _evaluate(
+	    const alglib::real_1d_array &x,
+	    double &func,
+	    void *ptr
+	    )
+    {
+	reinterpret_cast<NDTMatcherF2F*>(ptr)->evaluate(x, func);
+    }
+    //transforms x into a pose, computes a new "moving" ndt and evaluates it
+    void evaluate(
+	    const alglib::real_1d_array &x,
+	    double &func
+	    ); 
+
+    /////
+    //evaluate with analytical gradient 
+    static void _evaluateG(
+	    const alglib::real_1d_array &x,
+	    double &func,
+	    alglib::real_1d_array &grad,
+	    void *ptr
+	    )
+    {
+	reinterpret_cast<NDTMatcherF2F*>(ptr)->evaluateG(x, func, grad);
+    }
+    //transforms x into a pose, computes a new "moving" ndt and evaluates it
+    void evaluateG(
+	    const alglib::real_1d_array &x,
+	    double &func,
+	    alglib::real_1d_array &grad
+	    ); 
+
+
+    static void _callback(
+	    const alglib::real_1d_array &x,
+	    double func,
+	    void *ptr
+	    )
+    {
+	reinterpret_cast<NDTMatcherF2F*>(ptr)->callback(x, func);
+    }
+    
+    void callback(
+	    const alglib::real_1d_array &x,
+	    double func
+	    );
+#endif
+
     //compute the score of a point cloud to an NDT
     double scoreNDT(std::vector<NDTCell*> &moving, NDTMap &fixed);
 	
@@ -107,6 +203,7 @@ namespace lslgeneric{
 
     void generateScoreDebug(const char* out, pcl::PointCloud<pcl::PointXYZ>& fixed, 
 			    pcl::PointCloud<pcl::PointXYZ>& moving);
+    double finalscore;
   private:
 
     Eigen::Matrix<double,3,6> Jest;
@@ -120,11 +217,22 @@ namespace lslgeneric{
     double lfd1,lfd2;
     //bool useSimpleDerivatives;
     double current_resolution;
-    
+    int iteration_counter_internal;
+
     bool isIrregularGrid;
     bool bNumeric;
     std::vector<double> resolutions;
 
+#ifdef DNUMERIC
+    //TSV: for numeric optimization
+    NDTMap *current_fixed, *current_moving;
+    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> current_T;
+    alglib::real_1d_array px;
+#endif
+
+    //initializes stuff;
+    void init(bool _bNumeric, bool _isIrregularGrid, 
+	          bool useDefaultGridResolutions, std::vector<double> _resolutions);
     //pre-computes the multipliers of the derivatives for all points
     void precomputeAngleDerivatives(Eigen::Vector3d &eulerAngles);
     
@@ -173,7 +281,7 @@ namespace lslgeneric{
     //storage for pre-computed angular derivatives
     Eigen::Vector3d jest13, jest23, jest04, jest14, jest24, jest05, jest15, jest25;
     Eigen::Vector3d a2,a3, b2,b3, c2,c3, d1,d2,d3, e1,e2,e3, f1,f2,f3;
-
+    int NUMBER_OF_ACTIVE_CELLS;
     double normalizeAngle(double a);
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
