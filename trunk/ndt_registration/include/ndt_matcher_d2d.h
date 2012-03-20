@@ -32,30 +32,43 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef NDT_MATCHER_HH
-#define NDT_MATCHER_HH
+#ifndef NDT_MATCHER_D2D_HH
+#define NDT_MATCHER_D2D_HH
 
-#include "NDTMap.hh"
+#include "ndt_map.h"
 #include "pcl/point_cloud.h"
 #include "Eigen/Core"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 
 namespace lslgeneric{
 
   /**
    * This class implements NDT registration for 3D point cloud scans.
    */
-  class NDTMatcher 
+  template <typename PointSource, typename PointTarget>
+  class NDTMatcherD2D 
   {
   public:
-    NDTMatcher(std::vector<double> _resolutions) {
-	this->init(false,_resolutions);
+     /**
+      parametrized constructor. A default set is (false,false,true,empty_vector). parameters are:
+     \param _isIrregularGrid --- experimental single pass through an irregular grid. also unstable
+     \param useDefaultGridResolutions --- if set, the following parameter is set to a preset value
+     \param _resolutions --- if previous bool is not set, these are the resolutions (in reverse order) that we will go through
+    */
+    NDTMatcherD2D(bool _isIrregularGrid, 
+	          bool useDefaultGridResolutions, std::vector<double> _resolutions) {
+	this->init(_isIrregularGrid,useDefaultGridResolutions,_resolutions);
     }
-    NDTMatcher() {
-	this->init(true,std::vector<double>());
+    NDTMatcherD2D() {
+	this->init(false,true,std::vector<double>());
     }
-    NDTMatcher(const NDTMatcher& other) {
-	this->init(false,other.resolutions);
+    NDTMatcherD2D(const NDTMatcherD2D& other) {
+	this->init(other.isIrregularGrid,false,other.resolutions);
     }
+
     /**
      * Register two point clouds. This method builds an NDT
      * representation of the "fixed" point cloud and uses that for
@@ -69,9 +82,10 @@ namespace lslgeneric{
      *   gives the initial pose estimate of \c moving. When the
      *   algorithm terminates, \c T holds the registration result.
      */
-    bool match( pcl::PointCloud<pcl::PointXYZ>& fixed, 
-	        pcl::PointCloud<pcl::PointXYZ>& moving,
-		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T );
+    bool match( pcl::PointCloud<PointTarget>& target, 
+	        pcl::PointCloud<PointSource>& source,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
+		bool useInitialGuess = false);
 
     /**
      * Registers a point cloud to an NDT structure.
@@ -84,83 +98,97 @@ namespace lslgeneric{
      *   gives the initial pose estimate of \c moving. When the
      *   algorithm terminates, \c T holds the registration result.
      */
-    bool match( NDTMap& fixed, 
-	        pcl::PointCloud<pcl::PointXYZ>& moving,
-		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T );
-    
+    bool match( NDTMap<PointTarget>& target, 
+	        NDTMap<PointSource>& source,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
+		bool useInitialGuess = false);
+   
     /**
       * computes the covariance of the match between moving and fixed, at T.
       * note --- computes NDT distributions based on the resolution in res
       * result is returned in cov
       */
-    bool covariance( pcl::PointCloud<pcl::PointXYZ>& fixed, 
-	        pcl::PointCloud<pcl::PointXYZ>& moving,
+    bool covariance( pcl::PointCloud<PointTarget>& target, 
+	        pcl::PointCloud<PointSource>& source,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
+		Eigen::Matrix<double,6,6> &cov
+	    );
+
+    /**
+      * computes the covariance of the match between moving and fixed, at T.
+      * result is returned in cov
+      */
+    bool covariance( NDTMap<PointTarget>& target, 
+	        NDTMap<PointSource>& source,
 		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
 		Eigen::Matrix<double,6,6> &cov
 	    );
 
     //compute the score of a point cloud to an NDT
-    double scorePointCloud(pcl::PointCloud<pcl::PointXYZ> &moving, 
-			   NDTMap &fixed);
-    
+    virtual double scoreNDT(std::vector<NDTCell<PointSource>*> &source, NDTMap<PointTarget> &target,
+		Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T
+	    );
+	
     //compute the score gradient & hessian of a point cloud + transformation to an NDT
     // input: moving, fixed, tr, computeHessian
     //output: score_gradient, Hessian 
-    void derivativesPointCloud(pcl::PointCloud<pcl::PointXYZ> &moving, 
-	    NDTMap &fixed,
+    virtual void derivativesNDT( 
+	    std::vector<NDTCell<PointSource>*> &source,
+	    NDTMap<PointTarget> &target,
 	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &transform,
 	    //Eigen::Vector3d &eulerAngles,
 	    Eigen::Matrix<double,6,1> &score_gradient,
 	    Eigen::Matrix<double,6,6> &Hessian,
-	    bool computeHessian);
-
+	    bool computeHessian
+	    );
+/*
     void generateScoreDebug(const char* out, pcl::PointCloud<pcl::PointXYZ>& fixed, 
 			    pcl::PointCloud<pcl::PointXYZ>& moving);
-
+*/
     double finalscore;
-  private:
+  protected:
 
     Eigen::Matrix<double,3,6> Jest;
     Eigen::Matrix<double,18,6> Hest;
+    Eigen::Matrix<double,3,18> Zest;
+    Eigen::Matrix<double,18,18> ZHest;
+    
+    Eigen::Matrix<double,3,3> dRdx, dRdy, dRdz;
+    Eigen::Matrix<double,3,3> dRdxdx, dRdxdy, dRdxdz, dRdydy, dRdydz, dRdzdz;
     //lf = likelihood function d1 and d2 from the paper
     double lfd1,lfd2;
-    bool useSimpleDerivatives;
+    //bool useSimpleDerivatives;
     double current_resolution;
+    int iteration_counter_internal;
+
     bool isIrregularGrid;
+    std::vector<double> resolutions;
+
+    //initializes stuff;
+    void init(bool _isIrregularGrid, 
+	          bool useDefaultGridResolutions, std::vector<double> _resolutions);
 
     //pre-computes the multipliers of the derivatives for all points
-    void precomputeAngleDerivatives(Eigen::Vector3d &eulerAngles);
+    void precomputeAngleDerivatives();
     
-    //iteratively update the score gradient
-    bool update_score_gradient(Eigen::Matrix<double,6,1> &score_gradient, 
-			       Eigen::Vector3d &transformed, 
-			       Eigen::Matrix3d &Cinv); 
-    //iteratively update the hessian matrix
-    void update_hessian(Eigen::Matrix<double,6,6> &Hessian, 
-			Eigen::Vector3d &transformed, 
-			Eigen::Matrix3d &Cinv); 
+    //iteratively update the score gradient and hessian
+    virtual bool update_gradient_hessian(
+	    Eigen::Matrix<double,6,1> &score_gradient, 
+	    Eigen::Matrix<double,6,6> &Hessian, 
 
-    //pre-computes the derivative matrices Jest and Hest
-    void computeDerivatives(pcl::PointXYZ &pt);
+	    Eigen::Vector3d &m1, 
+	    Eigen::Matrix3d &C1); 
 
-    //perform line search to find the best descent rate (naive case)
-    double lineSearch(double score_here, 
-		      Eigen::Matrix<double,6,1> &score_gradient,
-		      Eigen::Matrix<double,6,1> &increment,
-		      pcl::PointCloud<pcl::PointXYZ> &cloud,
-		      NDTMap &ndt) ;
+    //pre-computes the derivative matrices Jest, Hest, Zest, ZHest
+    void computeDerivatives(PointSource &m1, Eigen::Matrix3d C1, Eigen::Matrix3d R);
+
     //perform line search to find the best descent rate (Mohre&Thuente)
     //adapted from NOX
     double lineSearchMT( Eigen::Matrix<double,6,1> &score_gradient_init,
 	    Eigen::Matrix<double,6,1> &increment,
-	    pcl::PointCloud<pcl::PointXYZ> &cloud,
+	    std::vector<NDTCell<PointSource>*> &source,
 	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &globalT,
-	    NDTMap &ndt) ;
-
-    //compute finited difference derivative, for debug
-    void fdd(pcl::PointCloud<pcl::PointXYZ> &moving, 
-	     NDTMap &fixed, 
-	     Eigen::Matrix<double,6,1> &score_gradient);
+	    NDTMap<PointTarget> &target) ;
 
     //auxiliary functions for MoreThuente line search
     struct MoreThuente {
@@ -174,23 +202,29 @@ namespace lslgeneric{
     }; //end MoreThuente
 
     //perform a subsampling depending on user choice
-    pcl::PointCloud<pcl::PointXYZ> subsample(pcl::PointCloud<pcl::PointXYZ>& original);
     int NUMBER_OF_POINTS;
-    int NUMBER_OF_ACTIVE_CELLS;
+    /* 
+    void gradient_numeric( 
+	    std::vector<NDTCell*> &moving,
+	    NDTMap &fixed,
+	    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &transform,
+	    //Eigen::Vector3d &eulerAngles,
+	    Eigen::Matrix<double,6,1> &score_gradient
+	    );
+    */
 
-  private:
+  protected:
     //storage for pre-computed angular derivatives
     Eigen::Vector3d jest13, jest23, jest04, jest14, jest24, jest05, jest15, jest25;
     Eigen::Vector3d a2,a3, b2,b3, c2,c3, d1,d2,d3, e1,e2,e3, f1,f2,f3;
-
-    std::vector<double> resolutions;
-    //initializes stuff;
-    void init(bool useDefaultGridResolutions, std::vector<double> _resolutions);
+    int NUMBER_OF_ACTIVE_CELLS;
     double normalizeAngle(double a);
+
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   };
 
 } // end namespace
- 
+
+#include <impl/ndt_matcher_d2d.hpp>
 #endif

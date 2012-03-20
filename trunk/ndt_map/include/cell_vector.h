@@ -32,85 +32,64 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef LSL_LAZZY_GRID_HH
-#define LSL_LAZZY_GRID_HH
+#ifndef LSL_CELL_VECTOR_HH
+#define LSL_CELL_VECTOR_HH
 
-#include <SpatialIndex.hh>
-//#include <pcl/kdtree/kdtree_ann.h>
+#include <spatial_index.h>
+#include <ndt_cell.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
 namespace lslgeneric {
 
-class NDTCell;
     /** \brief A spatial index represented as a grid map
         \details A grid map with delayed allocation of cells.
     */
-class LazzyGrid : public SpatialIndex {
+template <typename PointT>
+class CellVector : public SpatialIndex<PointT> {
     public:
-	LazzyGrid(double cellSize);
-	LazzyGrid(LazzyGrid *prot);
-	LazzyGrid(double sizeXmeters, double sizeYmeters, double sizeZmeters,
-		  double cellSizeX, double cellSizeY, double cellSizeZ,
-		  double _centerX, double _centerY, double _centerZ, 
-		  Cell *cellPrototype ); 
-	virtual ~LazzyGrid();
+	CellVector();
+	CellVector(Cell<PointT>* cellPrototype);
+	virtual ~CellVector();
 
-	virtual Cell* getCellForPoint(pcl::PointXYZ point);
-	virtual void addPoint(pcl::PointXYZ point);
+	virtual Cell<PointT>* getCellForPoint(const PointT &point);
+	virtual void addPoint(const PointT &point);
+        void addCellPoints(pcl::PointCloud<PointT> pc, const std::vector<size_t> &indices); 
+        void addCell(Cell<PointT>* cell);
+        void addNDTCell(NDTCell<PointT>* cell);
 
-	//these two don't make much sense...
-	virtual std::vector<Cell*>::iterator begin();
-	virtual std::vector<Cell*>::iterator end();
+        virtual typename SpatialIndex<PointT>::CellVectorItr begin();
+	virtual typename SpatialIndex<PointT>::CellVectorItr end();
 	virtual int size();
 
 	///clone - create an empty object with same type
-	virtual SpatialIndex* clone();
+	virtual SpatialIndex<PointT>* clone() const;
 	///copy - create the same object as a new instance
-	virtual SpatialIndex* copy();
+	virtual SpatialIndex<PointT>* copy() const;
 
 	///method to return all cells within a certain radius from a point
-	virtual void getNeighbors(pcl::PointXYZ point, const double &radius, std::vector<Cell*> &cells);
+	virtual void getNeighbors(const PointT &point, const double &radius, std::vector<Cell<PointT>*> &cells);
 
 	///sets the cell factory type
-	virtual void setCellType(Cell *type);
+	virtual void setCellType(Cell<PointT> *type);
 
-	virtual void setCenter(const double &cx, const double &cy, const double &cz); 
-	virtual void setSize(const double &sx, const double &sy, const double &sz); 
-
-	virtual NDTCell* getClosestNDTCell(const pcl::PointXYZ pt);
-	virtual std::vector<NDTCell*> getClosestNDTCells(const pcl::PointXYZ pt, double radius);
-	virtual Cell* getCellAt(int indX, int indY, int indZ);
-	virtual bool getLinkedAt(int indX, int indY, int indZ);
-
-	void getCellSize(float &cx, float &cy, float &cz);
-	void getGridSize(int &cx, int &cy, int &cz);
-	void getCenter(float &cx, float &cy, float &cz);
-	void getIndexForPoint(const pcl::PointXYZ& pt, int &idx, int &idy, int &idz);
 
 	void initKDTree();
-	void initialize();
-	void writeLinksVRML(FILE* fout);
 
+	NDTCell<PointT>* getClosestNDTCell(const PointT &pt);
+	std::vector<NDTCell<PointT>*> getClosestNDTCells(const PointT &point, double &radius);
+	NDTCell<PointT>* getCellIdx(unsigned int idx);
+
+	void cleanCellsAboveSize(double size);	
     private:
-	bool initialized;
-	Cell ****dataArray;
-	bool ***linkedCells;
-	Cell *protoType;
-	std::vector<Cell*> activeCells;
-	pcl::KdTreeFLANN<pcl::PointXYZ> meansTree;
-	bool centerIsSet, sizeIsSet;
-	pcl::KdTree<pcl::PointXYZ>::PointCloudPtr mp;
-
-	double sizeXmeters, sizeYmeters, sizeZmeters;
-	double cellSizeX, cellSizeY, cellSizeZ;
-	double centerX, centerY, centerZ;
-	int sizeX,sizeY,sizeZ;
-
-	bool checkCellforNDT(int indX, int indY, int indZ);
-	//void getIndexArrayForPoint(const pcl::PointXYZ& pt, int *&idx, int *&idy, int *&idz);
+	std::vector<Cell<PointT>*> activeCells;
+	Cell<PointT> *protoType;
+	pcl::KdTreeFLANN<PointT> meansTree;
+	typename pcl::KdTree<PointT>::PointCloudPtr mp;
+	bool treeUpdated;
 };
 
 
 }; //end namespace
+#include <impl/cell_vector.hpp>
 
 #endif

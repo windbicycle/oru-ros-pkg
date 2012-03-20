@@ -21,29 +21,25 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
-set (LIBRARY_SOURCES
-	src/PointCloudUtils.cc
-    )
-
 #common commands for building c++ executables and libraries
-rosbuild_add_library(${PROJECT_NAME} ${LIBRARY_SOURCES})
+#rosbuild_add_library(${PROJECT_NAME} ${LIBRARY_SOURCES})
 #target_link_libraries(${PROJECT_NAME} )
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 rosbuild_add_executable(vrml_reader src/pointcloud_reader_node.cc)
-target_link_libraries(vrml_reader ${PROJECT_NAME})
+#target_link_libraries(vrml_reader ${PROJECT_NAME})
 
 rosbuild_add_executable(vrml_writer src/pointcloud_writer_node.cc)
-target_link_libraries(vrml_writer ${PROJECT_NAME})
+#target_link_libraries(vrml_writer ${PROJECT_NAME})
 
 rosbuild_add_executable(logConverter test/processLogDir.cc)
-target_link_libraries(logConverter ${PROJECT_NAME})
+#target_link_libraries(logConverter ${PROJECT_NAME})
 
 rosbuild_add_executable(subsample test/subsampleRandom.cc)
-target_link_libraries(subsample ${PROJECT_NAME})
+#target_link_libraries(subsample ${PROJECT_NAME})
 
 rosbuild_add_executable(rpy2q test/rpy2q.cc)
-target_link_libraries(rpy2q ${PROJECT_NAME})
+#target_link_libraries(rpy2q ${PROJECT_NAME})
 
 rosbuild_add_executable(trajectory test/compareTrajectory.cc)
-target_link_libraries(trajectory ${PROJECT_NAME})
+#target_link_libraries(trajectory ${PROJECT_NAME})

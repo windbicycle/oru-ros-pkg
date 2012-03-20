@@ -12,6 +12,7 @@
 #include "pcl/features/fpfh.h"
 #include "pcl/registration/ia_ransac.h"
 #include "pcl/registration/icp.h"
+#include <pcl/surface/mls.h>
 
 #include <NDTMatcherF2F.hh>
 #include <PointCloudUtils.hh>
@@ -23,10 +24,11 @@ class FeatureCloud
 	typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 	typedef pcl::PointCloud<pcl::Normal> SurfaceNormals;
 	typedef pcl::PointCloud<pcl::FPFHSignature33> LocalFeatures;
-	typedef pcl::KdTreeFLANN<pcl::PointXYZ> SearchMethod;
+	//typedef pcl::KdTreeFLANN<pcl::PointXYZ> SearchMethod;
+
 
 	FeatureCloud () :
-	    search_method_xyz_ (new SearchMethod),
+	    //search_method_xyz_ (new SearchMethod),
 	    normal_radius_ (0.05),
 	    feature_radius_ (0.05)
         {
@@ -113,7 +115,8 @@ class FeatureCloud
 	PointCloud::Ptr xyz_;
 	SurfaceNormals::Ptr normals_;
 	LocalFeatures::Ptr features_;
-	SearchMethod::Ptr search_method_xyz_;
+	//SearchMethod::Ptr search_method_xyz_;
+	pcl::Feature<pcl::PointXYZ, pcl::Normal>::KdTreePtr search_method_xyz_;
 
 	// Parameters
 	float normal_radius_;
@@ -127,7 +130,7 @@ class TemplateRegistration
 	// A struct for storing alignment results
 
 	typedef Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> Result;
-	
+
 	TemplateRegistration () :
 	    min_sample_distance_ (0.05),
 	    max_correspondence_distance_ (0.01*0.01),
@@ -201,30 +204,30 @@ bool matchICP(pcl::PointCloud<pcl::PointXYZ> &fixed,  pcl::PointCloud<pcl::Point
     gr2.filter(*cloud_out);
     //*cloud_in = moving;
     //*cloud_out= fixed;
-    
-    
+
+
     pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
 
-    icp.setMaximumIterations(10000);    
+    icp.setMaximumIterations(10000);
     std::cout<<"max itr are "<<icp.getMaximumIterations()<<std::endl;
     icp.setInputCloud(cloud_in);
     icp.setInputTarget(cloud_out);
-   
+
     icp.setRANSACOutlierRejectionThreshold (2);
-    icp.setMaxCorrespondenceDistance(10); 
-    icp.setTransformationEpsilon(0.00001); 
+    icp.setMaxCorrespondenceDistance(10);
+    icp.setTransformationEpsilon(0.00001);
 //    cout<<"ransac outlier thersh   : "<<icp.getRANSACOutlierRejectionThreshold ()<<endl;
-//    cout<<"correspondance max dist : "<<icp.getMaxCorrespondenceDistance() << endl; 
-//    cout<<"epsilon : "<<icp.getTransformationEpsilon() << endl; 
+//    cout<<"correspondance max dist : "<<icp.getMaxCorrespondenceDistance() << endl;
+//    cout<<"epsilon : "<<icp.getTransformationEpsilon() << endl;
     pcl::PointCloud<pcl::PointXYZ> Final;
     icp.align(Final);
-    
+
 
 //    std::cout << "has converged:" << icp.hasConverged() << " score: " <<
 //	icp.getFitnessScore() << std::endl;
 //    std::cout << icp.getFinalTransformation() << std::endl;
 
-    //Eigen::Transform<float,3,Eigen::Affine,Eigen::ColMajor> tTemp; 
+    //Eigen::Transform<float,3,Eigen::Affine,Eigen::ColMajor> tTemp;
     Tout = (icp.getFinalTransformation()).cast<double>();
 
 /*    char fname[50];
@@ -252,7 +255,7 @@ main (int argc, char **argv)
 
     struct timeval tv_start, tv_end1, tv_end2;
     TemplateRegistration::Result ToutFPFH, ToutICP, ToutNDT, Tout;
-   
+
     // Load the target cloud PCD file
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloudM (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloudF (new pcl::PointCloud<pcl::PointXYZ>);
@@ -260,13 +263,13 @@ main (int argc, char **argv)
 
     *cloudM = lslgeneric::readVRML(argv[1]);
     *cloudF = lslgeneric::readVRML(argv[2]);
-    
+
     double __res[] = {0.2, 0.4, 1, 2};
     std::vector<double> resolutions (__res, __res+sizeof(__res)/sizeof(double));
     lslgeneric::NDTMatcherF2F matcherF2F(false, false, false, resolutions);
     bool ret = matcherF2F.match(*cloudF,*cloudM,ToutNDT);
     Final1 = lslgeneric::transformPointCloud(ToutNDT,*cloudM);
-    
+
    /* char f[50];
     snprintf(f,49,"/home/tsv/ndt_tmp/c2_offset.wrl");
     FILE *fo = fopen(f,"w");
@@ -279,7 +282,7 @@ main (int argc, char **argv)
     */
     //start timing
     gettimeofday(&tv_start,NULL);
-    
+
     pcl::VoxelGrid<pcl::PointXYZ> gr1,gr2;
     gr1.setLeafSize(0.05,0.05,0.05);
     gr2.setLeafSize(0.05,0.05,0.05);
@@ -296,7 +299,7 @@ main (int argc, char **argv)
     cloudF->width = cloudF->points.size();
     cloudM->is_dense = false;
     cloudF->is_dense = false;
-    
+
     // Assign to the target FeatureCloud
     FeatureCloud target_cloud, moving_cloud;
     target_cloud.setInputCloud (cloudF);
@@ -304,7 +307,7 @@ main (int argc, char **argv)
 
     TemplateRegistration templateReg;
     templateReg.setTargetCloud (target_cloud);
-    
+
     // Find the best template alignment
     templateReg.align(moving_cloud,ToutFPFH);
     //stop timing1
@@ -327,7 +330,7 @@ main (int argc, char **argv)
 	<<" (norm) "<<Tout.rotation().eulerAngles(0,1,2).norm()<<std::endl;
     std::cout<<" TIME: "<<
 	(tv_end1.tv_sec-tv_start.tv_sec)*1000.+(tv_end1.tv_usec-tv_start.tv_usec)/1000.<<std::endl;
-    
+
     Tout = ToutICP*ToutFPFH*(ToutNDT.inverse());
     std::cout<<"FPFH+ICP\n";
     std::cout<<"E translation "<<Tout.translation().transpose()
@@ -336,7 +339,7 @@ main (int argc, char **argv)
 	<<" (norm) "<<Tout.rotation().eulerAngles(0,1,2).norm()<<std::endl;
     std::cout<<" TIME: "<<
 	(tv_end2.tv_sec-tv_start.tv_sec)*1000.+(tv_end2.tv_usec-tv_start.tv_usec)/1000.<<std::endl;
-    
+
     char fname[50];
     snprintf(fname,49,"/home/tsv/ndt_tmp/c2_offset.wrl");
     FILE *fout = fopen(fname,"w");

@@ -1,28 +1,27 @@
-#include <PointCloudUtils.hh>
-#include <Eigen/Eigen>
+namespace lslgeneric {
 
-using namespace std;
-using namespace lslgeneric;
-
-pcl::PointCloud<pcl::PointXYZ> lslgeneric::readVRML(const char* fname) {
-    pcl::PointCloud<pcl::PointXYZ> cloud;
+template< typename PointT>
+pcl::PointCloud<PointT> readVRML(const char* fname) 
+{
+    pcl::PointCloud<PointT> cloud;
     FILE *vrml = fopen(fname,"r");
 
-    cloud = lslgeneric::readVRML(vrml);
+    cloud = lslgeneric::readVRML<PointT>(vrml);
 
     if(vrml!= NULL) fclose(vrml);
     return cloud;
 }
 
-pcl::PointCloud<pcl::PointXYZ> lslgeneric::readVRML(FILE* vrml) {
+template< typename PointT>
+pcl::PointCloud<PointT> readVRML(FILE* vrml) {
 
-    pcl::PointCloud<pcl::PointXYZ> cloud;
+    pcl::PointCloud<PointT> cloud;
     char *line = NULL;
     size_t len;
     bool first=true;
     size_t length = 0;
     if(vrml == NULL) {
-	cout<<"couldn't process vrml file\n";
+	std::cout<<"couldn't process vrml file\n";
 	return cloud;
     }
     
@@ -45,7 +44,7 @@ pcl::PointCloud<pcl::PointXYZ> lslgeneric::readVRML(FILE* vrml) {
 		first=true;
 		continue;
 	    }
-	    pcl::PointXYZ pt;
+	    PointT pt;
 	    if(token == NULL) continue;
 	    pt.x = atof(token);
 	    token = strtok(NULL," ");
@@ -64,19 +63,21 @@ pcl::PointCloud<pcl::PointXYZ> lslgeneric::readVRML(FILE* vrml) {
 }
 
 ///with intensity info from the colors
-pcl::PointCloud<pcl::PointXYZI> lslgeneric::readVRMLIntensity(const char* fname) {
-    pcl::PointCloud<pcl::PointXYZI> cloud;
+template< typename PointT>
+pcl::PointCloud<PointT> readVRMLIntensity(const char* fname) {
+    pcl::PointCloud<PointT> cloud;
     FILE *vrml = fopen(fname,"r");
 
-    cloud = lslgeneric::readVRMLIntensity(vrml);
+    cloud = lslgeneric::readVRMLIntensity<PointT>(vrml);
 
     fclose(vrml);
     return cloud;
 }
 
-pcl::PointCloud<pcl::PointXYZI> lslgeneric::readVRMLIntensity(FILE* vrml) {
+template< typename PointT>
+pcl::PointCloud<PointT> readVRMLIntensity(FILE* vrml) {
 
-    pcl::PointCloud<pcl::PointXYZI> cloud;
+    pcl::PointCloud<PointT> cloud;
     char *line = NULL;
     size_t len;
     bool first=true;
@@ -111,7 +112,7 @@ pcl::PointCloud<pcl::PointXYZI> lslgeneric::readVRMLIntensity(FILE* vrml) {
 		    first=true;
 		    continue;
 		}
-		pcl::PointXYZI pt;
+		PointT pt;
 		if(token == NULL) continue;
 		pt.x = atof(token);
 		token = strtok(NULL," ");
@@ -158,25 +159,55 @@ pcl::PointCloud<pcl::PointXYZI> lslgeneric::readVRMLIntensity(FILE* vrml) {
     return cloud;
 }
 
-void lslgeneric::writeToVRML(const char* fname, pcl::PointCloud<pcl::PointXYZI> &pc) {
+template< typename PointT>
+void writeToVRML(const char* fname, pcl::PointCloud<PointT> &pc, Eigen::Vector3d col) {
     FILE *out = fopen(fname,"w");
     fprintf(out,"#VRML V2.0 utf8\n");
-    writeToVRML(out,pc);
+    writeToVRML<PointT>(out,pc,col);
     fclose(out);
 }
 
-void lslgeneric::writeToVRML(FILE* fout, pcl::PointCloud<pcl::PointXYZI> &pc, 
+template< typename PointT>
+void writeToVRML(FILE* fout, pcl::PointCloud<PointT> &pc, 
 	    Eigen::Vector3d col) {
     fprintf(fout,"Shape {\n geometry PointSet {\n coord Coordinate {\n point [\n");
     for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
-	pcl::PointXYZI thisPoint = pc.points[pit];
+	PointT thisPoint = pc.points[pit];
 	if(std::isnan(thisPoint.x) || std::isnan(thisPoint.y) || std::isnan(thisPoint.z)) continue;
 	fprintf(fout,"%.5lf %.5lf %.5lf\n", thisPoint.x, thisPoint.y, thisPoint.z);
     }
 
     fprintf(fout,"]\n}\n color Color {\n color [\n");
     for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
-	pcl::PointXYZI thisPoint = pc.points[pit];
+	PointT thisPoint = pc.points[pit];
+	if(std::isnan(thisPoint.x) || std::isnan(thisPoint.y) || std::isnan(thisPoint.z)) continue;
+	fprintf(fout,"%.2f,%.2f,%.2f\n",col(0),col(1),col(2));
+    }
+    fprintf(fout,"]\n }\n }\n }\n");
+
+}
+
+template< typename PointT>
+void writeToVRMLIntensity(const char* fname, pcl::PointCloud<PointT> &pc, Eigen::Vector3d col) {
+    FILE *out = fopen(fname,"w");
+    fprintf(out,"#VRML V2.0 utf8\n");
+    writeToVRMLIntensity<PointT>(out,pc,col);
+    fclose(out);
+}
+
+template< typename PointT>
+void writeToVRMLIntensity(FILE* fout, pcl::PointCloud<PointT> &pc, 
+	    Eigen::Vector3d col) {
+    fprintf(fout,"Shape {\n geometry PointSet {\n coord Coordinate {\n point [\n");
+    for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
+	PointT thisPoint = pc.points[pit];
+	if(std::isnan(thisPoint.x) || std::isnan(thisPoint.y) || std::isnan(thisPoint.z)) continue;
+	fprintf(fout,"%.5lf %.5lf %.5lf\n", thisPoint.x, thisPoint.y, thisPoint.z);
+    }
+
+    fprintf(fout,"]\n}\n color Color {\n color [\n");
+    for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
+	PointT thisPoint = pc.points[pit];
 	if(std::isnan(thisPoint.x) || std::isnan(thisPoint.y) || std::isnan(thisPoint.z)) continue;
 	if(col == Eigen::Vector3d(1,1,1)) {
 	    fprintf(fout,"%.5f,%.5f,%.5f\n",thisPoint.intensity, thisPoint.intensity, thisPoint.intensity);
@@ -188,37 +219,43 @@ void lslgeneric::writeToVRML(FILE* fout, pcl::PointCloud<pcl::PointXYZI> &pc,
 
 }
 
-void lslgeneric::writeToVRML(const char* fname, pcl::PointCloud<pcl::PointXYZ> &pc, Eigen::Vector3d col) {
+template< typename PointT>
+void writeToVRMLColor(const char* fname, pcl::PointCloud<PointT> &pc) {
     FILE *out = fopen(fname,"w");
     fprintf(out,"#VRML V2.0 utf8\n");
-    writeToVRML(out,pc,col);
+    writeToVRMLColor<PointT>(out,pc);
     fclose(out);
 }
 
-void lslgeneric::writeToVRML(FILE* fout, pcl::PointCloud<pcl::PointXYZ> &pc, Eigen::Vector3d col) {
+template< typename PointT>
+void writeToVRMLColor(FILE* fout, pcl::PointCloud<PointT> &pc) {
     fprintf(fout,"Shape {\n geometry PointSet {\n coord Coordinate {\n point [\n");
     for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
-	pcl::PointXYZ thisPoint = pc.points[pit];
+	PointT thisPoint = pc.points[pit];
 	if(std::isnan(thisPoint.x) || std::isnan(thisPoint.y) || std::isnan(thisPoint.z)) continue;
 	fprintf(fout,"%.5lf %.5lf %.5lf\n", thisPoint.x, thisPoint.y, thisPoint.z);
     }
 
     fprintf(fout,"]\n}\n color Color {\n color [\n");
     for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
-	pcl::PointXYZ thisPoint = pc.points[pit];
+	PointT thisPoint = pc.points[pit];
 	if(std::isnan(thisPoint.x) || std::isnan(thisPoint.y) || std::isnan(thisPoint.z)) continue;
-	fprintf(fout,"%.2f,%.2f,%.2f\n",col(0),col(1),col(2));
+	uint32_t rgb = *reinterpret_cast<int*>(&thisPoint.rgb);
+	uint8_t r = (rgb >> 16) & 0x0000ff;
+	uint8_t g = (rgb >> 8)  & 0x0000ff;
+	uint8_t b = (rgb)       & 0x0000ff;
+	fprintf(fout,"%.5f,%.5f,%.5f\n",(double) r/255., (double) g/255., (double) b/255.);
     }
     fprintf(fout,"]\n }\n }\n }\n");
 
 }
 
-
-pcl::PointCloud<pcl::PointXYZ> lslgeneric::transformPointCloud(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &Tr, const pcl::PointCloud<pcl::PointXYZ> &pc){
+template< typename PointT>
+pcl::PointCloud<PointT> transformPointCloud(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &Tr, const pcl::PointCloud<PointT> &pc){
     Eigen::Transform<float,3,Eigen::Affine,Eigen::ColMajor> T = Tr.cast<float>();
-    pcl::PointCloud<pcl::PointXYZ> cloud;  
+    pcl::PointCloud<PointT> cloud;  
     for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
-	pcl::PointXYZ thisPoint = pc.points[pit];
+	PointT thisPoint = pc.points[pit];
 	Eigen::Map<Eigen::Vector3f> pt((float*)&thisPoint,3);
 	pt = T*pt;
 	cloud.points.push_back(thisPoint);
@@ -228,24 +265,20 @@ pcl::PointCloud<pcl::PointXYZ> lslgeneric::transformPointCloud(Eigen::Transform<
     return cloud; 
 }
 
-pcl::PointCloud<pcl::PointXYZI> lslgeneric::transformPointCloud(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &Tr, const pcl::PointCloud<pcl::PointXYZI> &pc){
-    Eigen::Transform<float,3,Eigen::Affine,Eigen::ColMajor> T = Tr.cast<float>();
-    pcl::PointCloud<pcl::PointXYZI> cloud;  
-    for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
-	pcl::PointXYZI thisPoint = pc.points[pit];
-	Eigen::Map<Eigen::Vector3f> pt((float*)&thisPoint,3);
-	pt = T*pt;
-	cloud.points.push_back(thisPoint);
-    }
-    cloud.width = pc.width;
-    cloud.height = pc.height;
-    return cloud; 
-}
-
-void lslgeneric::transformPointCloudInPlace(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &Tr, pcl::PointCloud<pcl::PointXYZ> &pc) {
+template< typename PointT>
+void transformPointCloudInPlace(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &Tr, pcl::PointCloud<PointT> &pc) {
     Eigen::Transform<float,3,Eigen::Affine,Eigen::ColMajor> T = Tr.cast<float>();
     for(unsigned int pit=0; pit<pc.points.size(); ++pit) {
 	Eigen::Map<Eigen::Vector3f> pt((float*)&pc.points[pit],3);
 	pt = T*pt;
     }
+}
+
+template< typename PointT>
+double geomDist(PointT p1, PointT p2) {
+    Eigen::Vector3d v;
+    v << p1.x-p2.x, p1.y-p2.y, p1.z-p2.z;
+    return v.norm();
+}
+
 }

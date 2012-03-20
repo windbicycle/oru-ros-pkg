@@ -37,7 +37,6 @@
 
 #include <vector>
 #include <cstdio>
-#include "pcl/point_types.h"
 
 namespace lslgeneric {
 
@@ -47,34 +46,88 @@ namespace lslgeneric {
       * are expected from a spatial cell and eventually be able to interchange
       * cell classes in \ref SpatialIndex implementations.
       */ 
-    class Cell {
+    template<typename PointT> 
+    class Cell 
+    {
 
 	protected:
-	    pcl::PointXYZ center;
-	    double xsize, ysize, zsize;
+	    PointT center_;
+	    double xsize_, ysize_, zsize_;
 
 	public:
-	    Cell();
-	    Cell(pcl::PointXYZ _center, double &xsize, double &ysize, double &zsize);
-	    Cell(const Cell& other);
-	    virtual ~Cell();
+	    Cell() { }
+	    inline Cell(PointT &center, double &xsize, double &ysize, double &zsize) 
+	    {
+		center_ = center;
+		xsize_ = xsize;
+		ysize_ = ysize;
+		zsize_ = zsize;
+	    }
+	    inline Cell(const Cell& other) 
+	    {
+		center_ = other.center_;
+		xsize_ = other.xsize_;
+		ysize_ = other.ysize_;
+		zsize_ = other.zsize_;
+	    }
+	    virtual ~Cell() { }
 
-	    void setCenter(pcl::PointXYZ cn);
-	    void setDimensions(const double &xs, const double &ys, const double &zs);
-	    pcl::PointXYZ getCenter();
-	    void getDimensions(double &xs, double &ys, double &zs) const ;
-	    bool isInside(pcl::PointXYZ pt);
+	    inline void setCenter(const PointT &cn) 
+	    {
+		center_ = cn;
+	    }
+	    inline void setDimensions(const double &xs, const double &ys, const double &zs) 
+	    {
+		xsize_ = xs;
+		ysize_ = ys;
+		zsize_ = zs;
+	    }
+
+	    inline PointT getCenter() const 
+	    {
+		return center_;
+	    }
+	    inline void getDimensions(double &xs, double &ys, double &zs) const  
+	    {
+		xs = xsize_;
+		ys = ysize_;
+		zs = zsize_;
+	    }
+	    inline bool isInside(const PointT pt) const {
+		if(pt.x < center_.x-xsize_/2 || pt.x > center_.x+xsize_/2) {
+		    return false;
+		}
+		if(pt.y < center_.y-ysize_/2 || pt.y > center_.y+ysize_/2) {
+		    return false;
+		}
+		if(pt.z < center_.z-zsize_/2 || pt.z > center_.z+zsize_/2) {
+		    return false;
+		}
+		return true;
+	    }
 
 	    ///clone - create an empty object with same type
-	    virtual Cell* clone();
+	    inline virtual Cell<PointT>* clone() const 
+	    {
+		Cell<PointT> *ret = new Cell<PointT>();
+		return(ret);
+	    }
 	    ///copy - create the same object as a new instance
-	    virtual Cell* copy();
+	    virtual Cell<PointT>* copy() const 
+	    {
+		Cell<PointT> *ret = new Cell<PointT>();
+		ret->setDimensions(xsize_,ysize_,zsize_);
+		ret->setCenter(center_);
+		return(ret);
+	    }
 
-	    virtual void addPoint(pcl::PointXYZ pt) { }
+	    virtual void addPoint(PointT &pt) { }
 
     };
 
 
 } //end namespace
+
+//#include<impl/cell.hpp>
 
 #endif

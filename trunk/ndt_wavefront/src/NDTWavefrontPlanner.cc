@@ -547,8 +547,9 @@ NDTCell* NDTWavefrontPlanner::findClosestProper(NDTCell *cell, double cellSize) 
 	if(nd->getClass() != NDTCell::HORIZONTAL) continue;
 	double dist = geomDist(nd->getCenter(),cell->getCenter());
 	if(dist < mindist) {
-	    dist = mindist;
+	    mindist = dist;
 	    closest = nd;
+//	    cout<<"dist to closest: "<<dist<<" center "<<nd->getCenter()<<endl;
 	}
     }
     return closest;

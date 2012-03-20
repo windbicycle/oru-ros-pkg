@@ -3,7 +3,7 @@
 #include "ros/ros.h"
 #include <tf/transform_broadcaster.h>
 #include "pcl/io/pcd_io.h"
-#include <PointCloudUtils.hh>
+#include <pointcloud_utils.h>
 
 int
 main (int argc, char** argv)
@@ -17,7 +17,7 @@ main (int argc, char** argv)
     pcl::PointCloud<pcl::PointXYZ> cloud;
 
     //load vrml file into cloud
-    cloud = lslgeneric::readVRML(argv[1]);   
+    cloud = lslgeneric::readVRML<pcl::PointXYZ>(argv[1]);   
     pcl::toROSMsg(cloud,cloudMSG); 
     ROS_INFO ("Loaded %d data points from %s with the following fields: %s", (int)(cloudMSG.width * cloudMSG.height), 
 	    argv[1], pcl::getFieldsList (cloudMSG).c_str ());

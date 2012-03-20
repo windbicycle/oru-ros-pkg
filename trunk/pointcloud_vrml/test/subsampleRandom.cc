@@ -1,4 +1,4 @@
-#include <PointCloudUtils.hh>
+#include <pointcloud_utils.h>
 
 using namespace std;
 using namespace lslgeneric;
@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
 	return -1;
     }
 
-    pcl::PointCloud<pcl::PointXYZ> pc = readVRML(argv[1]), pcs;
+    pcl::PointCloud<pcl::PointXYZ> pc = readVRML<pcl::PointXYZ>(argv[1]), pcs;
     char fname[500];
     snprintf(fname,499,"%s_subsampled.wrl",argv[1]);
 
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 	    pcs.points.push_back(pt);
 	}
     }
-    writeToVRML(fname,pcs);
+    writeToVRML<pcl::PointXYZ>(fname,pcs);
 
     return 0;
 }

@@ -1,11 +1,12 @@
 #ifndef NDT_HISTOGRAM_HH
 #define NDT_HISTOGRAM_HH
 
-#include <NDTMap.hh>
+#include <ndt_map.h>
 #include <vector>
 
 namespace lslgeneric {
 
+template <typename PointT>    
 class NDTHistogram {
 
     private:
@@ -27,23 +28,22 @@ class NDTHistogram {
 	std::vector<int> dist_histogramBinsLine[3];
 	std::vector<int> dist_histogramBinsSphere[3];
 
-	std::vector<Eigen::Vector3d,Eigen::aligned_allocator<Eigen::Vector3d> > directions;
 	std::vector<Eigen::Vector3d,Eigen::aligned_allocator<Eigen::Vector3d> > averageDirections;
-	void constructHistogram(NDTMap &map);
+	void constructHistogram(NDTMap<PointT> &map);
 	void incrementLineBin(double d);
 	void incrementFlatBin(Eigen::Vector3d &normal, double d);
 	void incrementSphereBin(double d);
 
 	void computeDirections();
-	void closedFormSolution(pcl::PointCloud<pcl::PointXYZI> &src, pcl::PointCloud<pcl::PointXYZI> &trgt,
+	void closedFormSolution(pcl::PointCloud<PointT> &src, pcl::PointCloud<PointT> &trgt,
 				Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T);
     public:
 	NDTHistogram();
-	NDTHistogram (NDTMap &map);
-	NDTHistogram (const NDTHistogram& other);
+	NDTHistogram (NDTMap<PointT> &map);
+	NDTHistogram (const NDTHistogram<PointT>& other);
 
 	//get the transform that brings me close to target
-	void bestFitToHistogram(NDTHistogram &target, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, bool bound_transform = true);
+	void bestFitToHistogram(NDTHistogram<PointT> &target, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, bool bound_transform = true);
 	void printHistogram(bool bMatlab=false);
 
 	//call this to get the 1/2/3 best option, AFTER a call to bestFitToHistogram
@@ -57,9 +57,11 @@ class NDTHistogram {
 	    return ret;
 	}
 
-	pcl::PointCloud<pcl::PointXYZI> getDominantDirections(int nDirections);
-	double getSimilarity(NDTHistogram &other);
-	double getSimilarity(NDTHistogram &other, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T);
+	pcl::PointCloud<PointT> getDominantDirections(int nDirections);
+	double getSimilarity(NDTHistogram<PointT> &other);
+	double getSimilarity(NDTHistogram<PointT> &other, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T);
+	
+	std::vector<Eigen::Vector3d,Eigen::aligned_allocator<Eigen::Vector3d> > directions;
     public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -67,4 +69,5 @@ class NDTHistogram {
 
 };
 
+#include <impl/ndt_histogram.hpp>
 #endif

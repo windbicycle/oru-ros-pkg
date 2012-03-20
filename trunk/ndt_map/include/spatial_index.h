@@ -35,8 +35,8 @@
 #ifndef SPATIAL_INDEX_HH
 #define SPATIAL_INDEX_HH
 
-#include "pcl/point_types.h"
-#include <Cell.hh>
+#include<vector>
+#include<cell.h>
 
 namespace lslgeneric {
 
@@ -49,39 +49,42 @@ namespace lslgeneric {
 	newly observed points. It should also be possible to check the size of
 	the occupied space, as well as to get cells neighboring any given cell.
     */
+    template <typename PointT>
     class SpatialIndex {
 	protected:
 
 	public:
+	    typedef std::vector<Cell<PointT>*> CellPtrVector;
+	    typedef typename CellPtrVector::iterator CellVectorItr;
+
 	    virtual ~SpatialIndex() {
 	    }
 
-	    virtual Cell* getCellForPoint(pcl::PointXYZ point) = 0;
-	    virtual void addPoint(pcl::PointXYZ point) = 0;
+	    virtual Cell<PointT>* getCellForPoint(const PointT &point) = 0;
+	    virtual void addPoint(const PointT &point) = 0;
 
 	    ///iterator through all cells in index, points at the begining
-	    virtual std::vector<Cell*>::iterator begin() = 0;
+	    virtual CellVectorItr begin() = 0;
 	    ///iterator through all cells in index, points at the end
-	    virtual std::vector<Cell*>::iterator end() = 0;
+	    virtual CellVectorItr end() = 0;
 	    // should be 'pure'?
-	    virtual int size() { return -1; }
+	    virtual int size() const { return -1; }
 
 	    ///clone - create an empty object with same type
-	    virtual SpatialIndex* clone() = 0;
+	    virtual SpatialIndex<PointT>* clone() const = 0;
 	    ///copy - create the same object as a new instance
-	    virtual SpatialIndex* copy() = 0;
+	    virtual SpatialIndex<PointT>* copy() const = 0;
 
 	    ///the following methods provide index specific functionalities and 
 	    ///don't have to be implemented by all sub-classes
 	    virtual void setCenter(const double &cx, const double &cy, const double &cz) {}
 	    virtual void setSize(const double &sx, const double &sy, const double &sz) {}
 	    
-	    
 	    ///method to return all cells within a certain radius from a point
-	    virtual void getNeighbors(pcl::PointXYZ point, const double &radius, std::vector<Cell*> &cells) = 0;
+	    virtual void getNeighbors(const PointT &point, const double &radius, std::vector<Cell<PointT>*> &cells)= 0;
 
 	    ///sets the cell factory type
-	    virtual void setCellType(Cell *type) = 0;
+	    virtual void setCellType(Cell<PointT> *type) = 0;
     };
 
 } //end namespace
