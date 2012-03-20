@@ -87,9 +87,9 @@ void lsl_od::extractDrivable(pcl::PointCloud<pcl::PointXYZ> pc,
     pcl::PointCloud<pcl::PointXYZ> in,out;
     
     pcl::PointXYZ scannerPosition;
-    scannerPosition.x =4;
-    scannerPosition.y =0;
-    scannerPosition.z =0;
+    scannerPosition.x =1.6;
+    scannerPosition.y =-0.15;
+    scannerPosition.z =-0.6;
     Eigen::Vector3d robotSize, inclinationConstraints;
     robotSize<<8,5,3;
     inclinationConstraints<<10*M_PI/180,9*M_PI/180,2*M_PI;

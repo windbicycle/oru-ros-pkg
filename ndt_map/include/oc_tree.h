@@ -35,106 +35,84 @@
 #ifndef OCT_TREE_HH
 #define OCT_TREE_HH
 
-#include <SpatialIndex.hh>
-#include <Cell.hh>
+#include <spatial_index.h>
+#include <ndt_cell.h>
 #include <vector>
 #include <cstdio>
-
 #include <Eigen/Core>
 
 namespace lslgeneric {
 
-    /** \brief Base cell class for \ref OctTree based indeces.
-      * \details The basic OctCell is a wrapper around an std::vector 
-      * point container. 
-      */
-    class OctCell : public Cell {
-	public:
-	    OctCell();
-	    virtual ~OctCell() { points.clear(); }
-	    OctCell(pcl::PointXYZ  _center, double &xsize, double &ysize, double &zsize);
-	    OctCell(const OctCell& other);
-	    std::vector<pcl::PointXYZ > points;
-	    
-	    virtual void writeToVRML(FILE *fout, Eigen::Vector3f color);
-	    virtual Cell* clone();
-	    virtual Cell* copy();
-	    virtual void addPoint(pcl::PointXYZ pt) {
-		points.push_back(pt);
-	    }
-	public:
-	      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-    };
-    class NDTCell;
-
     /** \brief An Oct Tree data structure for storing 3D points
       * \details This is an implementation of a \ref SpatialIndex that splits space 
       * using a tree structure. Each node has 8 children that do not necessarily have
-      * associated points. Points are stored using \ref OctCell cells. When inserting 
+      * associated points. Points are stored using \ref NDTCell cells. When inserting 
       * points the tree is split until the size BIG_CELL is reached. Further splits occur
       * when the number of points in a leaf goes above the MAX_POINTS threshold
       */
-    class OctTree : public SpatialIndex {
+    template <typename PointT> 
+    class OctTree : public SpatialIndex<PointT> {
 	protected:
-	    OctTree* parent;
-	    OctTree *children[8];
-	    OctCell *myCell; 
+	    OctTree* parent_;
+	    OctTree *children_[8];
+	    NDTCell<PointT> *myCell_; 
 	    
-	    std::vector<Cell*> myLeafs;
-	    unsigned int depth;
-	    bool leaf;
-	    bool leafsCached;
-
-	    /// @param maximum depth of the tree, after which no more splits
-	    static int MAX_DEPTH;
+	    std::vector< Cell<PointT>* > myLeafs_;
+	    unsigned int depth_;
+	    bool leaf_;
+	    bool leafsCached_;
 	    
-
 	    ///checks in which child node a point would belong
-	    virtual size_t getIndexForPoint(const pcl::PointXYZ pt);
+	    virtual size_t getIndexForPoint(const PointT &pt) const;
+	    
 	    ///fills in the leafs vector when needed
 	    virtual void computeLeafCells();
 
 
 	public:
 	    //--- OctTree Parameters ---//
+	    /// @param maximum depth of the tree, after which no more splits
+	    int MAX_DEPTH;
 	    /// @param number of points after which to split cell
-	    static int MAX_POINTS;
+	    int MAX_POINTS;
 	    /// @param at this level do not split any more
-	    static double SMALL_CELL_SIZE;
+	    double SMALL_CELL_SIZE;
 	    /// @param split tree up to this size before allocating a cell
-	    static double BIG_CELL_SIZE;
-	    static bool parametersSet;
+	    double BIG_CELL_SIZE;
+	    bool parametersSet_;
 	    
 	    ///dummy default constructor
 	    OctTree();
 	    ///creates an oct tree node with known center and size
-	    OctTree(pcl::PointXYZ center, double xsize, double ysize, 
-		    double zsize, OctCell* type, OctTree *_parent=NULL, unsigned int _depth=0);
+	    OctTree(PointT center, double xsize, double ysize, 
+		    double zsize, NDTCell<PointT>* type, OctTree<PointT> *_parent=NULL, unsigned int _depth=0);
 	    virtual ~OctTree();
 
-	    ///use this to set the parameters for the OctTree. If not called before creating the
-	    ///first leaf, default parameters will be used. \note be careful, remember that the parameters are static, thus global
-	    static void setParameters(double _BIG_CELL_SIZE	=4,
+	    ///use this to set the parameters for the OctTree - will *only* apply to leafs of the current node. 
+	    void setParameters(double _BIG_CELL_SIZE	=4,
 				      double _SMALL_CELL_SIZE   =0.5 ,	
 			              int _MAX_POINTS		=10,
 				      int _MAX_DEPTH		=20
 				     );
 	    
 	    ///add a point to the index
-	    virtual void addPoint(pcl::PointXYZ point);
+	    virtual void addPoint(const PointT &point);
+
 	    ///returns a pointer to the cell containing the point or NULL if not found
-	    virtual Cell* getCellForPoint(pcl::PointXYZ point);
-	    virtual Cell* getMyCell();
-	    virtual OctTree* getLeafForPoint(pcl::PointXYZ point);
+	    virtual Cell<PointT>* getCellForPoint(const PointT &point);
+	    inline virtual Cell<PointT>* getMyCell() 
+	    {
+		return myCell_;
+	    }
+	    virtual OctTree<PointT>* getLeafForPoint(const PointT &point);
 	
 	    ///sets the prototype for a cell
-	    virtual void setCellType(Cell *type);
+	    virtual void setCellType(Cell<PointT> *type);
 
 	    ///iterator through all cells in index, points at the begining
-	    virtual std::vector<Cell*>::iterator begin();
+	    virtual typename SpatialIndex<PointT>::CellVectorItr begin();
 	    ///iterator through all cells in index, points at the end
-	    virtual std::vector<Cell*>::iterator end();
+	    virtual typename SpatialIndex<PointT>::CellVectorItr end();
 
 	    ///recursively print the tree
 	    void print();
@@ -144,37 +122,36 @@ namespace lslgeneric {
 	    void writeToVRML(FILE* fout);
 
 	    ///returns a child at the specified index
-	    inline OctTree* getChild(int idx) { 
+	    inline OctTree<PointT>* getChild(int idx) { 
 		if(idx<8 && idx>=0) {
-		    return children[idx];
+		    return children_[idx];
 		} 
 		return NULL;
 	    }
-
 	    inline bool isLeaf() {
-		return leaf;
+		return leaf_;
 	    }
 	    
 	    /// cloning method inherited from spatial index
-	    virtual SpatialIndex* clone();
-	    virtual SpatialIndex* copy();
+	    virtual SpatialIndex<PointT>* clone() const;
+	    virtual SpatialIndex<PointT>* copy() const;
 
 	    virtual void setCenter(const double &cx, const double &cy, const double &cz);
 	    virtual void setSize(const double &sx, const double &sy, const double &sz);
 	    
-	    virtual void getNeighbors(pcl::PointXYZ point, const double &radius, std::vector<Cell*> &cells);
-	    virtual bool intersectSphere(pcl::PointXYZ center, const double &radius) const;
+	    virtual void getNeighbors(const PointT &point, const double &radius, std::vector<Cell<PointT>*> &cells);
+	    virtual bool intersectSphere(const PointT center, const double &radius) const;
 
-	    virtual Cell* getClosestLeafCell(pcl::PointXYZ pt);
-	    virtual NDTCell* getClosestNDTCell(const pcl::PointXYZ pt);
+	    virtual Cell<PointT>* getClosestLeafCell(const PointT &pt);
+	    virtual NDTCell<PointT>* getClosestNDTCell(const PointT &pt);
 
-	    friend class AdaptiveOctTree;
-	    friend class EllipsoidTree;
-	    friend class MultilayeredOcGrid;
+	    //friend class AdaptiveOctTree<PointT>;
 	public:
 	      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
 } //end namespace
+
+#include<impl/oc_tree.hpp>
 
 #endif

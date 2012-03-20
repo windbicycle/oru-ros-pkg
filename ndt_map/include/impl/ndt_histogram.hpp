@@ -1,10 +1,10 @@
-#include <NDTHistogram.hh>
-#include <PointCloudUtils.hh>
+#include <pointcloud_utils.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 
-using namespace lslgeneric;
+namespace lslgeneric {
 
-NDTHistogram::NDTHistogram() {
+template <typename PointT>
+NDTHistogram<PointT>::NDTHistogram() {
     N_LINE_BINS = 1;
     N_FLAT_BINS = 40;
     N_SPHERE_BINS = 10;
@@ -33,7 +33,8 @@ NDTHistogram::NDTHistogram() {
     inited = true;
 }
 
-NDTHistogram::NDTHistogram (const NDTHistogram& other) {
+template <typename PointT>
+NDTHistogram<PointT>::NDTHistogram (const NDTHistogram<PointT>& other) {
 
     histogramBinsLine =   other.histogramBinsLine;
     histogramBinsFlat =   other.histogramBinsFlat;
@@ -59,7 +60,8 @@ NDTHistogram::NDTHistogram (const NDTHistogram& other) {
     inited = true;
 }
 
-NDTHistogram::NDTHistogram (NDTMap &map) {
+template <typename PointT>
+NDTHistogram<PointT>::NDTHistogram (NDTMap<PointT> &map) {
 
     N_LINE_BINS = 1;
     N_FLAT_BINS = 40;
@@ -92,7 +94,8 @@ NDTHistogram::NDTHistogram (NDTMap &map) {
     inited = true;
 }
 	
-void NDTHistogram::computeDirections() {
+template <typename PointT>
+void NDTHistogram<PointT>::computeDirections() {
 
     double dlong = M_PI*(3-sqrt(5));  /* ~2.39996323 */
     double dz    = 2.0/N_FLAT_BINS;
@@ -109,23 +112,24 @@ void NDTHistogram::computeDirections() {
     }
 }
     
-void NDTHistogram::constructHistogram(NDTMap &map) {
+template <typename PointT>
+void NDTHistogram<PointT>::constructHistogram(NDTMap<PointT> &map) {
     
-    SpatialIndex *si = map.getMyIndex();
+    SpatialIndex<PointT> *si = map.getMyIndex();
     if(si==NULL) return;
 
     double LINEAR_FACTOR = 50;
     double FLAT_FACTOR = 50;
 
-    std::vector<Cell*>::iterator it = si->begin();
+    typename std::vector<Cell<PointT>*>::iterator it = si->begin();
     while(it!=si->end()) {
 
-	NDTCell *ndcell = dynamic_cast<NDTCell*>(*it);
+	NDTCell<PointT> *ndcell = dynamic_cast<NDTCell<PointT>*>(*it);
         if(ndcell == NULL) {
 	    it++;
 	    continue;
 	}
-	if(!ndcell->hasGaussian) {
+	if(!ndcell->hasGaussian_) {
 	    it++;
 	    continue;
 	}
@@ -179,7 +183,8 @@ void NDTHistogram::constructHistogram(NDTMap &map) {
 
 }
 
-void NDTHistogram::incrementLineBin(double d) {
+template <typename PointT>
+void NDTHistogram<PointT>::incrementLineBin(double d) {
     histogramBinsLine[0] ++;
 
     if(d<D1) dist_histogramBinsLine[0][0] ++;
@@ -187,7 +192,8 @@ void NDTHistogram::incrementLineBin(double d) {
     else dist_histogramBinsLine[1][0] ++;
 }
 
-void NDTHistogram::incrementFlatBin(Eigen::Vector3d &normal, double d) {
+template <typename PointT>
+void NDTHistogram<PointT>::incrementFlatBin(Eigen::Vector3d &normal, double d) {
     //std::cout<<"n "<<normal.transpose()<<std::endl;
     normal.normalize();
     //bins are in 3D. go through directions, find smallest difference
@@ -210,7 +216,8 @@ void NDTHistogram::incrementFlatBin(Eigen::Vector3d &normal, double d) {
     }
 }
 
-void NDTHistogram::incrementSphereBin(double d) {
+template <typename PointT>
+void NDTHistogram<PointT>::incrementSphereBin(double d) {
     histogramBinsSphere[0] ++;
     if(d<D1) {
 	int id = floor(((double)d*N_SPHERE_BINS)/(double)D1);
@@ -226,16 +233,17 @@ void NDTHistogram::incrementSphereBin(double d) {
 }
 
 	
-pcl::PointCloud<pcl::PointXYZI> NDTHistogram::getDominantDirections(int nDirections) {
+template <typename PointT>
+pcl::PointCloud<PointT> NDTHistogram<PointT>::getDominantDirections(int nDirections) {
 
-    pcl::PointCloud<pcl::PointXYZI> ret;
+    pcl::PointCloud<PointT> ret;
     std::vector<bool> dominated (directions.size(),false);
     double NORM_MIN = 0.2;
     int MIN_SUPPORT = 3;
 
     for(int i=0; i<nDirections; i++) {
 	//get the next direction
-	pcl::PointXYZI current;
+	PointT current;
 	//find max in histogram, that is not dominated
 	bool found = false;
 	int maxBin, idMax;
@@ -270,7 +278,7 @@ pcl::PointCloud<pcl::PointXYZI> NDTHistogram::getDominantDirections(int nDirecti
 	current.x = averageDirections[idMax](0);
 	current.y = averageDirections[idMax](1);
 	current.z = averageDirections[idMax](2);
-	current.intensity = maxBin;
+	//current.intensity = maxBin;
 	//std::cout<<directions[idMax].transpose()<<" e "<<maxBin<<std::endl;
 	//std::cout<<averageDirections[idMax].transpose()<<" e "<<maxBin<<std::endl;
 	ret.points.push_back(current);
@@ -279,12 +287,13 @@ pcl::PointCloud<pcl::PointXYZI> NDTHistogram::getDominantDirections(int nDirecti
     return ret;
 }
 
-void NDTHistogram::bestFitToHistogram(NDTHistogram &target, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, bool bound_transform) {
+template <typename PointT>
+void NDTHistogram<PointT>::bestFitToHistogram(NDTHistogram<PointT> &target, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, bool bound_transform) {
 
     //find the top N dominant directions
     int N = 3;
     //store vectors as pcl::points
-    pcl::PointCloud<pcl::PointXYZI> dominantBinsMine, dominantBinsTarget;
+    pcl::PointCloud<PointT> dominantBinsMine, dominantBinsTarget;
 
 //    std::cout<<"d1 : \n";    
     dominantBinsMine = this->getDominantDirections(N);
@@ -297,7 +306,7 @@ void NDTHistogram::bestFitToHistogram(NDTHistogram &target, Eigen::Transform<dou
 	N_OTHER += target.histogramBinsFlat[i];
     } 
 */    //estimate least-squares fit, assuming correspondence
-/*    pcl::registration::TransformationEstimationSVD<pcl::PointXYZ,pcl::PointXYZ> trEst;
+/*    pcl::registration::TransformationEstimationSVD<PointT,PointT> trEst;
     Eigen::Matrix4f TR;
     trEst.estimateRigidTransformation(dominantBinsMine, dominantBinsTarget, TR); 
     T = TR.cast<double>();
@@ -308,7 +317,7 @@ void NDTHistogram::bestFitToHistogram(NDTHistogram &target, Eigen::Transform<dou
 	topThree[r].setIdentity();
 	topThreeS[r] = INT_MAX;
     }
-    pcl::PointCloud<pcl::PointXYZI> mineNew, mineNew2;
+    pcl::PointCloud<PointT> mineNew, mineNew2;
     Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> localT, localT2;
 
 //    double best = INT_MAX;
@@ -325,7 +334,7 @@ void NDTHistogram::bestFitToHistogram(NDTHistogram &target, Eigen::Transform<dou
 			if(a2 == b2) continue;
 			//for(int c2 = 0; c2<dominantBinsTarget.points.size(); c2++) {
 			//    if(b2 == c2 || a2 == c2) continue;
-			    pcl::PointCloud<pcl::PointXYZI> useMine, useTarget;
+			    pcl::PointCloud<PointT> useMine, useTarget;
 			    useMine.points.push_back(dominantBinsMine[a1]);
 			    useMine.points.push_back(dominantBinsMine[b1]);
 			    //useMine.points.push_back(dominantBinsMine[c1]);
@@ -466,7 +475,8 @@ void NDTHistogram::bestFitToHistogram(NDTHistogram &target, Eigen::Transform<dou
 
 }
 	
-void NDTHistogram::closedFormSolution(pcl::PointCloud<pcl::PointXYZI> &src, pcl::PointCloud<pcl::PointXYZI> &tgt,
+template <typename PointT>
+void NDTHistogram<PointT>::closedFormSolution(pcl::PointCloud<PointT> &src, pcl::PointCloud<PointT> &tgt,
 				Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T) {
 
     T.setIdentity ();
@@ -507,7 +517,8 @@ void NDTHistogram::closedFormSolution(pcl::PointCloud<pcl::PointXYZI> &src, pcl:
 
 }
 
-void NDTHistogram::printHistogram(bool bMatlab) {
+template <typename PointT>
+void NDTHistogram<PointT>::printHistogram(bool bMatlab) {
 
     if(bMatlab) {
 	//prints in a format suitable for matlab plotting
@@ -566,7 +577,8 @@ void NDTHistogram::printHistogram(bool bMatlab) {
     }
 }
 	
-double NDTHistogram::getSimilarity(NDTHistogram &other) {
+template <typename PointT>
+double NDTHistogram<PointT>::getSimilarity(NDTHistogram<PointT> &other) {
 
     Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T;
     
@@ -575,7 +587,8 @@ double NDTHistogram::getSimilarity(NDTHistogram &other) {
     return this->getSimilarity(other,T);
 } 
 
-double NDTHistogram::getSimilarity(NDTHistogram &other,
+template <typename PointT>
+double NDTHistogram<PointT>::getSimilarity(NDTHistogram<PointT> &other,
 				Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T) {
 
     double score[3];
@@ -641,4 +654,6 @@ double NDTHistogram::getSimilarity(NDTHistogram &other,
 	    
 
     return score[0]+score[1];
+}
+
 }

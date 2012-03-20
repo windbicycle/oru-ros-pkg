@@ -10,10 +10,13 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_map</url>
   <depend package="pcl" />
+  <depend package="pcl_ros" />
   <depend package="pointcloud_vrml" />
   <depend package="eigen" />
+  <depend package="opencv2" />
+  <depend package="cv_bridge" />
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-lndt_map -L${prefix}/lib" />
+    <cpp cflags="-I${prefix}/include" />
   </export>
 
 </package>

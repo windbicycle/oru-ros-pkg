@@ -5,7 +5,7 @@
 #include"sensor_msgs/point_cloud_conversion.h"
 #include<cstring>
 #include<Eigen/Eigen>
-#include<PointCloudUtils.hh>
+#include<pointcloud_utils.h>
 #include "ros/ros.h"
 #include "pcl/point_cloud.h"
 #include "sensor_msgs/PointCloud2.h"
@@ -58,7 +58,7 @@ class WriterNode {
 	    dumpNumber ++;
 
 	    pcl::fromROSMsg (*msg_in, sensor_pc);
-	    lslgeneric::writeToVRML(fname,sensor_pc);
+	    lslgeneric::writeToVRML<pcl::PointXYZ>(fname,sensor_pc);
 	    printf ("Dumped %s\n",fname);
 
 	    Eigen::Quaterniond qlocal;

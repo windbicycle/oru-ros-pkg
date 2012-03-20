@@ -35,10 +35,13 @@
 #ifndef NDT_MAP_HH
 #define NDT_MAP_HH
 
-#include <SpatialIndex.hh>
-#include <cstdlib>
-#include <NDTCell.hh>
+#include <spatial_index.h>
+#include <ndt_cell.h>
+#include <depth_camera.h>
 
+#include <cstdlib>
+
+#include <cv.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
@@ -48,47 +51,78 @@ namespace lslgeneric {
         \details This is an interface to a SpatialIndex (custom defined)
 	that contains NDT cells. Provides methods to create from a PointCloud
     */
+    template <typename PointT>
     class NDTMap {
 	public:
 	    NDTMap() {
-		parametersSet = false;
-		index = NULL;
+		index_ = NULL;
+	    }
+	    /** default constructor. The SpatialIndex sent as a paramter 
+	      is used as a factory every time that loadPointCloud is called. 
+	      it can/should be deallocated outside the class after the destruction of the NDTMap
+	     */
+	    NDTMap(SpatialIndex<PointT> *idx) 
+	    {
+		index_ = idx;
+		//this is used to prevent memory de-allocation of the *si
+		//si was allocated outside the NDT class and should be deallocated outside
+		isFirstLoad_=true;
+	    }
+	    NDTMap(const NDTMap& other)
+	    {
+		if(other.index_ != NULL) {
+		    this->index_ = index_->copy();
+		    isFirstLoad_ = false;
+		}	
+	    }
+	    virtual ~NDTMap()
+	    {
+		if(index_ !=NULL && !isFirstLoad_) {
+		    delete index_;
+		}
 	    }
 
-	    NDTMap(SpatialIndex *idx);
-	    NDTMap(const NDTMap& other);
-	    virtual ~NDTMap();
-
-	    void loadPointCloud(pcl::PointCloud<pcl::PointXYZ> pc);
-	    void computeNDTCells();
+	    void loadPointCloud(const pcl::PointCloud<PointT> &pc);
+	    /// each entry in the indices vector contains a set of indices to a NDC cell.
+	    void loadPointCloud(const pcl::PointCloud<PointT> &pc, const std::vector<std::vector<size_t> > &indices);
 	    
+	    void loadDepthImage(const cv::Mat& depthImage, DepthCamera<PointT> &cameraParams);
+	    pcl::PointCloud<PointT> loadDepthImageFeatures(const cv::Mat& depthImage, std::vector<cv::KeyPoint> &keypoints, 
+					size_t &supportSize, double maxVar, DepthCamera<PointT> &cameraParams);
+	    void computeNDTCells();
+	    	    
 	    void writeToVRML(const char* filename);
-	    virtual void writeToVRML(FILE* fout, bool bOctMap = false);
+	    virtual void writeToVRML(FILE* fout);
 	    virtual void writeToVRML(FILE* fout, Eigen::Vector3d col);
 
-	    SpatialIndex* getMyIndex() const;
+	    inline SpatialIndex<PointT>* getMyIndex() const 
+	    {
+		return index_;
+	    }
+	    /// return the spatial index used as a string
+	    std::string getMyIndexStr() const;
 	    
-	    ///use this to set the parameters for the NDTMap. \note be careful, remember that the parameters are static, thus global
-	    static void setParameters();	    
-
 	    //computes the likelihood of a single observation
-    	    double getLikelihoodForPoint(pcl::PointXYZ pt);
+    	    double getLikelihoodForPoint(PointT pt);
 	    
 	    //computes the likelihood of a single observation
-    	    double getLikelihoodForPointWithInterpolation(pcl::PointXYZ pt);
+    	    //double getLikelihoodForPointWithInterpolation(PointT pt);
 	    
 	    //returns the covariance matrix of the closest cell to refPoint
-	    bool getCellForPoint(const pcl::PointXYZ &refPoint, NDTCell *&cell);
-	    std::vector<NDTCell*> getCellsForPoint(const pcl::PointXYZ pt, double radius);
+	    bool getCellForPoint(const PointT &refPoint, NDTCell<PointT> *&cell);
+	    std::vector<NDTCell<PointT>*> getCellsForPoint(const PointT pt, double radius);
 
-	    std::vector<NDTCell*> pseudoTransformNDT(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T);
+	    ///return the cell using a specific index (not available for all spatialindexes), will return NULL if the idx is not valid.
+	    NDTCell<PointT>* getCellIdx(unsigned int idx);
+
+	    std::vector<NDTCell<PointT>*> pseudoTransformNDT(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T);
+	    
 	    //tsv: temporary debug function
-	    void debugToVRML(const char* fname, pcl::PointCloud<pcl::PointXYZ> &pc);
+	    void debugToVRML(const char* fname, pcl::PointCloud<PointT> &pc);
 	protected:
-	    SpatialIndex *index;
-	    bool isFirstLoad;
+	    SpatialIndex<PointT> *index_;
+	    bool isFirstLoad_;
 
-	    static bool parametersSet;
 	public:
 	      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -96,5 +130,7 @@ namespace lslgeneric {
     };
 
 } // end namespace
+
+#include <impl/ndt_map.hpp>
 
 #endif

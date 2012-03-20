@@ -1,4 +1,4 @@
-#include <PointCloudUtils.hh>
+#include <pointcloud_utils.h>
 #include <cstdio>
 #include <iostream>
 
@@ -45,7 +45,7 @@ int main(int argc, char ** argv) {
 	} 
 	if(isMartin) {
 	    snprintf(fname,300,"%s%03d.wrl",inDirName,fileno);
-	    pcl::PointCloud<pcl::PointXYZ> cl = lslgeneric::readVRML(fname);
+	    pcl::PointCloud<pcl::PointXYZ> cl = lslgeneric::readVRML<pcl::PointXYZ>(fname);
 	    pcl::PointXYZ pt;
 	    for(int i=0; i<cl.points.size(); i++) {
 		pt = cl.points[i];

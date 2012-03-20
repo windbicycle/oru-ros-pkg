@@ -1,4 +1,5 @@
-#include <OctTree.hh>
+#include <oc_tree.h>
+
 #include "ros/ros.h"
 #include "pcl/point_cloud.h"
 #include "sensor_msgs/PointCloud2.h"
@@ -20,7 +21,7 @@ void octCallback(const sensor_msgs::PointCloud2ConstPtr &msg) {
     pcl::PointXYZ c;
     c.x=centroid(0); c.y=centroid(1); c.z=centroid(2);
 
-    lslgeneric::OctTree tr(c,10,10,10,new lslgeneric::OctCell());
+    lslgeneric::OctTree<pcl::PointXYZ> tr(c,10,10,10,new lslgeneric::NDTCell<pcl::PointXYZ>());
 
     for(unsigned int i=0; i<cloud.points.size(); ++i) {	
 	tr.addPoint(cloud.points[i]);	
@@ -28,8 +29,16 @@ void octCallback(const sensor_msgs::PointCloud2ConstPtr &msg) {
 
     char fname[50];
     snprintf(fname,49,"oct_tree%05d.wrl",ctr);
-    tr.writeToVRML(fname);
+    FILE* fout = fopen (fname,"w");
+    if(fout == NULL) {
+	return;
+    }
+    fprintf(fout,"#VRML V2.0 utf8\n");
+    tr.writeToVRML(fout);
+    lslgeneric::writeToVRML<pcl::PointXYZ>(fout,cloud);
     ctr++;    
+    fclose(fout);
+    
 
 }
 
