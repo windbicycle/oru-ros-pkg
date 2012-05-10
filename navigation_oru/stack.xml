@@ -1,0 +1,9 @@
+<stack>
+  <description brief="navigation">navigation</description>
+  <author>Maintained by Todor Stoyanov</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/navigation</url>
+  <depend stack="ros" />
+
+</stack>
