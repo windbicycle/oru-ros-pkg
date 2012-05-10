@@ -1,0 +1,1 @@
+../bin/frame_matching_test --std1 intensity001.pgm --pc1 pointcloud001.pcd --std2 intensity002.pgm --pc2 pointcloud002.pcd

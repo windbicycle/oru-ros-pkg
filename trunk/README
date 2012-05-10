@@ -3,38 +3,25 @@
 This stack contains various packages provided by the Center for Applied Autonomous 
 Sensor Systems (AASS) at Orebro University, Sweden. The packages currently provided are:
 
-pointcloud_vrml/  : a set of utility routines for reading and writing vrml files 
-		    to pointclouds
-
-ndt_map/	  : the core of the Normal Distributions Transform packages. Implements
-		    several spatial indexing data structures and functions to compute
-		    the NDTs of point clouds
-		    
-ndt_registration/ : package that implements 3D-NDT registration of point sets. Parameters
-		    of the matching are currently passed internally, but will be taken out
-		    into configuration files. Optimization is performed using a native 
-		    Newton's scheme (with More-Thuente line search for step size).
-		    Input is passed as point cloud files, currently loaded from vrml.
-		    Several issues with the convergence of tha algorithm still exist!
-
-ndt_wavefront/	  : a modification of the wavefront path planner that operates directly in
-		    3D-NDT maps. 
-		    note: experimental code, migrated from previous repository.
-
-ndt_utils/	  : packages used for various small projects and utility functions.
-		    (internal)
-
-spatial_representation/: code to generate samples from point clouds for spatial 
-			 representation testing. (internal)
+We provide several packages, organized in two (at the moment) stacks - perception_oru and
+ grasping_oru. For more details, check respective stacks.
 
 -----------------------------------------------------------------------------------------
 
-The code in this project is written as a ROS package for ROS C Turtle. In order to build,
+The code in this project is written as a ROS package for ROS Electric. In order to build,
 put the stack oru-ros-pkg in your ROS code source directory and use rosmake. For an 
 introduction to ROS check http://www.ros.org
 
 -----------------------------------------------------------------------------------------
-Authors :
+Authors and Maintainers:
+
+perception -
 
     Todor Stoyanov	(todor.stoyanov@oru.se)
+    Henrik Andreasson   (henrik.andreasson@oru.se)
+
+grasping -
+
+    Robert Krug         (robert.krug@oru.se)
+    Krzysztof Charusta  (krzysztof.charusta@oru.se)
 

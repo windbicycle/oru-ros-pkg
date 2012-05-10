@@ -1,0 +1,31 @@
+<package>
+  <description brief="ndt_feature_reg">
+
+     Utilize intensity images in combination with range data, typically from a ToF camera, to perform registration. Shortly, correspondances are detected in the intensity images, for each corresponding feature a NDT representaion is extraced and are feed into the Todor's cool and fancy NDT-NDT registration method.
+
+  </description>
+  <author>Henrik Andreasson</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ndt_feature_reg</url>
+
+  <depend package="ndt_registration"/>
+  <depend package="ndt_map"/>
+  <depend package="eigen"/>
+  <depend package="pcl"/>
+  <depend package="pointcloud_vrml"/>
+  <depend package="tf"/>
+  <depend package="tf_conversions"/>
+  <depend package="opencv2"/>
+  <depend package="cv_bridge"/>
+
+  <depend package="image_transport"/>
+  <depend package="image_geometry"/>
+  
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lndt_feature_reg" />
+  </export>
+
+</package>
+
+

@@ -1,0 +1,9 @@
+<stack>
+  <description brief="perception_oru">perception</description>
+  <author>Maintained by Todor Stoyanov</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/perception</url>
+  <depend stack="ros" />
+
+</stack>

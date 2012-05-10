@@ -1,0 +1,19 @@
+<launch>    
+    <arg name="file" default="$(env TUM_DATA_DIR)/rgbd_dataset_freiburg1_desk.bag" />
+
+    <param name="/use_sim_time" value="true" />
+    <node pkg="rosbag" type="rosbag" name="rosbag_data" args="play -r 0.1 --clock $(arg file)" />
+    <node pkg="ndt_feature_reg" type="ndt_feature_reg_node" name="ndt_feature_reg_node" output="screen">
+      <remap from="rgb" to="/camera/rgb/image_color" />
+      <remap from="depth" to="/camera/depth/image" />
+      <param name="max_inldist_xy" type="double" value="0.02" />
+      <param name="max_inldist_z" type="double" value="0.05" />
+      <param name="support_size" value="15" />	
+      <param name="image_scale" value="0.25" />
+      <param name="visualize" value="true" />
+      <param name="detector_thresh" value="200" />
+      <param name="set_initial_pose" value="true" />
+      <param name="publish_cloud" value="true" />
+      <param name="subsample_step" value="5" />
+    </node>
+</launch>
