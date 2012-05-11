@@ -1,8 +1,18 @@
 #summary perception stack packages
-= Stack Summary =
-
 
 = Packages =
 
+ndt_registration - implements 3D-NDT registration point-to-distribution and distribution-to-distribution. More information on the two algorithms can be found in <a href = ""> </a> and <a href = ""> </a>. Includes headers, sample test executable and experimental node.
+
+ndt_feature_reg - implements local visual feature registration + 3D-NDT refinement, as described in <a href = ""> </a>. Includes library, test executable and ROS node.
+
+ndt_map - base classes for 3D-NDT model creation.
+
+ndt_map_builder - experimental package for 3D-NDT mapping, based on 3d_ndt registration and graph slam
+
+pointcloud_vrml - routines for processing vrml files.
 
 = Installation Instructions =
+
+The packages inthis stack have no external dependencies, outside of the standard ROS installation. Simply type rosmake perception_oru.
+ 
