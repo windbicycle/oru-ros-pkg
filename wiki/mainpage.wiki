@@ -5,6 +5,7 @@
 
 = perception stack =
 
+For more details check @perception.
 
 = grasping stack =
 
