@@ -2,6 +2,9 @@
 
 = Introduction =
 
+This repository contains various packages provided by the Mobile Robot and Olfaction Lab at Center for Applied Autonomous Sensor Systems (AASS) at Orebro University, Sweden. The packages currently provided are:
+
+We provide several packages, organized in four (at the moment) stacks - perception_oru, navigation_oru, olfaction_oru and grasping_oru. For more details, check respective stacks.
 
 = perception stack =
 
@@ -9,12 +12,12 @@ This stack contains packages related to 3D perception, in particular 3D point cl
 
 = grasping stack =
 
-This stack contains packages related to Independent Contact Regions (ICR) generation and grasping. For more details check the grasping page.
+This stack contains packages related to Independent Contact Regions (ICR) generation and grasping. For more details check the [grasping] page.
 
 = navigation stack =
 
-This stack contains packages related to mobile robot navigation. 
+This stack contains packages related to mobile robot [navigation]. 
 
 = olfaction stack =
 
-This stack contains packages related to artificial olfaction.
+This stack contains packages related to artificial [olfaction]. The packages in this stack are still work in progress and will be released in the near future.
