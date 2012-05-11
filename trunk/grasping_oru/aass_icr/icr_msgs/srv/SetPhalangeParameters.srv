@@ -1,0 +1,13 @@
+
+#This should be reworked to include the whole parameter set. Also, it should be encapsulated in a string which then needs to be properly parsed in the code, so that not all of the paramers need to be specified when calling the service
+string    name  #name of the phalange, e.g, "thdistal"
+uint8 fc_disc
+float32 mu_0
+---
+bool success
+
+
+
+
+
+

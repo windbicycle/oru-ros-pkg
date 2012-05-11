@@ -1,0 +1,36 @@
+<launch>
+   
+ <group>
+   <rosparam file="$(find icr)/config/phalange_config.yaml" command="load"/>
+
+    <node pkg="icr" name="model_server" type="model_server" output="screen" ns="model_server">
+            <param name="model_directory" type="string" value="$(find icr)/models"/>
+            <param name="object_scale" type="double" value="1.0"/>
+            <param name="pose_source" type="string" value="gazebo"/> <!--possible values: "gazebo" or "uc3m_objtrack" -->
+            <rosparam file="$(find icr)/config/model_server_config.yaml" command="load"/>
+       </node>
+
+       <node pkg="icr" name="grasp_server" type="grasp_server" output="screen" ns="grasp_server">
+           <param name="tf_prefix" type="string" value="/srh/position" />  
+           <param name="spin_frequency" type="double" value="100" /> 
+            <param name="palm_frame_id" type="string" value="/srh/position/palm" /> 
+      </node>
+
+     <!--Launch the KCL sensor simulator node and the remapper-->
+      <include file="$(find kclcontloc_sim)/kclcontloc_sim.launch" />
+      <include file="$(find sensor_remapper)/launch/KCL_sensor_remapper.launch" />
+
+  <node pkg="icr" name="icr_server" type="icr_server" output="screen" ns="icr_server">
+      <param name="computation_mode" type="int" value="0" />  <!--possible values: 0 - continuous or 1 - step_wise -->
+      <param name="icr_database_directory" type="string" value="$(find icr)/icr_database/" /> 
+      <remap from="grasp" to="/grasp_server/grasp"/> 
+  </node>
+
+ </group>
+
+</launch>
+
+
+
+
+

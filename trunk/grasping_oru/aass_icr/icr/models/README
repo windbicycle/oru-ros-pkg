@@ -1,0 +1,4 @@
+to create the urdfs run
+>> python create_urdfs.py icr
+
+

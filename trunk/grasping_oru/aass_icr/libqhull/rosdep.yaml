@@ -1,0 +1,10 @@
+Qhull-2011.2:
+  ubuntu: |
+      cd `rospack find libqhull`/Qhull-2011.2
+      cmake -DCMAKE_INSTALL_PREFIX=`pwd`/build
+      make
+      make install
+      make clean
+
+
+ 

@@ -1,0 +1,9 @@
+<stack>
+  <description brief="aass_icr">aass_icr</description>
+  <author>Maintained by Robert Krug</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/aass_icr</url>
+  <depend stack="ros" />
+
+</stack>

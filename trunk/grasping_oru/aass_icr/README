@@ -1,0 +1,3 @@
+ROS stack containing the packages for the computation of Independent Contact Regions. Uses icr-v1.0 and icrcpp-v1.0
+
+Robert Krug 2012/05/10

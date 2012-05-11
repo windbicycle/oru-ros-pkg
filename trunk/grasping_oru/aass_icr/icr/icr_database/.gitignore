@@ -1,0 +1,86 @@
+# git-ls-files --others --ignored
+# Lines that start with '#' are comments.
+
+# Backup and data files
+eg/eg.*
+*~
+*.bak
+*.off
+*.x
+x.*
+r
+x
+x?
+r?
+
+# patch results
+*.rej
+
+# Build products
+tmp/*
+build/Makefile*
+build/CMakeFiles
+build/CMakeCache.txt
+build/*/Makefile*
+build/*/object_script*
+build/*/Release/*
+build/*/Debug/*
+build/*/MinSizeRel/*
+build/*/RelWithDebInfo/*
+build
+icr/build/
+icr/bin/
+icr/src/icr
+icr/srv_gen
+icr/msg_gen
+sensor_remapper/build/
+sensor_remapper/bin/
+sensor_remapper/src/icr
+sensor_remapper/srv_gen
+sensor_remapper/msg_gen
+dummy_server/build/
+dummy_server/bin/
+dummy_server/src/icr
+dummy_server/srv_gen
+dummy_server/msg_gen
+icr_msgs/srv_gen
+icr_msgs/msg_gen
+icr_msgs/bin
+icr_msgs/include
+icr_msgs/src
+libicr/icrcpp
+libobj/obj-1.0
+libqhull/Qhull-2011.2
+*#
+*.#
+*.obj
+*.urdf
+*.stl
+*.zip
+*.a
+*.dll
+*.lib
+*.exe
+*.o
+*.md5sum
+
+# Qt files
+*.pro.user
+
+# DevStudio files
+*.bsc
+*.ncb
+*.pdb
+*.suo
+*.user
+*.ilk
+
+# CVS files
+CVS/*
+*/CVS/*
+*/*/CVS/*
+*/*/*/CVS/*
+*.cvsignore
+
+# Other files
+working/

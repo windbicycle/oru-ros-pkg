@@ -1,0 +1,9 @@
+The objects have to comprise the same number of vertices and vertex normals, i.e., each vertex has to correspond to exactly one vertex normal.
+
+A valid facet definition in the .obj file looks like this:
+f 1713//1713 1714//1714 1685//1685
+
+Opposed to an invalid one:
+f 1713//1623 1714//1599 1685//1200
+
+To generate .obj files in Meshlab carry out following filtering steps: remove unreferenced vertex, remove duplicated vertex, recompute vertex normals and normalize vertex normals. Save with only the 'Normals' box ticked.

@@ -1,0 +1,25 @@
+obj-1.0:
+  ubuntu: |
+        cd `rospack find libobj`/obj-1.0
+        ./configure --prefix=`pwd`/build
+        make
+        make install
+        make clean
+
+Qhull-2011.2:
+  ubuntu: |
+      cd `rospack find libqhull`/Qhull-2011.2
+      cmake -DCMAKE_INSTALL_PREFIX=`pwd`/build
+      make
+      make install
+      make clean
+
+icrcpp:
+  ubuntu: |
+      cd `rospack find libicr`/icrcpp
+      INCLUDE=`rospack export --lang=cpp --attrib=cflags libobj`
+      INCLUDE+=`rospack export --lang=cpp --attrib=cflags libqhull`
+      INCLUDE+="-I"`pwd`/tools/eigen-eigen-3.0.2
+      make INCPATH="$INCLUDE"  
+
+ 

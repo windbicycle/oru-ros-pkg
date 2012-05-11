@@ -1,0 +1,22 @@
+<package>
+  <description brief="icr_msgs">
+
+     icr_msgs
+
+  </description>
+  <author>rkg</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/icr_msgs</url>
+   <export>
+    <cpp cflags="-I${prefix}/icrcpp/include"/>
+  </export>
+  <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="visualization_msgs"/>
+  <depend package="pcl"/>
+  <depend package="tf"/>
+</package>
+
+

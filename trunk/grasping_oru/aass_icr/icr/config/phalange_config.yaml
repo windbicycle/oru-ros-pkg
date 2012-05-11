@@ -1,0 +1,77 @@
+phalanges:
+     - phl_frame_id: /thdistal
+       phl_name: thdistal
+       sensor_topic: /sensor_remapper/thdistal/contact_state 
+       L_T_Cref: [0.0,-0.009,0.022,1.57,0.0,0.0]
+       force_magnitude: 1.0
+       fc_disc: 8
+       mu_0: 0.8
+       mu_T: 0.5
+       contact_type: Frictional
+       model_type: Single_Point 
+       rule_type: Sphere 
+       rule_parameter: 0.005 
+       filter_patch: true
+       display_color: [255.0 , 215.0, 0.0] #gold
+    
+     - phl_frame_id: /ffdistal
+       phl_name: ffdistal
+       sensor_topic: /sensor_remapper/ffdistal/contact_state 
+       L_T_Cref: [0.0,-0.007,0.018,1.45,0.0,0.0]
+       force_magnitude: 1.0
+       fc_disc: 8
+       mu_0: 0.8
+       mu_T: 0.5
+       contact_type: Frictional
+       model_type: Single_Point 
+       rule_type: Sphere 
+       rule_parameter: 0.005 
+       filter_patch: true
+       display_color: [160.0, 32.0, 240.0] #purple
+
+     - phl_frame_id: /mfdistal
+       phl_name: mfdistal
+       sensor_topic: /sensor_remapper/mfdistal/contact_state 
+       L_T_Cref: [0.0,-0.007,0.018,1.45,0.0,0.0]
+       force_magnitude: 1.0
+       fc_disc: 8
+       mu_0: 0.8
+       mu_T: 0.5
+       contact_type: Frictional
+       model_type: Single_Point 
+       rule_type: Sphere 
+       rule_parameter: 0.005 
+       filter_patch: true
+       display_color: [0.0, 255.0, 0.0] #green
+    
+     - phl_frame_id: /rfdistal
+       phl_name: rfdistal
+       sensor_topic: /sensor_remapper/rfdistal/contact_state 
+       L_T_Cref: [0.0,-0.007,0.018,1.45,0.0,0.0]
+       force_magnitude: 1.0
+       fc_disc: 8
+       mu_0: 0.8
+       mu_T: 0.5
+       contact_type: Frictional
+       model_type: Single_Point 
+       rule_type: Sphere 
+       rule_parameter: 0.005 
+       filter_patch: true
+       display_color: [0.0 , 0.0, 255.0] #blue
+  
+     - phl_frame_id: /lfdistal
+       phl_name: lfdistal
+       sensor_topic: /sensor_remapper/lfdistal/contact_state 
+       L_T_Cref: [0.0,-0.006,0.016,1.45,0.0,0.0]
+       force_magnitude: 1.0
+       fc_disc: 8
+       mu_0: 0.8
+       mu_T: 0.5
+       contact_type: Frictional
+       model_type: Single_Point 
+       rule_type: Sphere 
+       rule_parameter: 0.005 
+       filter_patch: true
+       display_color: [0.0 , 255.0, 255.0] #cyan
+
+

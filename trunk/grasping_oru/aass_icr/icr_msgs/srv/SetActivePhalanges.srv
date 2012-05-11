@@ -1,0 +1,3 @@
+string[] phalanges #Names of the phalanges which will be used for the icr computation, e.g, ["thdistal","ffdistal","mfdistal","rfdistal","lfdistal"]
+---
+bool success
