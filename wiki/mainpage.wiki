@@ -5,12 +5,16 @@
 
 = perception stack =
 
-For more details check @perception.
+This stack contains packages related to 3D perception, in particular 3D point cloud registration. For more details check perception page.
 
 = grasping stack =
 
+This stack contains packages related to Independent Contact Regions (ICR) generation and grasping. For more details check the grasping page.
 
 = navigation stack =
 
+This stack contains packages related to mobile robot navigation. 
 
 = olfaction stack =
+
+This stack contains packages related to artificial olfaction.
