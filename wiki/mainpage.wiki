@@ -5,7 +5,7 @@
 
 = perception stack =
 
-This stack contains packages related to 3D perception, in particular 3D point cloud registration. For more details check perception page.
+This stack contains packages related to 3D perception, in particular 3D point cloud registration. For more details check [perception] page.
 
 = grasping stack =
 
