@@ -1,0 +1,4 @@
+float32 qs #the fraction of the largest insphere of the prototype grasp's GWS which will be used to parametrize a spherical Task Wrench Space
+--- 
+bool success
+

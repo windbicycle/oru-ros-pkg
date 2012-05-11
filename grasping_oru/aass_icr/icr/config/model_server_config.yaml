@@ -1,0 +1,5 @@
+reference_frame_id: "/shadowarm_base"
+camera_frame_id: "/camera_rgb_frame"
+gazebo_prefix: "/gazebo" 
+uc3m_objtrack_prefix: "/oru_hdb" 
+obj_client_topics: ["/icr_server/set_object","/grasp_server/set_object"] #A ServiceClient call to all connected servers waiting for a object will be made     

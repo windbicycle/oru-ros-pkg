@@ -1,0 +1,10 @@
+obj-1.0:
+  ubuntu: |
+        cd `rospack find libobj`/obj-1.0
+        ./configure --prefix=`pwd`/build
+        make
+        make install
+        make clean
+
+
+ 

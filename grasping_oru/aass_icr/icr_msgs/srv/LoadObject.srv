@@ -1,0 +1,4 @@
+string file   #local file name in the /icr/models/obj directory 
+geometry_msgs/Pose initial_pose #initial pose offset (only used in simulation when spawning in Gazebo)
+---
+bool success

@@ -1,0 +1,27 @@
+<package>
+  <description brief="Implements a node for the computation of Independent Contact Regions">
+
+  </description>
+  <author>Robert Krug</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <rosdep name="boost" />
+  <depend package="libqhull"/>
+  <depend package="libobj"/>
+  <depend package="libicr"/>
+  <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
+  <depend package="gazebo_msgs"/>
+  <depend package="icr_msgs"/>
+  <depend package="std_msgs"/>
+  <depend package="std_srvs"/>
+  <depend package="eigen"/>
+  <depend package="urdf_interface"/>
+  <depend package="urdf"/>
+  <depend package="tf"/>
+  <depend package="tf_conversions"/>
+  <depend package="pcl_ros"/>
+  <depend package="pcl"/>
+</package>
+
+

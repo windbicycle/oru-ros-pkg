@@ -1,9 +1,0 @@
-<stack>
-  <description brief="grasping">grasping</description>
-  <author>Maintained by Todor Stoyanov</author>
-  <license>BSD</license>  
-  <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/grasping</url>
-  <depend stack="ros" />
-
-</stack>

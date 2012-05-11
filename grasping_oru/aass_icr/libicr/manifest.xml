@@ -1,0 +1,18 @@
+<package>
+  <description brief="libicr is a library to compute independent contact regions on discretized target object">
+
+     This is a wrapper around the library icrcpp. For more information see the README in {prefix}/icrcpp.
+
+  </description>
+  <author>Robert Krug</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <export>
+    <cpp cflags="-I${prefix}/icrcpp/include" lflags="-L${prefix}/icrcpp/lib -Wl,-rpath,${prefix}/icrcpp/lib -licr"/>
+  </export>
+  <depend package="libobj"/>
+  <depend package="libqhull"/>
+  <rosdep name="icrcpp"/>
+</package>
+
+

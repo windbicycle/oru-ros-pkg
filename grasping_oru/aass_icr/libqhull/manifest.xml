@@ -1,0 +1,16 @@
+<package>
+  <description brief="libqhull is a library to compute n-dimensional convex hulls">
+
+  This is a wrapper around Qhull 2011.2 by C. Bradford Barber and Hannu Huhdanpaa. This package uses a slightly modified version. For more information check the README in {prefix}/Qhull-2011.2.
+
+  </description>
+  <author>Robert Krug</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <export>
+    <cpp cflags="-I${prefix}/Qhull-2011.2/build/include/libqhullcpp -I${prefix}/Qhull-2011.2/build/include" lflags="-L${prefix}/Qhull-2011.2/build/lib -Wl,-rpath,${prefix}/Qhull-2011.2/build/lib -lqhull6 -L${prefix}/Qhull-2011.2/build/lib -Wl,-rpath,${prefix}/Qhull-2011.2/build/lib -lqhullcpp"/>
+  </export>
+  <rosdep name="Qhull-2011.2"/>
+</package>
+
+

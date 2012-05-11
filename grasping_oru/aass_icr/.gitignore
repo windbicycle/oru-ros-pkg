@@ -1,0 +1,103 @@
+# git-ls-files --others --ignored
+# Lines that start with '#' are comments.
+
+# Backup and data files
+eg/eg.*
+*~
+*.bak
+*.off
+*.x
+x.*
+r
+x
+x?
+r?
+
+# patch results
+*.rej
+
+# Build products
+tmp/*
+build/Makefile*
+build/CMakeFiles
+build/CMakeCache.txt
+build/*/Makefile*
+build/*/object_script*
+build/*/Release/*
+build/*/Debug/*
+build/*/MinSizeRel/*
+build/*/RelWithDebInfo/*
+build
+icr/build/
+icr/bin/
+icr/src/icr
+icr/srv_gen
+icr/msg_gen
+sensor_remapper/build/
+sensor_remapper/bin/
+sensor_remapper/src/icr
+sensor_remapper/srv_gen
+sensor_remapper/msg_gen
+grasp_affordances/build
+grasp_affordances/bin
+grasp_affordances/src/grasp_affordances
+grasp_affordances/srv_gen
+grasp_affordances/msg_gen
+icr_msgs/srv_gen
+icr_msgs/msg_gen
+icr_msgs/bin
+icr_msgs/include
+icr_msgs/src
+libqhull/Qhull-2011.2/CMakeFiles
+libobj/obj-1.0/Makefile
+libobj/obj-1.0/config.h
+libobj/obj-1.0/config.status
+libobj/obj-1.0/doc/Doxyfile
+libobj/obj-1.0/doc/Makefile
+libobj/obj-1.0/libtool
+libobj/obj-1.0/obj/Makefile
+libobj/obj-1.0/stamp-h1
+libobj/obj-1.0/tools/Makefile
+libqhull/Qhull-2011.2/CMakeCache.txt
+libqhull/Qhull-2011.2/Makefile
+libqhull/Qhull-2011.2/cmake_install.cmake
+libqhull/Qhull-2011.2/install_manifest.txt
+
+*#
+*.#
+*.stl
+*.zip
+*.a
+*.dll
+*.lib
+*.exe
+*.bag
+*.o
+*.so
+*.md5sum
+*.Plo
+*.pc
+*.Po
+*.log
+*.sed
+
+# Qt files
+*.pro.user
+
+# DevStudio files
+*.bsc
+*.ncb
+*.pdb
+*.suo
+*.user
+*.ilk
+
+# CVS files
+CVS/*
+*/CVS/*
+*/*/CVS/*
+*/*/*/CVS/*
+*.cvsignore
+
+# Other files
+working/

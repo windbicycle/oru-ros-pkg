@@ -1,0 +1,3 @@
+This is a republication of the library obj-1.0, a C++ library to load Wavefront .obj files, written by Ares Lagae. The original code can be found at http://people.cs.kuleuven.be/~ares.lagae/libobj/  obj-0.1.tar.gz. The only change made was in the file /obj/obj_parser.hpp - the original typedef statement before the enum in line 50 was deleted, since it is superfluous and creates an error when compiling with the -Werr flag.
+
+Robert Krug 2011/01/11
