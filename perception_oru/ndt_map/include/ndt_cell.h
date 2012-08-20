@@ -44,6 +44,19 @@
 #include <cstdio>
 #include <Eigen/Eigen>
 
+#include <fstream>
+
+/// A rather unsophisticated way of determining the 
+/// update method for a cell
+/// Covariance intersection based estimation []
+#define CELL_UPDATE_MODE_COVARIANCE_INTERSECTION 		0 
+/// Recursive Sample variance method [Chan, Gene, Randall, Updating Formulae and pairwise algorithm for computing sample variances, tech report Standford, 1979] 
+#define CELL_UPDATE_MODE_SAMPLE_VARIANCE 				1 
+/// Yguel, Vasquez, Aycard, Siegward, Laugier, Error-Driven Refinement of Multi-scale gaussian maps
+#define CELL_UPDATE_MODE_ERROR_REFINEMENT				2
+///Combined CI and SV
+#define CELL_UPDATE_MODE_SAMPLE_VARIANCE_WITH_RESET		3
+
 namespace lslgeneric {
 
     /** \brief implements a normal distibution cell
@@ -70,6 +83,7 @@ namespace lslgeneric {
 				B = 0.5;
 				occ = 0;
 				emptyval = 0;
+				cellConfidence = 0.5;
 	    }
 	    virtual ~NDTCell() 
 	    { 
@@ -86,6 +100,7 @@ namespace lslgeneric {
 				B = 0.5;
 				occ = 0;
 				emptyval = 0;
+				cellConfidence = 0.5;
 				if(!parametersSet_) {
 						setParameters();
 				}
@@ -101,15 +116,16 @@ namespace lslgeneric {
 				this->G = other.G;
 				this->B = other.B;
 				this->N = other.N;
-				this->occ = other.N;
+				this->occ = other.occ;
 				this->emptyval = other.emptyval;
 				this->edata = other.edata;
+				this->cellConfidence = other.cellConfidence;
 	    }
 	    
 	    virtual Cell<PointT>* clone() const;
 	    virtual Cell<PointT>* copy() const;
 
-	    inline void computeGaussian();
+	    inline void computeGaussian(int mode=CELL_UPDATE_MODE_SAMPLE_VARIANCE_WITH_RESET);
 			//template<typename PointT>
 			//void NDTCell<pcl::PointXYZRGB>::computeGaussian()
 			
@@ -125,17 +141,24 @@ namespace lslgeneric {
 	    void classify();
 	    
 	    void writeToVRML(FILE *fout, Eigen::Vector3d col = Eigen::Vector3d(0,0,0));
+	    int writeToJFF(FILE * jffout);
+	    int loadFromJFF(FILE * jffin);
 
 	    inline CellClass getClass() const { return cl_; }
 	    inline Eigen::Matrix3d getCov() const { return cov_; }
 	    inline Eigen::Matrix3d getInverseCov() const { return icov_; }
-	    inline Eigen::Vector3d getMean() const {return mean_; }
+	    inline Eigen::Vector3d getMean() const { return mean_; }
 	    inline Eigen::Matrix3d getEvecs() const { return evecs_; }	    
-	    inline Eigen::Vector3d getEvals() const { return evals_; }	    
+	    inline Eigen::Vector3d getEvals() const { return evals_; }
+	    inline Eigen::Matrix3d getCovSum() const { return covSum_; }
+	    inline Eigen::Vector3d getMeanSum() const { return meanSum_; }
+	    inline float getCellConfidence() const { return cellConfidence; }
 
 	    void setCov(const Eigen::Matrix3d &cov);
 	    inline void setMean(const Eigen::Vector3d &mean) { mean_ = mean; }
-	    inline void setEvals(const Eigen::Vector3d &ev) { evals_ = ev; }		
+	    inline void setEvals(const Eigen::Vector3d &ev) { evals_ = ev; }
+	    inline void setCovSum(const Eigen::Matrix3d &covSum) { covSum_ = covSum; }
+	    inline void setMeanSum(const Eigen::Vector3d &meanSum) { meanSum_ = meanSum; }		
 	    
 	    ///use this to set the parameters for the NDTCell. \note be careful, remember that the parameters are static, thus global
 	    static void setParameters(double _EVAL_ROUGH_THR   =0.1, 
@@ -156,7 +179,7 @@ namespace lslgeneric {
 	    void setRGB(float r, float g, float b){
 				R=r; G = g; B = b;
 			}
-	    void getRGB(double &r, double &g, double &b){
+	    void getRGB(float &r, float &g, float &b){
 				r = R; g = G; b = B;
 			}
 			
@@ -185,26 +208,29 @@ namespace lslgeneric {
 			void setOccupancy(float occ_){occ = occ_;}
 			void setEmptyval(int emptyval_){emptyval=emptyval_;}
 			void setEventData(TEventData _ed){edata = _ed;}
+			void setCellConfidence(float conf){cellConfidence = conf; }
+			void setN(int N_){N = N_;}
 
 	private:
 	    Eigen::Matrix3d cov_;
-			Eigen::Matrix3d covSum_;
+		Eigen::Matrix3d covSum_;
 	    Eigen::Matrix3d icov_;
 	    Eigen::Matrix3d evecs_;
 	    Eigen::Vector3d mean_;
-			Eigen::Vector3d meanSum_;
+		Eigen::Vector3d meanSum_;
 	    Eigen::Vector3d evals_;
 	    CellClass cl_;
-	    static bool parametersSet_;
-	    static double EVAL_ROUGH_THR;// = 0.1;
-	    static double EVEC_INCLINED_THR; // = cos(8*M_PI/18);//10 degree slope;
-	    static double EVAL_FACTOR;
+	    static bool parametersSet_;													// ???
+	    static double EVAL_ROUGH_THR;		// = 0.1;								// ???
+	    static double EVEC_INCLINED_THR; 	// = cos(8*M_PI/18);//10 degree slope;	// ???
+	    static double EVAL_FACTOR;													// ???
 	    double d1_,d2_;
-			unsigned int N; ///Number of points used for Normal distribution estimation so far
-			float R,G,B; ///RGB values [0..1] - Special implementations for PointXYZRGB & PointXYZI
-			float occ;   ///Occupancy value stored as "Log odds" (if you wish)
-			int emptyval;
-			TEventData edata;
+		unsigned int N; 	///Number of points used for Normal distribution estimation so far
+		int emptyval;
+		float R,G,B; 		///RGB values [0..1] - Special implementations for PointXYZRGB & PointXYZI
+		float occ;   		///Occupancy value stored as "Log odds" (if you wish)
+		float cellConfidence;
+		TEventData edata;
 	public:
 	      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

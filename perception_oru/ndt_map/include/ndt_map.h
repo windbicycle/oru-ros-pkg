@@ -45,6 +45,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+
 namespace lslgeneric {
 
     /** \brief Implements an NDT based spatial index
@@ -87,7 +88,7 @@ namespace lslgeneric {
 		    delete index_;
 		}
 	    }
-			void addPointCloud(const pcl::PointCloud<PointT> &pc);
+		void addPointCloud(const pcl::PointCloud<PointT> &pc);
 			
 	    void loadPointCloud(const pcl::PointCloud<PointT> &pc);
 	    /// each entry in the indices vector contains a set of indices to a NDC cell.
@@ -102,12 +103,21 @@ namespace lslgeneric {
 	    virtual void writeToVRML(FILE* fout);
 	    virtual void writeToVRML(FILE* fout, Eigen::Vector3d col);
 
+	    int writeToJFF(const char* filename);
+	    int writeLazyGridJFF(FILE * jffout);
+	    int writeCellVectorJFF(FILE * jffout);
+	    int writeOctTreeJFF(FILE * jffout);
+
+	    int loadFromJFF(const char* filename);
+
 	    inline SpatialIndex<PointT>* getMyIndex() const 
 	    {
 		return index_;
 	    }
 	    /// return the spatial index used as a string
 	    std::string getMyIndexStr() const;
+	    /// return the spatial index used as an integer
+	    int getMyIndexInt() const;
 	    
 	    //computes the likelihood of a single observation
     	    double getLikelihoodForPoint(PointT pt);

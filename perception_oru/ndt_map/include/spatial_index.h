@@ -35,8 +35,9 @@
 #ifndef SPATIAL_INDEX_HH
 #define SPATIAL_INDEX_HH
 
-#include<vector>
-#include<cell.h>
+#include <vector>
+#include <cell.h>
+#include <iostream>
 
 namespace lslgeneric {
 
@@ -85,6 +86,9 @@ namespace lslgeneric {
 
 	    ///sets the cell factory type
 	    virtual void setCellType(Cell<PointT> *type) = 0;
+
+	    ///reads map contents from .jff file
+	    virtual int loadFromJFF(FILE * jffin) const { std::cerr << "Calling from SpatialIndex.h\n"; return -1; }
     };
 
 } //end namespace

@@ -1,0 +1,8 @@
+Pangolin:
+  ubuntu: |
+      sudo apt-get install freeglut3-dev libglu-dev libglew-dev
+      cd `rospack find ndt_visualisation`/Pangolin
+      cmake -DCMAKE_INSTALL_PREFIX=`pwd`/build
+      make
+      make install
+      make clean

@@ -8,17 +8,16 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_map_builder</url>
+  <depend package="common_rosdeps" />
   <depend package="pcl" />
   <depend package="pcl_ros" />
   <depend package="pointcloud_vrml" />
-  <depend package="eigen" />
   <depend package="ndt_map" />
   <depend package="ndt_registration" />
+  <rosdep name="eigen" />
   <export>
   <cpp cflags="-I${prefix}/include" />
   </export>
 
 
 </package>
-
-

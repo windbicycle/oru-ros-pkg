@@ -5,9 +5,15 @@
 #include <string>
 #include <climits>
 
-#include<oc_tree.h>
-#include<lazy_grid.h>
-#include<cell_vector.h>
+#include <oc_tree.h>
+#include <lazy_grid.h>
+#include <cell_vector.h>
+
+#include <cstring>
+#include <cstdio>
+
+#define _JFFVERSION_ "#JFF V0.50"
+#define JFFERR(x) std::cerr << x << std::endl; return -1;
 
 namespace lslgeneric {
 
@@ -15,9 +21,9 @@ namespace lslgeneric {
   * \param pc the PointCloud that is to be loaded
   * \note every subsequent call will destroy the previous map!
   */
-template<typename PointT>    
+template<typename PointT>
 void NDTMap<PointT>::loadPointCloud(const pcl::PointCloud<PointT> &pc) {
-   if(index_ != NULL) {
+    if(index_ != NULL) {
 		//std::cout<<"CLONE INDEX\n";
 		SpatialIndex<PointT> *si = index_->clone();
 		//cout<<"allocating index\n";
@@ -33,17 +39,17 @@ void NDTMap<PointT>::loadPointCloud(const pcl::PointCloud<PointT> &pc) {
 		return;
 	}
     
-  if(index_ == NULL) {
+	if(index_ == NULL) {
 	//ERR("Problem creating index, unimplemented method\n");
 		return;
-   }
+	}
     
-   double maxDist = 0;//, distCeil = 200;
+	double maxDist = 0;//, distCeil = 200;
 
-   typename pcl::PointCloud<PointT>::const_iterator it = pc.points.begin();
-   Eigen::Vector3d centroid(0,0,0);
-   int npts = 0;
-   while(it!=pc.points.end()) {
+    typename pcl::PointCloud<PointT>::const_iterator it = pc.points.begin();
+    Eigen::Vector3d centroid(0,0,0);
+    int npts = 0;
+	while(it!=pc.points.end()) {
 			Eigen::Vector3d d;
 			if(std::isnan(it->x) ||std::isnan(it->y) ||std::isnan(it->z))
 			{
@@ -75,7 +81,7 @@ void NDTMap<PointT>::loadPointCloud(const pcl::PointCloud<PointT> &pc) {
 			maxDist = (dist > maxDist) ? dist : maxDist;
 			it++;
     }
-   // cout<<"Points = " <<pc.points.size()<<" maxDist = "<<maxDist<<endl;
+    // cout<<"Points = " <<pc.points.size()<<" maxDist = "<<maxDist<<endl;
 
     NDTCell<PointT> *ptCell = new NDTCell<PointT>();
     index_->setCellType(ptCell);
@@ -354,6 +360,7 @@ void NDTMap<PointT>::writeToVRML(FILE* fout) {
     }
 
 }
+
 template<typename PointT>    
 void NDTMap<PointT>::writeToVRML(FILE* fout, Eigen::Vector3d col) {
     if(fout == NULL) {
@@ -373,6 +380,232 @@ void NDTMap<PointT>::writeToVRML(FILE* fout, Eigen::Vector3d col) {
     }
 }
 
+
+/** output methods for saving the map in the jff format
+ */
+template<typename PointT>    
+int NDTMap<PointT>::writeToJFF(const char* filename) {
+
+    if(filename == NULL) {
+		//ERR("problem outputing to jff\n");
+		return -1;
+    }
+    
+    FILE * jffout = fopen(filename, "w+b");
+
+    fwrite(_JFFVERSION_, sizeof(char), strlen(_JFFVERSION_), jffout);
+
+	switch(this->getMyIndexInt())
+    {
+    	case 1:
+    		writeCellVectorJFF(jffout);
+    		break;
+    	case 2:
+    		//writeOctTreeJFF(jffout);
+    		break;
+    	case 3:
+    		writeLazyGridJFF(jffout);
+    		break;
+    	default:
+    		//ERR("unknown index type\n");
+			return -1;
+    }
+
+    fclose(jffout);
+
+    return 0;
+}
+
+
+template<typename PointT>
+int NDTMap<PointT>::writeCellVectorJFF(FILE * jffout){
+	int indexType[1] = {1};
+	fwrite(indexType, sizeof(int), 1, jffout);
+	
+	// TODO: add CellVector specific stuff
+	
+	typename SpatialIndex<PointT>::CellVectorItr it = index_->begin();
+    while (it != index_->end()) {
+		NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*> (*it);
+		if(cell!=NULL) {
+			if(cell->hasGaussian_) {
+				// TODO: add index specific content smartly
+				if(cell->writeToJFF(jffout) < 0)
+		    		return -1;
+		    }
+		} else {
+			// do nothing
+		}
+		it++;
+	}
+
+	return 0;
+
+}
+
+
+template<typename PointT>
+int NDTMap<PointT>::writeOctTreeJFF(FILE * jffout){
+	int indexType[1] = {2};
+	fwrite(indexType, sizeof(int), 1, jffout);
+	
+	// TODO: add OctTree specific stuff
+	
+	typename SpatialIndex<PointT>::CellVectorItr it = index_->begin();
+    while (it != index_->end()) {
+		NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*> (*it);
+		if(cell!=NULL) {
+			if(cell->hasGaussian_) {
+				// TODO: add index specific content smartly
+				if(cell->writeToJFF(jffout) < 0)
+		    		return -1;
+		    }
+		} else {
+			// do nothing
+		}
+		it++;
+	}
+
+	return 0;
+
+}
+
+template<typename PointT>
+int NDTMap<PointT>::writeLazyGridJFF(FILE * jffout){
+	int indexType[1] = {3};
+	fwrite(indexType, sizeof(int), 1, jffout);
+
+	// add LazyGrid specific stuff
+	double sizeXmeters, sizeYmeters, sizeZmeters;
+	double cellSizeX, cellSizeY, cellSizeZ;
+	double centerX, centerY, centerZ;
+	LazyGrid<PointT> *ind = dynamic_cast<LazyGrid<PointT>*>(index_);
+
+	ind->getGridSizeInMeters(sizeXmeters, sizeYmeters, sizeZmeters);
+	ind->getCellSize(cellSizeX, cellSizeY, cellSizeZ);
+	ind->getCenter(centerX, centerY, centerZ);
+	
+	double lazyGridData[9] = { sizeXmeters, sizeYmeters, sizeZmeters,
+	                           cellSizeX,   cellSizeY,   cellSizeZ,
+	                           centerX,     centerY,     centerZ };
+	
+	fwrite(lazyGridData, sizeof(double), 9, jffout);
+	
+	fwrite(ind->getProtoType(), sizeof(Cell<PointT>), 1, jffout);
+
+	// loop through all active cells
+	typename SpatialIndex<PointT>::CellVectorItr it = index_->begin();
+    while (it != index_->end()) {
+		NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*> (*it);
+		if(cell!=NULL) {
+			if(cell->hasGaussian_) {
+				if(cell->writeToJFF(jffout) < 0)
+		    		return -1;
+		    }
+		} else {
+			// do nothing
+		}
+		it++;
+	}
+
+	return 0;
+
+}
+
+/** method to load NDT maps from .jff files
+	USAGE:	create NDTMap with desired index and PointType (index type is
+			checked, but Point type is NOT checked) via e.g.
+
+			lslgeneric::NDTMap<pcl::PointXYZ> nd1(
+				new lslgeneric::LazyGrid<pcl::PointXYZ>(0.4)); --> (*)
+
+			and then call
+
+			nd1.loadFromJFF("map0027.jff");
+
+			*) use this constructor so index is not initialized and attributes
+			   can be set manually
+ */
+template<typename PointT>    
+int NDTMap<PointT>::loadFromJFF(const char* filename) {
+	
+	FILE * jffin;
+
+	if(filename == NULL) {
+		JFFERR("problem outputing to jff");
+	}
+
+    jffin = fopen(filename,"r+b");
+    
+    char versionBuf[16];
+    if(fread(&versionBuf, sizeof(char), strlen(_JFFVERSION_), jffin) <= 0){
+		JFFERR("reading version failed");
+	}
+	versionBuf[strlen(_JFFVERSION_)] = '\0';
+
+    int indexType;
+    if(fread(&indexType, sizeof(int), 1, jffin) <= 0){
+		JFFERR("reading version failed");
+	}
+    
+    if(indexType != this->getMyIndexInt()){
+    	switch(indexType){
+			case 1:
+				std::cerr << "Map uses CellVector\n";
+				return -1;
+				break;
+			case 2:
+				std::cerr << "Map uses OctTree\n";
+				return -2;
+				break;
+			case 3:
+				std::cerr << "Map uses LazyGrid\n";
+				return -3;
+				break;
+		}
+	}
+
+	switch(indexType){
+		case 1:{
+			CellVector<PointT>* cv = dynamic_cast<CellVector<PointT> * >(index_);
+			if(cv->loadFromJFF(jffin) < 0){
+				JFFERR("Error loading CellVector");
+			}
+			break;
+		}
+		case 2:{
+			OctTree<PointT>* tr = dynamic_cast<OctTree<PointT>*>(index_);
+			if(tr->loadFromJFF(jffin) < 0){
+				JFFERR("Error loading OctTree");
+			}
+			break;
+		}
+		case 3:{
+			LazyGrid<PointT>* gr = dynamic_cast<LazyGrid<PointT>*>(index_);
+			if(gr->loadFromJFF(jffin) < 0){
+				JFFERR("Error loading LazyGrid");
+			}
+			break;
+		}
+		default:
+			JFFERR("error casting index");
+	}
+
+	NDTCell<PointT> *ptCell = new NDTCell<PointT>();
+	index_->setCellType(ptCell);
+	delete ptCell;
+
+    fclose(jffin);
+
+    std::cout << "map loaded successfully " << versionBuf << std::endl;
+
+    // isFirstLoad_ = false;
+
+    return 0;
+
+}
+
+
 /// returns the current spatial index as a string (debugging function)
 template<typename PointT>    
 std::string NDTMap<PointT>::getMyIndexStr() const 
@@ -391,6 +624,26 @@ std::string NDTMap<PointT>::getMyIndexStr() const
       }	
       
      return std::string("Unknown index type");
+}
+
+/// returns the current spatial index as an integer (debugging function)
+template<typename PointT>    
+int NDTMap<PointT>::getMyIndexInt() const 
+{
+     CellVector<PointT>* cl = dynamic_cast<CellVector<PointT> * >(index_);
+     if(cl!=NULL) {
+	  return 1;
+      }
+      OctTree<PointT>* tr = dynamic_cast<OctTree<PointT>*>(index_);
+      if(tr!=NULL) {
+	   return 2;
+      }
+      LazyGrid<PointT> *gr = dynamic_cast<LazyGrid<PointT>*>(index_);
+      if(gr!=NULL) {
+	   return 3;
+      }	
+      
+     return -1;
 }
 
 //computes the *negative log likelihood* of a single observation
@@ -762,7 +1015,7 @@ NDTMap<PointT>::getCellIdx(unsigned int idx)
      }
      return NULL;
 }
-
+// ???
 template<typename PointT>    
 //std::vector<lslgeneric::NDTCell<pcl::PointXYZ>*> NDTMap<PointT>::getAllCells(){
 std::vector<lslgeneric::NDTCell<PointT>*> NDTMap<PointT>::getAllCells(){

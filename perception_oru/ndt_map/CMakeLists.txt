@@ -42,6 +42,8 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_executable(oct_builder test/octTreeBuilder.cc)
 rosbuild_add_executable(ndt_builder test/ndtMapBuilder.cc)
 rosbuild_add_executable(histTest test/test_ndt_histogram.cc)
+rosbuild_add_executable(jffSaveTest test/jffLazyGridTest_saving.cc)
+rosbuild_add_executable(jffLoadTest test/jffLazyGridTest_loading.cc)
 
 #rosbuild_add_executable(likelihood_test test/ndtLikelihoodTester.cc)
 #target_link_libraries(likelihood_test ${PROJECT_NAME}  pointcloud_vrml)

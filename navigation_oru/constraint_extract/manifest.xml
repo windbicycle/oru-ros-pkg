@@ -1,0 +1,16 @@
+<package>
+  <description brief="constraint_extract">
+
+     constraint_extract
+
+  </description>
+  <author>Todor Stoyanov</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/constraint_extract</url>
+  <depend package="eigen"/>
+  <depend package="opencv2"/>
+
+</package>
+
+
