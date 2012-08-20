@@ -1,3 +1,8 @@
+#include <cstring>
+#include <cstdio>
+
+#define JFFERR(x) std::cerr << x << std::endl; return -1;
+
 namespace lslgeneric {
 
     template <typename PointT> 
@@ -310,7 +315,7 @@ namespace lslgeneric {
 	    indY = floor((point.y - centerY)/cellSizeY+0.5) + sizeY/2;
 	    indZ = floor((point.z - centerZ)/cellSizeZ+0.5) + sizeZ/2;
 	}
-
+ 
     /*
        void LazyGrid<PointT>::getIndexArrayForPoint(const PointT& point, int* &indX, int* &indY, int *&indZ) {
        indX[0] = floor((point.x - centerX)/cellSizeX+0.5) + sizeX/2;
@@ -565,14 +570,14 @@ namespace lslgeneric {
 	}
 
     template <typename PointT> 
-	void LazyGrid<PointT>::getCellSize(float &cx, float &cy, float &cz) {
+	void LazyGrid<PointT>::getCellSize(double &cx, double &cy, double &cz) {
 	    cx = cellSizeX;
 	    cy = cellSizeY;
 	    cz = cellSizeZ;
 	}
 
     template <typename PointT> 
-	void LazyGrid<PointT>::getCenter(float &cx, float &cy, float &cz) {
+	void LazyGrid<PointT>::getCenter(double &cx, double &cy, double &cz) {
 	    cx = centerX;
 	    cy = centerY;
 	    cz = centerZ;
@@ -586,4 +591,78 @@ namespace lslgeneric {
 	    cz = sizeZ;
 	}
 
-}
+	template <typename PointT> 
+	void LazyGrid<PointT>::getGridSizeInMeters(double &cx, double &cy, double &cz) {
+	    cx = sizeXmeters;
+	    cy = sizeYmeters;
+	    cz = sizeZmeters;
+	}
+
+	template <typename PointT>
+	int LazyGrid<PointT>::loadFromJFF(FILE * jffin){
+		double lazyGridData[9]; // = { sizeXmeters, sizeYmeters, sizeZmeters,
+	                            //     cellSizeX,   cellSizeY,   cellSizeZ,
+	                            //     centerX,     centerY,     centerZ };
+		NDTCell<PointT> prototype_;
+		if(fread(&lazyGridData, sizeof(double), 9, jffin) <= 0){
+			JFFERR("reading lazyGridData failed");
+		}
+		if(fread(&prototype_, sizeof(Cell<PointT>), 1, jffin) <= 0){
+			JFFERR("reading prototype_ failed");
+		}
+
+		// just in case someone was messing around with the new NDTMap
+	    centerIsSet = false;
+	    sizeIsSet = false;
+
+		protoType = prototype_.clone();
+
+		this->setSize(lazyGridData[0], lazyGridData[1], lazyGridData[2]);
+
+	    cellSizeX = lazyGridData[3];
+	    cellSizeY = lazyGridData[4];
+	    cellSizeZ = lazyGridData[5];
+
+		this->setCenter(lazyGridData[6], lazyGridData[7], lazyGridData[8]);
+
+		int indX, indY, indZ;
+	    
+	    // load all cells
+	    while (1) {
+	    	if(prototype_.loadFromJFF(jffin) < 0){
+	    		if(feof(jffin)){
+	    			break;
+	    		} else {
+	    			JFFERR("loading cell failed");
+				}
+			}
+
+	    	if(!feof(jffin)){
+	    		// std::cout << prototype_.getOccupancy() << std::endl; /* for debugging */
+	    	} else {
+	    		break;
+	    	}
+	    	this->getIndexForPoint(prototype_.getCenter(), indX, indY, indZ);
+	    	if(!initialized) return -1;
+			if(dataArray == NULL) return -1;
+			if(dataArray[indX] == NULL) return -1;
+			if(dataArray[indX][indY] == NULL) return -1;
+
+			if(dataArray[indX][indY][indZ] != NULL) {
+				delete dataArray[indX][indY][indZ];
+			}
+			//initialize cell
+			dataArray[indX][indY][indZ] = prototype_.copy();
+			NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*>(dataArray[indX][indY][indZ]);
+			cell->setCovSum(prototype_.getCovSum());
+			cell->setMeanSum(prototype_.getMeanSum());
+
+			activeCells.push_back(dataArray[indX][indY][indZ]);
+    	}
+
+    	this->initKDTree();
+
+		return 0;
+	}
+
+} //end namespace

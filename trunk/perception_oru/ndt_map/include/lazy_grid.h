@@ -85,15 +85,20 @@ namespace lslgeneric {
 	virtual Cell<PointT>* getCellAt(int indX, int indY, int indZ);
 	virtual bool getLinkedAt(int indX, int indY, int indZ);
 
-	void getCellSize(float &cx, float &cy, float &cz);
+	void getCellSize(double &cx, double &cy, double &cz);
 	void getGridSize(int &cx, int &cy, int &cz);
-	void getCenter(float &cx, float &cy, float &cz);
+	void getGridSizeInMeters(double &cx, double &cy, double &cz);
+	void getCenter(double &cx, double &cy, double &cz);
 	void getIndexForPoint(const PointT& pt, int &idx, int &idy, int &idz);
+	Cell<PointT> * getProtoType() { return protoType; }
 
 	void initKDTree();
 	void initialize();
     
 	void initializeAll() ;
+
+	///reads map contents from .jff file
+	virtual int loadFromJFF(FILE * jffin);
 
     private:
 	bool initialized;

@@ -9,8 +9,9 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_registration</url>
+  <depend package="common_rosdeps" />
+  <rosdep name="eigen" />
   <depend package="ndt_map"/>
-  <depend package="eigen"/>
   <depend package="pcl"/>
   <depend package="pointcloud_vrml"/>
   <depend package="tf"/>

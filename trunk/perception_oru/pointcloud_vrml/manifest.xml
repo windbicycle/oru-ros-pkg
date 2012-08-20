@@ -8,9 +8,10 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/pointcloud_vrml</url>
+  <depend package="common_rosdeps" />
+  <rosdep name="eigen" />
   <depend package="pcl"/>
   <depend package="pcl_ros"/>
-  <depend package="eigen"/>
   <depend package="tf"/>
   <depend package="nav_msgs"/>
   <export> 

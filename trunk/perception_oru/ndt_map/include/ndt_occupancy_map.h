@@ -119,7 +119,7 @@ template <typename PointT>
 				size_t &supportSize, double maxVar, DepthCamera<PointT> &cameraParams, bool estimateParamsDI=false, bool nonMean = false);
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 				
-	    void computeNDTCells();
+	    void computeNDTCells(int cellupdatemode = CELL_UPDATE_MODE_SAMPLE_VARIANCE_WITH_RESET);
 	    	    
 	    void writeToVRML(const char* filename);
 	    virtual void writeToVRML(FILE* fout);

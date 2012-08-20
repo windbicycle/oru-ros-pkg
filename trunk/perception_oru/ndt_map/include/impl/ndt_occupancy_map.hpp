@@ -320,7 +320,7 @@ pcl::PointCloud<PointT> NDTOccupancyMap<PointT>::loadDepthImageFeatures(const cv
 /** Helper function, computes the  NDTCells
   */
 template<typename PointT>    
-void NDTOccupancyMap<PointT>::computeNDTCells() {
+void NDTOccupancyMap<PointT>::computeNDTCells(int cellupdatemode) {
     CellVector<PointT> *cv = dynamic_cast<CellVector<PointT>*>(index_);
     
     typename SpatialIndex<PointT>::CellVectorItr it = index_->begin();
@@ -330,7 +330,7 @@ void NDTOccupancyMap<PointT>::computeNDTCells() {
 			//fprintf(stderr,"*");
 			if(cell!=NULL) {
 				//fprintf(stderr,"Something is not null!\n");
-				cell->computeGaussian();
+				cell->computeGaussian(cellupdatemode);
 	    if (cv!=NULL)
 	    {
 		 // Set the mean to the cell's centre.

@@ -9,10 +9,11 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_map</url>
+  <depend package="common_rosdeps" />
+  <rosdep name="eigen" />
   <depend package="pcl" />
   <depend package="pcl_ros" />
   <depend package="pointcloud_vrml" />
-  <depend package="eigen" />
   <depend package="opencv2" />
   <depend package="cv_bridge" />
   <export>

@@ -114,10 +114,10 @@ main (int argc, char** argv)
 	
 	gettimeofday(&tv_start,NULL);
 	//we do a single scan to scan registration
-	reader.read(argv[1],cloud);
-	reader.read(argv[2],cloud_offset);
-	//cloud = lslgeneric::readVRML<pcl::PointXYZ>(argv[1]);
-	//cloud_offset = lslgeneric::readVRML<pcl::PointXYZ>(argv[2]);
+	//reader.read(argv[1],cloud);
+	//reader.read(argv[2],cloud_offset);
+	cloud = lslgeneric::readVRML<pcl::PointXYZ>(argv[1]);
+	cloud_offset = lslgeneric::readVRML<pcl::PointXYZ>(argv[2]);
 
 /*	pcl::PointCloud<pcl::PointXYZ> cloud1, cloud_offset1;
 	for(int i=0; i<cloud.points.size(); i++) {
@@ -143,19 +143,19 @@ main (int argc, char** argv)
 	cout<<"translation "<<Tout.translation().transpose()<<endl;
 	cout<<"euler: "<<Tout.rotation().eulerAngles(0,1,2).transpose()<<endl;
 
-	cloud_offset += cloud;
+	// cloud_offset += cloud;
 	char fname[50];
 	snprintf(fname,49,"c_offset.pcd");
-	writer.write(fname, cloud_offset);
+	// writer.write(fname, cloud_offset);
 
-	/*
+	
 	snprintf(fname,49,"c_offset.wrl");
 	FILE *fout = fopen(fname,"w");
 	fprintf(fout,"#VRML V2.0 utf8\n");
 	lslgeneric::writeToVRML<pcl::PointXYZ>(fout,cloud,Eigen::Vector3d(0,1,0));
 	lslgeneric::writeToVRML<pcl::PointXYZ>(fout,cloud_offset,Eigen::Vector3d(1,0,0));
 	fclose(fout);
-	*/
+	
 	cout<<"initial registration done, saved into file c_offset.pcd\n";
 	cout<<"make sure to check that initial registration was successful!\n";
 

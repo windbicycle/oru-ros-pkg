@@ -53,3 +53,21 @@ rosbuild_add_executable(ndt_feature_eval src/ndt_feature_eval.cc)
 #target_link_libraries(ndt_feature_eval ${PROJECT_NAME})
 
 rosbuild_add_executable(ndt_feature_reg_node src/ndt_feature_reg_node.cc)
+
+
+rosbuild_get_stack_version(ROS_VERSION ros)
+
+STRING(REGEX REPLACE "^([0-9]+)\\.[0-9]+\\.[0-9]+" "\\1" ros_major 
+"${ROS_VERSION}")
+STRING(REGEX REPLACE "^[0-9]+\\.([0-9])+\\.[0-9]+" "\\1" ros_minor 
+"${ROS_VERSION}")
+STRING(REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9]+)" "\\1" ros_patch 
+"${ROS_VERSION}")
+
+if(ros_major MATCHES 1 AND ros_minor GREATER 7)
+MESSAGE(STATUS "ROS version: fuerte")
+#	include_directories(/usr/include/vtk-5.8)
+#	target_link_libraries(ndt_feature_eval ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
+#	target_link_libraries(ndt_feature_reg_node ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
+#	target_link_libraries(ndt_feature_viewer ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
+endif()

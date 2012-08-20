@@ -1,0 +1,28 @@
+<package>
+  <description brief="ndt_visualisation">
+
+     contains the implementation of and the methods necesary
+     to use the .jff format for 3D NDT maps.
+
+  </description>
+  <author>Jan Brenstein</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ndt_visualisation</url>
+  <depend package="ndt_map"/>
+  <depend package="common_rosdeps" />
+  <rosdep name="eigen" />
+  <depend package="pcl"/>
+  <depend package="pointcloud_vrml"/>
+  <depend package="tf"/>
+  <depend package="tf_conversions"/>
+  <depend package="pangolin_wrapper"/>
+
+  <export>
+      <cpp cflags="-I${prefix}/include"/>
+      
+  </export>
+
+</package>
+
+
