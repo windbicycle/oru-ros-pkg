@@ -1,0 +1,20 @@
+<package>
+  <description brief="depth_fuse">
+
+     depth_fuse
+
+  </description>
+  <author>danielcanelhas</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/depth_fuse</url>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+  <depend package="cv_bridge"/>
+  <depend package="opencv2"/>
+  <depend package="openni_camera"/>
+   <rosdep name="eigen"/>
+
+</package>
+
+
