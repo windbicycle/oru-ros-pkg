@@ -19,7 +19,7 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
-#include <pcl/common/transform.h>
+#include <pcl/common/transforms.h>
 
 using namespace ndt_feature_reg;
 using namespace pcl;

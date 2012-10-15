@@ -25,9 +25,19 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules/"
 
 #To use pangolin
 FIND_PACKAGE(Pangolin REQUIRED)
-INCLUDE_DIRECTORIES(${Pangolin_INCLUDE_DIRS})
-LINK_DIRECTORIES(${Pangolin_LIBRARY_DIRS})
-LINK_LIBRARIES(${Pangolin_LIBRARIES})
+FIND_PACKAGE(FREEGLUT REQUIRED)
+INCLUDE_DIRECTORIES(${Pangolin_INCLUDE_DIR})
+## Find required dependencies
+FIND_PACKAGE(OpenGL REQUIRED QUIET)
+FIND_PACKAGE(GLEW REQUIRED)
+## Apply required dependencies settings
+LIST(APPEND LINK_LIBS "${OPENGL_LIBRARIES};${GLEW_LIBRARY};${Pangolin_LIBRARY};${FREEGLUT_LIBRARY};${OPENGL_LIBRARIES}" )
+LIST(APPEND LIB_DIRS  "${OPENGL_LIBRARY_DIR};${GLEW_LIBRARY_DIR};${Pangolin_LIBRARY_DIRS}" )
+LINK_DIRECTORIES(${LIB_DIRS})
+LINK_LIBRARIES(${LINK_LIBS})
+MESSAGE(STATUS "Found Pangolin: ${Pangolin_LIBRARY}")
+MESSAGE(STATUS "link dirs: ${LIB_DIRS}")
+MESSAGE(STATUS "link libs: ${LINK_LIBS}")
 
 #### need to add something so rosmake also build pangolin library ####
 #ADD_SUBDIRECTORY(Pangolin/build)
@@ -36,13 +46,10 @@ LINK_LIBRARIES(${Pangolin_LIBRARIES})
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
-rosbuild_add_executable(ndt_visualiser src/fromFile.cpp)
 #rosbuild_add_executable(jan_test src/main.cpp)
-
+rosbuild_add_executable(ndt_visualiser src/fromFile.cpp)
 rosbuild_add_boost_directories()
-rosbuild_link_boost(ndt_visualiser filesystem system)
+rosbuild_link_boost(ndt_visualiser filesystem system thread)

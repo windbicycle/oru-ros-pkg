@@ -8,7 +8,7 @@ FIND_PATH(
   Pangolin_INCLUDE_DIR_SRC
   NAMES pangolin/pangolin.h
   PATHS
-    ${CMAKE_SOURCE_DIR}/Pangolin
+    ${CMAKE_SOURCE_DIR}/../pangolin_wrapper/Pangolin
     ${CMAKE_SOURCE_DIR}/../pangolin
     ${CMAKE_SOURCE_DIR}/../Pangolin
     /usr/include
@@ -19,7 +19,7 @@ FIND_PATH(
   Pangolin_INCLUDE_DIR_BUILD
   NAMES pangolin/config.h
   PATHS
-    ${CMAKE_SOURCE_DIR}/Pangolin/build/
+    ${CMAKE_SOURCE_DIR}/../pangolin_wrapper/Pangolin/build/
     ${CMAKE_SOURCE_DIR}/../Pangolin/release/
     ${CMAKE_SOURCE_DIR}/../Pangolin/build/
     ${CMAKE_SOURCE_DIR}/../pangolin/release/
@@ -32,7 +32,7 @@ FIND_LIBRARY(
   Pangolin_LIBRARY
   NAMES pangolin
   PATHS
-    ${CMAKE_SOURCE_DIR}/Pangolin/build/pangolin
+    ${CMAKE_SOURCE_DIR}/../pangolin_wrapper/Pangolin/build/pangolin
     ${CMAKE_SOURCE_DIR}/../Pangolin/release/pangolin
     ${CMAKE_SOURCE_DIR}/../Pangolin/build/pangolin
     ${CMAKE_SOURCE_DIR}/../pangolin/release/pangolin

@@ -16,7 +16,7 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
-#include <pcl/common/transform.h>
+#include <pcl/common/transforms.h>
 
 using namespace ndt_feature_reg;
 using namespace pcl;
@@ -263,7 +263,8 @@ int main(int argc, char** argv)
 	   frame1->current_res = current_res;
 	   frame2->current_res = current_res;
 	   NDTFrameProc<pcl::PointXYZ> proc(nb_ransac, max_inldist_xy, max_inldist_z);
-	   proc.detector = new cv::SurfFeatureDetector( detector_thresh );
+	   proc.detector = cv::FeatureDetector::create("SURF");
+	   //( detector_thres
 	   proc.img_scale = img_scale;
 	   
 	   double t1 = getDoubleTime();
@@ -290,7 +291,8 @@ int main(int argc, char** argv)
      // ----------------------------------------------------------------
 //#else
      NDTFrameProc<pcl::PointXYZ> proc(nb_ransac, max_inldist_xy, max_inldist_z);
-     proc.detector = new cv::SurfFeatureDetector( detector_thresh );
+     proc.detector = cv::FeatureDetector::create("SURF");
+     //proc.detector = new cv::SurfFeatureDetector( detector_thresh );
      proc.img_scale = img_scale;
      proc.trim_factor = trim_factor;
      proc.non_mean = non_mean;

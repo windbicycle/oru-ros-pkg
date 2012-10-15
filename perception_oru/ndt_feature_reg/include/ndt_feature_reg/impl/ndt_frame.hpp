@@ -3,6 +3,9 @@
 #include <Eigen/LU>
 #include <iostream>
 #include <limits>
+#include "opencv2/core/core.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/highgui/highgui.hpp"
 
 namespace ndt_feature_reg {
 
@@ -17,7 +20,7 @@ PoseEstimator<PointSource,PointTarget>::PoseEstimator(int NRansac,
      trans.setZero();
      
      // matcher
-     matcher = new cv::BruteForceMatcher< cv::L2<float> >;
+     matcher = new cv::BFMatcher(cv::NORM_L2);
      wx = 92; wy = 48;
      windowed = false;
      projectMatches = true;
