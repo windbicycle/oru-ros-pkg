@@ -196,7 +196,8 @@ public:
 
 	       double detector_thresh;
 	       param_nh.param("detector_thresh", detector_thresh, 400.);
-	       proc->detector = new cv::SurfFeatureDetector( detector_thresh );
+	       //proc->detector = new cv::SurfFeatureDetector( detector_thresh );
+	       proc->detector = cv::FeatureDetector::create("SURF");
 
 	       param_nh.param("img_scale", proc->img_scale, 0.25);
 	       param_nh.param("trim_factor", proc->trim_factor, 1.);
