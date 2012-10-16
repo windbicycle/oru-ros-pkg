@@ -22,7 +22,7 @@ namespace lslgeneric {
   * \note every subsequent call will destroy the previous map!
   */
 template<typename PointT>
-void NDTMap<PointT>::loadPointCloud(const pcl::PointCloud<PointT> &pc) {
+void NDTMap<PointT>::loadPointCloud(const pcl::PointCloud<PointT> &pc, double range_limit) {
     if(index_ != NULL) {
 		//std::cout<<"CLONE INDEX\n";
 		SpatialIndex<PointT> *si = index_->clone();
@@ -44,66 +44,88 @@ void NDTMap<PointT>::loadPointCloud(const pcl::PointCloud<PointT> &pc) {
 		return;
 	}
     
+
 	double maxDist = 0;//, distCeil = 200;
 
-    typename pcl::PointCloud<PointT>::const_iterator it = pc.points.begin();
-    Eigen::Vector3d centroid(0,0,0);
-    int npts = 0;
+	typename pcl::PointCloud<PointT>::const_iterator it = pc.points.begin();
+	Eigen::Vector3d centroid(0,0,0);
+	int npts = 0;
 	while(it!=pc.points.end()) {
-			Eigen::Vector3d d;
-			if(std::isnan(it->x) ||std::isnan(it->y) ||std::isnan(it->z))
-			{
-					it++;
-					continue;
-			}
-			d << it->x, it->y, it->z;
-			centroid += d;
-			it++;
-			npts++;
+	    Eigen::Vector3d d;
+	    if(std::isnan(it->x) ||std::isnan(it->y) ||std::isnan(it->z))
+	    {
+		it++;
+		continue;
+	    }
+	    d << it->x, it->y, it->z;
+	    if(range_limit>0) {
+		if(d.norm()>range_limit) {
+		    it++;
+		    continue;
 		}
+	    }
+	    centroid += d;
+	    it++;
+	    npts++;
+	}
 
-    centroid /= (double)npts;
+	centroid /= (double)npts;
 
-    //Eigen::Vector4f centroid(0,0,0,0);
-    //pcl::compute3DCentroid(pc,centroid);
-    
-    //compute distance to furthest point
-    it = pc.points.begin();
-    while(it!=pc.points.end()) {
-			Eigen::Vector3d d;
-			if(std::isnan(it->x) ||std::isnan(it->y) ||std::isnan(it->z))
-			{
-					it++;
-					continue;
-			}
-			d << centroid(0)-it->x, centroid(1)-it->y, centroid(2)-it->z;
-			double dist = d.norm();
-			maxDist = (dist > maxDist) ? dist : maxDist;
-			it++;
-    }
-    // cout<<"Points = " <<pc.points.size()<<" maxDist = "<<maxDist<<endl;
+	//Eigen::Vector4f centroid(0,0,0,0);
+	//pcl::compute3DCentroid(pc,centroid);
 
-    NDTCell<PointT> *ptCell = new NDTCell<PointT>();
-    index_->setCellType(ptCell);
-    delete ptCell;
-    index_->setCenter(centroid(0),centroid(1),centroid(2));
-    index_->setSize(4*maxDist,4*maxDist,4*maxDist);
+	//compute distance to furthest point
+	it = pc.points.begin();
+	while(it!=pc.points.end()) {
+	    Eigen::Vector3d d;
+	    if(std::isnan(it->x) ||std::isnan(it->y) ||std::isnan(it->z))
+	    {
+		it++;
+		continue;
+	    }
+	    if(range_limit>0) {
+		d << it->x, it->y, it->z;
+		if(d.norm()>range_limit) {
+		    it++;
+		    continue;
+		}
+	    }
+	    d << centroid(0)-it->x, centroid(1)-it->y, centroid(2)-it->z;
+	    double dist = d.norm();
+	    maxDist = (dist > maxDist) ? dist : maxDist;
+	    it++;
+	}
+	// cout<<"Points = " <<pc.points.size()<<" maxDist = "<<maxDist<<endl;
 
-//    ROS_INFO("centroid is %f,%f,%f", centroid(0),centroid(1),centroid(2));
-//    ROS_INFO("maxDist is %lf", maxDist);
+	NDTCell<PointT> *ptCell = new NDTCell<PointT>();
+	index_->setCellType(ptCell);
+	delete ptCell;
+	index_->setCenter(centroid(0),centroid(1),centroid(2));
+	index_->setSize(4*maxDist,4*maxDist,4*maxDist);
 
-    it = pc.points.begin();
-    while(it!=pc.points.end()) {
-			if(std::isnan(it->x) ||std::isnan(it->y) ||std::isnan(it->z))
-			{
-					it++;
-					continue;
-			}
-			index_->addPoint(*it);
-			it++;
-    }
+	//    ROS_INFO("centroid is %f,%f,%f", centroid(0),centroid(1),centroid(2));
+	//    ROS_INFO("maxDist is %lf", maxDist);
 
-    isFirstLoad_ = false;
+	it = pc.points.begin();
+	while(it!=pc.points.end()) {
+	    Eigen::Vector3d d;
+	    if(std::isnan(it->x) ||std::isnan(it->y) ||std::isnan(it->z))
+	    {
+		it++;
+		continue;
+	    }
+	    if(range_limit>0) {
+		d << it->x, it->y, it->z;
+		if(d.norm()>range_limit) {
+		    it++;
+		    continue;
+		}
+	    }
+	    index_->addPoint(*it);
+	    it++;
+	}
+
+	isFirstLoad_ = false;
 }
 
 
@@ -425,7 +447,7 @@ int NDTMap<PointT>::writeCellVectorJFF(FILE * jffout){
 	// TODO: add CellVector specific stuff
 	
 	typename SpatialIndex<PointT>::CellVectorItr it = index_->begin();
-    while (it != index_->end()) {
+	while (it != index_->end()) {
 		NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*> (*it);
 		if(cell!=NULL) {
 			if(cell->hasGaussian_) {
@@ -978,6 +1000,33 @@ void NDTMap<PointT>::debugToVRML(const char* fname, pcl::PointCloud<PointT> &pc)
     fclose(fout);
 }
 	    
+template<typename PointT>    
+NDTMap<PointT>* NDTMap<PointT>::pseudoTransformNDTMap(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T) {
+   NDTMap<PointT>* map = new NDTMap<PointT>(new CellVector<PointT>());
+   CellVector<PointT>* idx = dynamic_cast<CellVector<PointT>*> (map->getMyIndex()); 
+   typename SpatialIndex<PointT>::CellVectorItr it = index_->begin();
+
+   while (it != index_->end()) {
+       NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*> (*it);
+       if(cell!=NULL) {
+	   if(cell->hasGaussian_) {
+	       Eigen::Vector3d mean = cell->getMean();
+	       Eigen::Matrix3d cov = cell->getCov();
+	       mean = T*mean;
+	       cov = T.rotation().transpose()*cov*T.rotation();
+	       NDTCell<PointT>* nd = (NDTCell<PointT>*)cell->clone();
+	       nd->setMean(mean);
+	       nd->setCov(cov);
+	       idx->addNDTCell(nd);
+	   }
+       } else {
+	   //ERR("problem casting cell to NDT!\n");
+       }
+       it++;
+   }
+   return map;
+}
+
 template<typename PointT>    
 std::vector<NDTCell<PointT>*> NDTMap<PointT>::pseudoTransformNDT(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T) {
 

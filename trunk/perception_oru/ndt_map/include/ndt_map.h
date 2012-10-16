@@ -90,7 +90,7 @@ namespace lslgeneric {
 	    }
 		void addPointCloud(const pcl::PointCloud<PointT> &pc);
 			
-	    void loadPointCloud(const pcl::PointCloud<PointT> &pc);
+	    void loadPointCloud(const pcl::PointCloud<PointT> &pc, double range_limit = -1);
 	    /// each entry in the indices vector contains a set of indices to a NDC cell.
 	    void loadPointCloud(const pcl::PointCloud<PointT> &pc, const std::vector<std::vector<size_t> > &indices);
 	    
@@ -132,7 +132,15 @@ namespace lslgeneric {
 	    ///return the cell using a specific index (not available for all spatialindexes), will return NULL if the idx is not valid.
 	    NDTCell<PointT>* getCellIdx(unsigned int idx);
 
+	    /** 
+	      * Returns a transformed NDT as a vector of NDT cells
+	      */
 	    std::vector<NDTCell<PointT>*> pseudoTransformNDT(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T);
+	    
+	    /** 
+	      * Returns a transformed NDT as an NDT map with a CellVector data structure
+       	      */
+	    NDTMap<PointT>* pseudoTransformNDTMap(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T);
 	    /**
 	      * Returns all computed cells from the map
 	      */

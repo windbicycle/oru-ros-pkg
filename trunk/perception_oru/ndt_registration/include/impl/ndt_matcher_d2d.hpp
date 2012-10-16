@@ -8,7 +8,7 @@
 
 namespace lslgeneric {
 
-//#define DO_DEBUG_PROC
+#define DO_DEBUG_PROC
     
 template <typename PointSource, typename PointTarget>
 void NDTMatcherD2D<PointSource,PointTarget>::init(bool _isIrregularGrid, 
@@ -145,8 +145,15 @@ bool NDTMatcherD2D<PointSource,PointTarget>::match( pcl::PointCloud<PointTarget>
 	      }
 	  }
 	  lslgeneric::writeToVRML(fout,sourceCloud,Eigen::Vector3d(0,1,0));
-	  
 	  fclose(fout);
+	  
+	  snprintf(fname,49,"cloud%lf.wrl",current_resolution);
+	  fout = fopen(fname,"w");
+	  fprintf(fout,"#VRML V2.0 utf8\n");
+	  lslgeneric::writeToVRML(fout,target,Eigen::Vector3d(1,0,0));
+	  lslgeneric::writeToVRML(fout,sourceCloud,Eigen::Vector3d(0,1,0));
+	  fclose(fout);
+	  
 #endif
       }
   }
@@ -177,7 +184,7 @@ bool NDTMatcherD2D<PointSource,PointTarget>::match( NDTMap<PointTarget>& targetN
     //locals 
     bool convergence = false;
     //double score=0;
-    double DELTA_SCORE = 10e-3*current_resolution;
+    double DELTA_SCORE = 10e-4*current_resolution;
     //double DELTA_SCORE = 0.0005;
     double NORM_MAX = 4*current_resolution, ROT_MAX = M_PI/4; //
     int itr_ctr = 0;
@@ -192,7 +199,7 @@ bool NDTMatcherD2D<PointSource,PointTarget>::match( NDTMap<PointTarget>& targetN
     }
 
     std::vector<NDTCell<PointSource>*> nextNDT = sourceNDT.pseudoTransformNDT(T);
-
+/*
 #ifdef DO_DEBUG_PROC	  
     char fname[50];
     snprintf(fname,49,"innit%lf.wrl",current_resolution);
@@ -207,9 +214,8 @@ bool NDTMatcherD2D<PointSource,PointTarget>::match( NDTMap<PointTarget>& targetN
 	}
     }
     fclose(fout);
-    /*
-*/
 #endif
+*/
 
     while(!convergence) 
     {

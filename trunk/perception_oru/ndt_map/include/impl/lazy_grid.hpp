@@ -599,70 +599,70 @@ namespace lslgeneric {
 	}
 
 	template <typename PointT>
-	int LazyGrid<PointT>::loadFromJFF(FILE * jffin){
+	    int LazyGrid<PointT>::loadFromJFF(FILE * jffin){
 		double lazyGridData[9]; // = { sizeXmeters, sizeYmeters, sizeZmeters,
-	                            //     cellSizeX,   cellSizeY,   cellSizeZ,
-	                            //     centerX,     centerY,     centerZ };
+		//     cellSizeX,   cellSizeY,   cellSizeZ,
+		//     centerX,     centerY,     centerZ };
 		NDTCell<PointT> prototype_;
 		if(fread(&lazyGridData, sizeof(double), 9, jffin) <= 0){
-			JFFERR("reading lazyGridData failed");
+		    JFFERR("reading lazyGridData failed");
 		}
 		if(fread(&prototype_, sizeof(Cell<PointT>), 1, jffin) <= 0){
-			JFFERR("reading prototype_ failed");
+		    JFFERR("reading prototype_ failed");
 		}
 
 		// just in case someone was messing around with the new NDTMap
-	    centerIsSet = false;
-	    sizeIsSet = false;
+		centerIsSet = false;
+		sizeIsSet = false;
 
 		protoType = prototype_.clone();
 
 		this->setSize(lazyGridData[0], lazyGridData[1], lazyGridData[2]);
 
-	    cellSizeX = lazyGridData[3];
-	    cellSizeY = lazyGridData[4];
-	    cellSizeZ = lazyGridData[5];
+		cellSizeX = lazyGridData[3];
+		cellSizeY = lazyGridData[4];
+		cellSizeZ = lazyGridData[5];
 
 		this->setCenter(lazyGridData[6], lazyGridData[7], lazyGridData[8]);
 
 		int indX, indY, indZ;
-	    
-	    // load all cells
-	    while (1) {
-	    	if(prototype_.loadFromJFF(jffin) < 0){
-	    		if(feof(jffin)){
-	    			break;
-	    		} else {
-	    			JFFERR("loading cell failed");
-				}
+
+		// load all cells
+		while (1) {
+		    if(prototype_.loadFromJFF(jffin) < 0){
+			if(feof(jffin)){
+			    break;
+			} else {
+			    JFFERR("loading cell failed");
 			}
+		    }
 
-	    	if(!feof(jffin)){
-	    		// std::cout << prototype_.getOccupancy() << std::endl; /* for debugging */
-	    	} else {
-	    		break;
-	    	}
-	    	this->getIndexForPoint(prototype_.getCenter(), indX, indY, indZ);
-	    	if(!initialized) return -1;
-			if(dataArray == NULL) return -1;
-			if(dataArray[indX] == NULL) return -1;
-			if(dataArray[indX][indY] == NULL) return -1;
+		    if(!feof(jffin)){
+			// std::cout << prototype_.getOccupancy() << std::endl; /* for debugging */
+		    } else {
+			break;
+		    }
+		    this->getIndexForPoint(prototype_.getCenter(), indX, indY, indZ);
+		    if(!initialized) return -1;
+		    if(dataArray == NULL) return -1;
+		    if(dataArray[indX] == NULL) return -1;
+		    if(dataArray[indX][indY] == NULL) return -1;
 
-			if(dataArray[indX][indY][indZ] != NULL) {
-				delete dataArray[indX][indY][indZ];
-			}
-			//initialize cell
-			dataArray[indX][indY][indZ] = prototype_.copy();
-			NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*>(dataArray[indX][indY][indZ]);
-			cell->setCovSum(prototype_.getCovSum());
-			cell->setMeanSum(prototype_.getMeanSum());
+		    if(dataArray[indX][indY][indZ] != NULL) {
+			delete dataArray[indX][indY][indZ];
+		    }
+		    //initialize cell
+		    dataArray[indX][indY][indZ] = prototype_.copy();
+		    NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*>(dataArray[indX][indY][indZ]);
+		    cell->setCovSum(prototype_.getCovSum());
+		    cell->setMeanSum(prototype_.getMeanSum());
 
-			activeCells.push_back(dataArray[indX][indY][indZ]);
-    	}
+		    activeCells.push_back(dataArray[indX][indY][indZ]);
+		}
 
-    	this->initKDTree();
+		this->initKDTree();
 
 		return 0;
-	}
+	    }
 
 } //end namespace
