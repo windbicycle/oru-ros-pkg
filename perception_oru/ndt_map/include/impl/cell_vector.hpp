@@ -260,5 +260,35 @@ void CellVector<PointT>::cleanCellsAboveSize(double size) {
     }
 
 }
+template <typename PointT>
+int CellVector<PointT>::loadFromJFF(FILE * jffin){
+    NDTCell<PointT> prototype_;
+    if(fread(&prototype_, sizeof(Cell<PointT>), 1, jffin) <= 0){
+	JFFERR("reading prototype_ failed");
+    }
+    protoType = prototype_.clone();
+    // load all cells
+    while (1) {
+	if(prototype_.loadFromJFF(jffin) < 0){
+	    if(feof(jffin)){
+		break;
+	    } else {
+		JFFERR("loading cell failed");
+	    }
+	}
+
+	if(!feof(jffin)){
+	    // std::cout << prototype_.getOccupancy() << std::endl; /* for debugging */
+	} else {
+	    break;
+	}
+	//initialize cell
+	activeCells.push_back(prototype_);
+    }
+
+    this->initKDTree();
+
+    return 0;
+}
 
 }

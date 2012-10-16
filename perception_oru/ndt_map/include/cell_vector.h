@@ -85,6 +85,7 @@ class CellVector : public SpatialIndex<PointT> {
 	NDTCell<PointT>* getCellIdx(unsigned int idx);
 
 	void cleanCellsAboveSize(double size);	
+	int loadFromJFF(FILE * jffin);
     private:
 	std::vector<Cell<PointT>*> activeCells;
 	Cell<PointT> *protoType;

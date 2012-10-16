@@ -2,11 +2,11 @@
 # File that provides "make uninstall" target
 #  We use the file 'install_manifest.txt'
 # -----------------------------------------------
-IF(NOT EXISTS "/home/robotics/oru-ros-pkg/perception_oru/pangolin_wrapper/Pangolin/build/install_manifest.txt")
-  MESSAGE(FATAL_ERROR "Cannot find install manifest: \"/home/robotics/oru-ros-pkg/perception_oru/pangolin_wrapper/Pangolin/build/install_manifest.txt\"")
-ENDIF(NOT EXISTS "/home/robotics/oru-ros-pkg/perception_oru/pangolin_wrapper/Pangolin/build/install_manifest.txt")
+IF(NOT EXISTS "/home/tsv/code/release/oru-ros-pkg/perception_oru/pangolin_wrapper/Pangolin/build/install_manifest.txt")
+  MESSAGE(FATAL_ERROR "Cannot find install manifest: \"/home/tsv/code/release/oru-ros-pkg/perception_oru/pangolin_wrapper/Pangolin/build/install_manifest.txt\"")
+ENDIF(NOT EXISTS "/home/tsv/code/release/oru-ros-pkg/perception_oru/pangolin_wrapper/Pangolin/build/install_manifest.txt")
 
-FILE(READ "/home/robotics/oru-ros-pkg/perception_oru/pangolin_wrapper/Pangolin/build/install_manifest.txt" files)
+FILE(READ "/home/tsv/code/release/oru-ros-pkg/perception_oru/pangolin_wrapper/Pangolin/build/install_manifest.txt" files)
 STRING(REGEX REPLACE "\n" ";" files "${files}")
 FOREACH(file ${files})
   MESSAGE(STATUS "Uninstalling \"$ENV{DESTDIR}${file}\"")
