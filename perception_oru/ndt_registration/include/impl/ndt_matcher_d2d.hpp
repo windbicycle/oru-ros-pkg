@@ -8,7 +8,7 @@
 
 namespace lslgeneric {
 
-#define DO_DEBUG_PROC
+//#define DO_DEBUG_PROC
     
 template <typename PointSource, typename PointTarget>
 void NDTMatcherD2D<PointSource,PointTarget>::init(bool _isIrregularGrid, 

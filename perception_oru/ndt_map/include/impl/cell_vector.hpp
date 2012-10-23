@@ -283,7 +283,7 @@ int CellVector<PointT>::loadFromJFF(FILE * jffin){
 	    break;
 	}
 	//initialize cell
-	activeCells.push_back(prototype_);
+	this->addCell(prototype_.copy());
     }
 
     this->initKDTree();
