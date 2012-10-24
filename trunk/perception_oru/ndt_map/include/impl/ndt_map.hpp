@@ -291,7 +291,7 @@ void NDTMap<PointT>::computeNDTCells() {
     }
     */
     CellVector<PointT> *cv = dynamic_cast<CellVector<PointT>*>(index_);
-    
+   
     typename SpatialIndex<PointT>::CellVectorItr it = index_->begin();
     while (it != index_->end()) {
 	NDTCell<PointT> *cell = dynamic_cast<NDTCell<PointT>*> (*it);
@@ -322,7 +322,7 @@ void NDTMap<PointT>::computeNDTCells() {
 
     CellVector<PointT> *cl = dynamic_cast<CellVector<PointT>*>(index_);
     if(cl!=NULL) {
-	 cl->initKDTree();
+	cl->initKDTree();
     }
 }
 

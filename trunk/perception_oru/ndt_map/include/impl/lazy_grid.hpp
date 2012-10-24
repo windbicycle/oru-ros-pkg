@@ -358,9 +358,9 @@ namespace lslgeneric {
 	    const PointT pt(point);
 	    std::vector<NDTCell<PointT>*> cells;
 	    
-	    if(!meansTree.indices_) return cells;
-	    if(meansTree.indices_->size() < 1) return cells;
-	    if(!meansTree.nearestKSearch(pt,NCELLS,id,dist)) return cells;
+	    if(meansTree.input_.get()==NULL) { return cells;}
+	    if(meansTree.input_->size() < 1) { return cells;}
+	    if(!meansTree.nearestKSearch(pt,NCELLS,id,dist)) { return cells;}
 	    NDTCell<PointT> *ret = NULL;
 
 	    for(int i=0; i<NCELLS; i++) { 
@@ -439,10 +439,9 @@ namespace lslgeneric {
 	    id.reserve(1);
 	    dist.reserve(1);
 	    const PointT pt(point);
-	    if(!meansTree.indices_) return NULL;
-	    if(meansTree.indices_->size() < 1) return NULL;
-	    if(!meansTree.nearestKSearch(pt,1,id,dist)) return NULL;
-
+	    if(meansTree.input_.get()==NULL) {return NULL;}
+	    if(meansTree.input_->size() < 1) {return NULL;}
+	    if(!meansTree.nearestKSearch(pt,1,id,dist)) {return NULL;}
 	    PointT close = mp->points[id[0]];
 
 	    NDTCell<PointT> *ret = NULL;

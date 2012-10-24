@@ -33,7 +33,7 @@ void NDTMatcherD2D<PointSource,PointTarget>::init(bool _isIrregularGrid,
     current_resolution = 0.1; // Argggg!!! This is very important to have initiated! (one day debugging later) :-) TODO do we need to set it to anything better?
     lfd1 = 1; //lfd1/(double)sourceNDT.getMyIndex()->size(); //current_resolution*2.5;
     lfd2 = 0.05; //0.1/current_resolution;
-    ITR_MAX = 10;
+    ITR_MAX = 100;
     
 }
     
@@ -222,23 +222,23 @@ bool NDTMatcherD2D<PointSource,PointTarget>::match( NDTMap<PointTarget>& targetN
 
 	TR.setIdentity();
 	derivativesNDT(nextNDT,targetNDT,TR,score_gradient,Hessian,true);
-	if (fabs(pose_increment_v.dot(score_gradient))<= std::numeric_limits<double>::min())
-	{
-	    std::cout<<"gradient vanished\n";
-	    return true;
-	}
-//	cout<<"H  =  ["<<Hessian<<"]"<<endl;
-//	cout<<"grad= ["<<score_gradient.transpose()<<"]"<<endl;
-//	cout<<"pose_increment_v= ["<<pose_increment_v<<"]"<<endl;
-//	cout<<"dg    "<<pose_increment_v.dot(score_gradient)<<endl;
-	
 	pose_increment_v = Hessian.ldlt().solve(-score_gradient);
+	//std::cout<<"H  =  ["<<Hessian<<"]"<<std::endl;				  //
+	//std::cout<<"grad= ["<<score_gradient.transpose()<<"]"<<std::endl;         //
+	//std::cout<<"pose_increment_v= ["<<pose_increment_v<<"]"<<std::endl;       //
+	//std::cout<<"dg    "<<pose_increment_v.dot(score_gradient)<<std::endl;     //
+	
 	
 	//pose_increment_v = Hessian.svd().solve(-score_gradient);
         
 	//std::cout<<"iteration "<<itr_ctr<<" pose norm "<<(pose_increment_v.norm())<<std::endl;
 	//make the initial increment reasonable...
 	//cout<<"incr_init = ["<<pose_increment_v.transpose()<<"]"<<endl;
+	if (fabs(pose_increment_v.dot(score_gradient))<= std::numeric_limits<double>::min())
+	{
+	    std::cout<<"gradient vanished\n";
+	    return true;
+	}
 	
 	double pnorm = sqrt(pose_increment_v(0)*pose_increment_v(0) + pose_increment_v(1)*pose_increment_v(1) 
 			    +pose_increment_v(2)*pose_increment_v(2));
