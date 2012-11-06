@@ -16,7 +16,6 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-rosbuild_add_executable(depth_fuse src/depth_fuse.cpp)
 find_package(OpenCV REQUIRED)
 find_package(Eigen REQUIRED)
 include_directories(${Eigen_INCLUDE_DIRS})
@@ -27,8 +26,22 @@ include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
 add_definitions(${OPENCV_DEFINITIONS})
 
-target_link_libraries(depth_fuse ${OpenCV_LIBS})
+rosbuild_add_library(${PROJECT_NAME} src/sdf_tracker.cpp)
+rosbuild_add_executable(sdf_tracker_node src/sdf_tracker_node.cpp)
 
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+rosbuild_add_openmp_flags(${PROJECT_NAME})
 
-rosbuild_add_openmp_flags(depth_fuse)
+target_link_libraries(sdf_tracker_node ${PROJECT_NAME} ${OpenCV_LIBS})
 
+#uncomment if you have defined messages
+#rosbuild_genmsg()
+#uncomment if you have defined services
+#rosbuild_gensrv()
+
+#common commands for building c++ executables and libraries
+#target_link_libraries(${PROJECT_NAME} another_library)
+#rosbuild_add_boost_directories()
+#rosbuild_link_boost(${PROJECT_NAME} thread)
+#rosbuild_add_executable(example examples/example.cpp)
+#target_link_libraries(example ${PROJECT_NAME})
