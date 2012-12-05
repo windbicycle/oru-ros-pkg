@@ -5,6 +5,7 @@
 //#include <image_transport/image_transport.h>
 #include <boost/thread/mutex.hpp>
 
+#include <fstream>
 #include <iostream>
 #include <Eigen/StdVector>
 #include <Eigen/Core>
@@ -45,6 +46,7 @@ class SDFTracker
   boost::mutex depthDenoised_mutex_;
   std::string camera_name_;
   bool depth_registered_;
+  bool quit_;
   bool first_frame_;  
   bool makeTris_;
   bool** validityMask_;
@@ -72,6 +74,8 @@ class SDFTracker
   double regularization_;
   double min_parameter_update_;
   double min_pose_change_;
+
+  std::ofstream triangle_stream_;
   // functions 
   Eigen::Vector3d VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,double valp1, double valp2);
   Eigen::Matrix4d Twist(const Vector6d &xi);
