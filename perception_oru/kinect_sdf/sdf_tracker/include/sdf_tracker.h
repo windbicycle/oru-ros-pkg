@@ -78,20 +78,20 @@ class SDFTracker
   std::ofstream triangle_stream_;
   // functions 
   Eigen::Vector3d VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,double valp1, double valp2);
-  Eigen::Matrix4d Twist(const Vector6d &xi);
-  Eigen::Vector4d To3D(int row, int column, double depth, double fx, double fy, double cx, double cy);
-  cv::Point2d To2D(const Eigen::Vector4d &location, double fx, double fy, double cx, double cy);
-  bool validGradient(const Eigen::Vector4d &location);
-  double SDFGradient(const Eigen::Vector4d &location, int dim, int stepSize);
   void marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron);
-  void FuseDepth(const sensor_msgs::Image::ConstPtr& msg);   
   void publishDepthDenoisedImage(const ros::TimerEvent& event);
 
   public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW    
-  double SDF(const Eigen::Vector4d &location);
-  Vector6d EstimatePose(void); 
-  void Render(void);
+  virtual double SDF(const Eigen::Vector4d &location);
+  virtual double SDFGradient(const Eigen::Vector4d &location, int dim, int stepSize);
+  bool validGradient(const Eigen::Vector4d &location);
+  virtual Vector6d EstimatePose(void); 
+  cv::Point2d To2D(const Eigen::Vector4d &location, double fx, double fy, double cx, double cy);
+  Eigen::Matrix4d Twist(const Vector6d &xi);
+  Eigen::Vector4d To3D(int row, int column, double depth, double fx, double fy, double cx, double cy);
+  virtual void FuseDepth(const sensor_msgs::Image::ConstPtr& msg);   
+  virtual void Render(void);
   SDFTracker();
   ~SDFTracker();    
 };
