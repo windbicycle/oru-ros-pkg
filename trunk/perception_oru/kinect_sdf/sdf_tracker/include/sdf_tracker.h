@@ -82,7 +82,9 @@ class SDFTracker
   void publishDepthDenoisedImage(const ros::TimerEvent& event);
 
   public:
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW    
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  virtual void subscribeTopic(const std::string topic = std::string("default"));    
+  virtual void advertiseTopic(const std::string topic = std::string("default"));    
   virtual double SDF(const Eigen::Vector4d &location);
   virtual double SDFGradient(const Eigen::Vector4d &location, int dim, int stepSize);
   bool validGradient(const Eigen::Vector4d &location);

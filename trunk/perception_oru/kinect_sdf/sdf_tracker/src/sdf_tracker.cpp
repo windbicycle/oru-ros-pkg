@@ -61,19 +61,6 @@ SDFTracker::SDFTracker()
   depthImage_ = new cv::Mat(image_height_,image_width_,CV_32FC1); 
   depthImage_denoised_ = new cv::Mat( image_height_,image_width_,CV_32FC1);
 
-  if(depth_registered_)
-  {
-    depth_subscriber_ = n_.subscribe(camera_name_+"/depth_registered/image", 1, &SDFTracker::FuseDepth, this);
-    depth_publisher_ = n_.advertise<sensor_msgs::Image>("/"+camera_name_+"/depth_registered/image_denoised",10); 
-  }
-  else
-  {
-    depth_subscriber_ = n_.subscribe(camera_name_+"/depth/image", 1, &SDFTracker::FuseDepth, this);
-    depth_publisher_ = n_.advertise<sensor_msgs::Image>("/"+camera_name_+"/depth/image_denoised",10); 
-  }
-
-  heartbeat_depth_ = nh_.createTimer(ros::Duration(1.0), &SDFTracker::publishDepthDenoisedImage, this);
-  
   validityMask_ = new bool*[image_height_];
   for (int i = 0; i < image_height_; ++i)
   {
@@ -150,6 +137,44 @@ SDFTracker::~SDFTracker()
   delete depthImage_denoised_;
   
 };
+
+void
+SDFTracker::subscribeTopic(const std::string topic)
+{
+  
+  std::string subscribe_topic = topic;
+
+  if(depth_registered_)
+  {
+    if(topic=="default") subscribe_topic = camera_name_+"/depth_registered/image";
+    depth_subscriber_ = n_.subscribe(subscribe_topic, 1, &SDFTracker::FuseDepth, this);
+  }
+  else
+  {
+    if(topic=="default") subscribe_topic = camera_name_+"/depth/image";
+    depth_subscriber_ = n_.subscribe(subscribe_topic, 1, &SDFTracker::FuseDepth, this);
+  }
+}
+
+void
+SDFTracker::advertiseTopic(const std::string topic)
+{
+  std::string advertise_topic = topic;
+
+  if(depth_registered_)
+  {
+    if(topic=="default") advertise_topic = "/"+camera_name_+"/depth_registered/image_denoised";
+    depth_publisher_ = n_.advertise<sensor_msgs::Image>(advertise_topic, 10); 
+  }
+  else
+  {
+    if(topic == "default") advertise_topic = "/"+camera_name_+"/depth/image_denoised";
+    depth_publisher_ = n_.advertise<sensor_msgs::Image>( advertise_topic ,10); 
+  }
+
+  heartbeat_depth_ = nh_.createTimer(ros::Duration(1.0), &SDFTracker::publishDepthDenoisedImage, this);
+
+}
 
 Eigen::Vector3d 
 SDFTracker::VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,double valp1, double valp2)
