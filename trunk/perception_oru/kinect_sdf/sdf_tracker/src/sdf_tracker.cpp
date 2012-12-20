@@ -92,9 +92,11 @@ SDFTracker::SDFTracker()
       }
     }
   }
+
   quit_ = false;
   first_frame_=true;
   Pose_ << 0.0,0.0,0.0,0.0,0.0,0.0;
+  cumulative_pose_ << 0.0,0.0,0.0,0.0,0.0,0.0;
   Transformation_=Eigen::MatrixXd::Identity(4,4);
   Transformation_(0,3)+=XOffset_;
   Transformation_(1,3)+=YOffset_;
@@ -1079,6 +1081,7 @@ SDFTracker::Render(void)
   const Eigen::Matrix4d expmap = Transformation_;
   const Eigen::Vector4d camera = expmap * Eigen::Vector4d(0.0,0.0,0.0,1.0);
   const Eigen::Vector4d viewAxis = expmap * Eigen::Vector4d(0.0,0.0,1.0,0.0);
+  const double max_ray_length = resolution_*(XSize_+YSize_+ZSize_); //not really, but it's an ok guess.
   
   //Rendering loop
   #pragma omp parallel for 
@@ -1087,6 +1090,8 @@ SDFTracker::Render(void)
     for(int v = 0; v < image_width_; ++v)
     {
       
+      bool hit = false;
+
       Eigen::Vector4d p = expmap*To3D(u,v,1.0,fx_,fy_,cx_,cy_) - camera;
       p.normalize();
             
@@ -1095,8 +1100,7 @@ SDFTracker::Render(void)
       double scaling_prev=0;
       int steps=0;
       double D = resolution_;
-
-      while(steps<raycast_steps_ && D>=minStep)
+      while(steps<raycast_steps_ && D>=minStep && scaling < max_ray_length)
       { 
         double D_prev = D;
         D = SDF(camera + p*scaling);
@@ -1105,8 +1109,8 @@ SDFTracker::Render(void)
         {
           scaling = scaling_prev - (scaling-scaling_prev) * D_prev /
                                    ( D - D_prev);
-          if(scaling > 5.0) break;
-          
+          hit = true;
+
           if(interactive_mode_)
           {
             Eigen::Vector4d normal_vector = Eigen::Vector4d::Zero();
@@ -1134,13 +1138,13 @@ SDFTracker::Render(void)
         depthImage_out.at<float>(u,v)=depthImage_->ptr<float>(u)[v];  
    //     depthDenoised_mutex_.unlock();
 
-        if(interactive_mode_)
-        {
-          preview.at<cv::Vec3b>(u,v)[0]=uchar(30);
-          preview.at<cv::Vec3b>(u,v)[1]=uchar(30);
-          preview.at<cv::Vec3b>(u,v)[2]=uchar(30);
-        }
       }//ray
+      if(interactive_mode_ && !hit)
+      {
+        preview.at<cv::Vec3b>(u,v)[0]=uchar(30);
+        preview.at<cv::Vec3b>(u,v)[1]=uchar(30);
+        preview.at<cv::Vec3b>(u,v)[2]=uchar(30);
+      }
     }//col
   }//row
   depthDenoised_mutex_.lock();
