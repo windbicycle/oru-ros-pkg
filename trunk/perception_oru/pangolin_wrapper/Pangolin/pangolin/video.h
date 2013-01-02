@@ -58,91 +58,95 @@
 
 namespace pangolin
 {
-    struct VideoException : std::exception
+struct VideoException : std::exception
+{
+    VideoException(std::string str) : desc(str) {}
+    VideoException(std::string str, std::string detail)
     {
-        VideoException(std::string str) : desc(str) {}
-        VideoException(std::string str, std::string detail) {
-            desc = str + "\n\t" + detail;
-        }
-        ~VideoException() throw() {}
-        const char* what() const throw() { return desc.c_str(); }
-        std::string desc;
-    };
-
-    struct VideoPixelFormat
+        desc = str + "\n\t" + detail;
+    }
+    ~VideoException() throw() {}
+    const char* what() const throw()
     {
-        std::string format;
-        unsigned int channels;
-        unsigned int channel_bits[4];
-        unsigned int bpp;
-        bool planar;
-    };
+        return desc.c_str();
+    }
+    std::string desc;
+};
 
-    struct Uri
-    {
-        std::string scheme;
-        std::string url;
-        std::map<std::string,std::string> params;
-    };
+struct VideoPixelFormat
+{
+    std::string format;
+    unsigned int channels;
+    unsigned int channel_bits[4];
+    unsigned int bpp;
+    bool planar;
+};
 
-    //! Return Pixel Format properties given string specification in
-    //! FFMPEG notation.
-    VideoPixelFormat VideoFormatFromString(const std::string& format);
+struct Uri
+{
+    std::string scheme;
+    std::string url;
+    std::map<std::string,std::string> params;
+};
 
-    //! Interface to video capture sources
-    struct VideoInterface
-    {
-        virtual ~VideoInterface() {}
-        virtual unsigned Width() const = 0;
-        virtual unsigned Height() const = 0;
-        virtual size_t SizeBytes() const = 0;
+//! Return Pixel Format properties given string specification in
+//! FFMPEG notation.
+VideoPixelFormat VideoFormatFromString(const std::string& format);
 
-        virtual std::string PixFormat() const = 0;
+//! Interface to video capture sources
+struct VideoInterface
+{
+    virtual ~VideoInterface() {}
+    virtual unsigned Width() const = 0;
+    virtual unsigned Height() const = 0;
+    virtual size_t SizeBytes() const = 0;
 
-        virtual void Start() = 0;
-        virtual void Stop() = 0;
+    virtual std::string PixFormat() const = 0;
 
-        //! Copy the next frame from the camera to image.
-        //! Optionally wait for a frame if one isn't ready
-        //! Returns true iff image was copied
-        virtual bool GrabNext( unsigned char* image, bool wait = true ) = 0;
+    virtual void Start() = 0;
+    virtual void Stop() = 0;
 
-        //! Copy the newest frame from the camera to image
-        //! discarding all older frames.
-        //! Optionally wait for a frame if one isn't ready
-        //! Returns true iff image was copied
-        virtual bool GrabNewest( unsigned char* image, bool wait = true ) = 0;
-    };
+    //! Copy the next frame from the camera to image.
+    //! Optionally wait for a frame if one isn't ready
+    //! Returns true iff image was copied
+    virtual bool GrabNext( unsigned char* image, bool wait = true ) = 0;
 
-    struct VideoInput : public VideoInterface
-    {
-        VideoInput();
-        VideoInput(std::string uri);
-        ~VideoInput();
+    //! Copy the newest frame from the camera to image
+    //! discarding all older frames.
+    //! Optionally wait for a frame if one isn't ready
+    //! Returns true iff image was copied
+    virtual bool GrabNewest( unsigned char* image, bool wait = true ) = 0;
+};
 
-        void Open(std::string uri);
-        void Reset();
+struct VideoInput : public VideoInterface
+{
+    VideoInput();
+    VideoInput(std::string uri);
+    ~VideoInput();
 
-        unsigned Width() const;
-        unsigned Height() const;
-        size_t SizeBytes() const;
-        std::string PixFormat() const;
+    void Open(std::string uri);
+    void Reset();
 
-        void Start();
-        void Stop();
-        bool GrabNext( unsigned char* image, bool wait = true );
-        bool GrabNewest( unsigned char* image, bool wait = true );
+    unsigned Width() const;
+    unsigned Height() const;
+    size_t SizeBytes() const;
+    std::string PixFormat() const;
 
-    protected:
-        std::string uri;
-        VideoInterface* video;
-    };
+    void Start();
+    void Stop();
+    bool GrabNext( unsigned char* image, bool wait = true );
+    bool GrabNewest( unsigned char* image, bool wait = true );
 
-    //! Open Video Interface from string specification (as described in this files header)
-    VideoInterface* OpenVideo(std::string uri);
+protected:
+    std::string uri;
+    VideoInterface* video;
+};
 
-    //! Parse string as Video URI
-    Uri ParseUri(std::string str_uri);
+//! Open Video Interface from string specification (as described in this files header)
+VideoInterface* OpenVideo(std::string uri);
+
+//! Parse string as Video URI
+Uri ParseUri(std::string str_uri);
 }
 
 #endif // PANGOLIN_VIDEO_H

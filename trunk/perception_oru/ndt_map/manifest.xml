@@ -2,10 +2,10 @@
   <description brief="ndt_map">
 
      Contains the definitions of the 3D Normal Distributions Transform data structures, 
-     used for mapping, registration, etc
+     used for mapping, registration, etc.
 
   </description>
-  <author>Todor Stoyanov</author>
+  <author>Todor Stoyanov, Jari Saarinen, Henrik Andreasson</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_map</url>
@@ -17,7 +17,7 @@
   <depend package="opencv2" />
   <depend package="cv_bridge" />
   <export>
-    <cpp cflags="-I${prefix}/include" />
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib" />
   </export>
 
 </package>

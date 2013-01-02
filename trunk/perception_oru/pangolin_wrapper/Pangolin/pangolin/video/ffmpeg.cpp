@@ -32,8 +32,9 @@ namespace pangolin
 
 PixelFormat FfmpegFmtFromString(const std::string fmt)
 {
-	std::string lfmt = boost::algorithm::to_lower_copy(fmt);
-    if(!lfmt.compare("gray8") || !lfmt.compare("grey8") || !lfmt.compare("grey")) {
+    std::string lfmt = boost::algorithm::to_lower_copy(fmt);
+    if(!lfmt.compare("gray8") || !lfmt.compare("grey8") || !lfmt.compare("grey"))
+    {
         return PIX_FMT_GRAY8;
     }
     return av_get_pix_fmt(lfmt.c_str());
@@ -43,78 +44,79 @@ PixelFormat FfmpegFmtFromString(const std::string fmt)
 
 std::string FfmpegFmtToString(const PixelFormat fmt)
 {
-	switch( fmt )
-	{
-	TEST_PIX_FMT_RETURN(YUV420P);
-	TEST_PIX_FMT_RETURN(YUYV422);
-    TEST_PIX_FMT_RETURN(RGB24);
-    TEST_PIX_FMT_RETURN(BGR24);
-	TEST_PIX_FMT_RETURN(YUV422P);
-	TEST_PIX_FMT_RETURN(YUV444P);
-	TEST_PIX_FMT_RETURN(YUV410P);
-	TEST_PIX_FMT_RETURN(YUV411P);
-	TEST_PIX_FMT_RETURN(GRAY8);
-	TEST_PIX_FMT_RETURN(MONOWHITE);
-	TEST_PIX_FMT_RETURN(MONOBLACK);
-	TEST_PIX_FMT_RETURN(PAL8);
-	TEST_PIX_FMT_RETURN(YUVJ420P);
-	TEST_PIX_FMT_RETURN(YUVJ422P);
-	TEST_PIX_FMT_RETURN(YUVJ444P);
-	TEST_PIX_FMT_RETURN(XVMC_MPEG2_MC);
-	TEST_PIX_FMT_RETURN(XVMC_MPEG2_IDCT);
-	TEST_PIX_FMT_RETURN(UYVY422);
-	TEST_PIX_FMT_RETURN(UYYVYY411);
-	TEST_PIX_FMT_RETURN(BGR8);
-	TEST_PIX_FMT_RETURN(BGR4);
-	TEST_PIX_FMT_RETURN(BGR4_BYTE);
-	TEST_PIX_FMT_RETURN(RGB8);
-	TEST_PIX_FMT_RETURN(RGB4);
-	TEST_PIX_FMT_RETURN(RGB4_BYTE);
-	TEST_PIX_FMT_RETURN(NV12);
-	TEST_PIX_FMT_RETURN(NV21);
-	TEST_PIX_FMT_RETURN(ARGB);
-	TEST_PIX_FMT_RETURN(RGBA);
-	TEST_PIX_FMT_RETURN(ABGR);
-	TEST_PIX_FMT_RETURN(BGRA);
-	TEST_PIX_FMT_RETURN(GRAY16BE);
-	TEST_PIX_FMT_RETURN(GRAY16LE);
-	TEST_PIX_FMT_RETURN(YUV440P);
-	TEST_PIX_FMT_RETURN(YUVJ440P);
-	TEST_PIX_FMT_RETURN(YUVA420P);
-	TEST_PIX_FMT_RETURN(VDPAU_H264);
-	TEST_PIX_FMT_RETURN(VDPAU_MPEG1);
-	TEST_PIX_FMT_RETURN(VDPAU_MPEG2);
-	TEST_PIX_FMT_RETURN(VDPAU_WMV3);
-	TEST_PIX_FMT_RETURN(VDPAU_VC1);
-	TEST_PIX_FMT_RETURN(RGB48BE );
-	TEST_PIX_FMT_RETURN(RGB48LE );
-	TEST_PIX_FMT_RETURN(RGB565BE);
-	TEST_PIX_FMT_RETURN(RGB565LE);
-	TEST_PIX_FMT_RETURN(RGB555BE);
-	TEST_PIX_FMT_RETURN(RGB555LE);
-	TEST_PIX_FMT_RETURN(BGR565BE);
-	TEST_PIX_FMT_RETURN(BGR565LE);
-	TEST_PIX_FMT_RETURN(BGR555BE);
-	TEST_PIX_FMT_RETURN(BGR555LE);
-	TEST_PIX_FMT_RETURN(VAAPI_MOCO);
-	TEST_PIX_FMT_RETURN(VAAPI_IDCT);
-	TEST_PIX_FMT_RETURN(VAAPI_VLD);
-	TEST_PIX_FMT_RETURN(YUV420P16LE);
-	TEST_PIX_FMT_RETURN(YUV420P16BE);
-	TEST_PIX_FMT_RETURN(YUV422P16LE);
-	TEST_PIX_FMT_RETURN(YUV422P16BE);
-	TEST_PIX_FMT_RETURN(YUV444P16LE);
-	TEST_PIX_FMT_RETURN(YUV444P16BE);
-	TEST_PIX_FMT_RETURN(VDPAU_MPEG4);
-	TEST_PIX_FMT_RETURN(DXVA2_VLD);
-	TEST_PIX_FMT_RETURN(RGB444BE);
-	TEST_PIX_FMT_RETURN(RGB444LE);
-	TEST_PIX_FMT_RETURN(BGR444BE);
-	TEST_PIX_FMT_RETURN(BGR444LE);
-	TEST_PIX_FMT_RETURN(Y400A   );
-	TEST_PIX_FMT_RETURN(NB      );
-	default: return "";
-	}
+    switch( fmt )
+    {
+        TEST_PIX_FMT_RETURN(YUV420P);
+        TEST_PIX_FMT_RETURN(YUYV422);
+        TEST_PIX_FMT_RETURN(RGB24);
+        TEST_PIX_FMT_RETURN(BGR24);
+        TEST_PIX_FMT_RETURN(YUV422P);
+        TEST_PIX_FMT_RETURN(YUV444P);
+        TEST_PIX_FMT_RETURN(YUV410P);
+        TEST_PIX_FMT_RETURN(YUV411P);
+        TEST_PIX_FMT_RETURN(GRAY8);
+        TEST_PIX_FMT_RETURN(MONOWHITE);
+        TEST_PIX_FMT_RETURN(MONOBLACK);
+        TEST_PIX_FMT_RETURN(PAL8);
+        TEST_PIX_FMT_RETURN(YUVJ420P);
+        TEST_PIX_FMT_RETURN(YUVJ422P);
+        TEST_PIX_FMT_RETURN(YUVJ444P);
+        TEST_PIX_FMT_RETURN(XVMC_MPEG2_MC);
+        TEST_PIX_FMT_RETURN(XVMC_MPEG2_IDCT);
+        TEST_PIX_FMT_RETURN(UYVY422);
+        TEST_PIX_FMT_RETURN(UYYVYY411);
+        TEST_PIX_FMT_RETURN(BGR8);
+        TEST_PIX_FMT_RETURN(BGR4);
+        TEST_PIX_FMT_RETURN(BGR4_BYTE);
+        TEST_PIX_FMT_RETURN(RGB8);
+        TEST_PIX_FMT_RETURN(RGB4);
+        TEST_PIX_FMT_RETURN(RGB4_BYTE);
+        TEST_PIX_FMT_RETURN(NV12);
+        TEST_PIX_FMT_RETURN(NV21);
+        TEST_PIX_FMT_RETURN(ARGB);
+        TEST_PIX_FMT_RETURN(RGBA);
+        TEST_PIX_FMT_RETURN(ABGR);
+        TEST_PIX_FMT_RETURN(BGRA);
+        TEST_PIX_FMT_RETURN(GRAY16BE);
+        TEST_PIX_FMT_RETURN(GRAY16LE);
+        TEST_PIX_FMT_RETURN(YUV440P);
+        TEST_PIX_FMT_RETURN(YUVJ440P);
+        TEST_PIX_FMT_RETURN(YUVA420P);
+        TEST_PIX_FMT_RETURN(VDPAU_H264);
+        TEST_PIX_FMT_RETURN(VDPAU_MPEG1);
+        TEST_PIX_FMT_RETURN(VDPAU_MPEG2);
+        TEST_PIX_FMT_RETURN(VDPAU_WMV3);
+        TEST_PIX_FMT_RETURN(VDPAU_VC1);
+        TEST_PIX_FMT_RETURN(RGB48BE );
+        TEST_PIX_FMT_RETURN(RGB48LE );
+        TEST_PIX_FMT_RETURN(RGB565BE);
+        TEST_PIX_FMT_RETURN(RGB565LE);
+        TEST_PIX_FMT_RETURN(RGB555BE);
+        TEST_PIX_FMT_RETURN(RGB555LE);
+        TEST_PIX_FMT_RETURN(BGR565BE);
+        TEST_PIX_FMT_RETURN(BGR565LE);
+        TEST_PIX_FMT_RETURN(BGR555BE);
+        TEST_PIX_FMT_RETURN(BGR555LE);
+        TEST_PIX_FMT_RETURN(VAAPI_MOCO);
+        TEST_PIX_FMT_RETURN(VAAPI_IDCT);
+        TEST_PIX_FMT_RETURN(VAAPI_VLD);
+        TEST_PIX_FMT_RETURN(YUV420P16LE);
+        TEST_PIX_FMT_RETURN(YUV420P16BE);
+        TEST_PIX_FMT_RETURN(YUV422P16LE);
+        TEST_PIX_FMT_RETURN(YUV422P16BE);
+        TEST_PIX_FMT_RETURN(YUV444P16LE);
+        TEST_PIX_FMT_RETURN(YUV444P16BE);
+        TEST_PIX_FMT_RETURN(VDPAU_MPEG4);
+        TEST_PIX_FMT_RETURN(DXVA2_VLD);
+        TEST_PIX_FMT_RETURN(RGB444BE);
+        TEST_PIX_FMT_RETURN(RGB444LE);
+        TEST_PIX_FMT_RETURN(BGR444BE);
+        TEST_PIX_FMT_RETURN(BGR444LE);
+        TEST_PIX_FMT_RETURN(Y400A   );
+        TEST_PIX_FMT_RETURN(NB      );
+    default:
+        return "";
+    }
 }
 
 #undef TEST_PIX_FMT_RETURN
@@ -135,7 +137,8 @@ void FfmpegVideo::InitUrl(const std::string url, const std::string strfmtout, co
 
     AVInputFormat* fmt = NULL;
 
-    if( !codec_hint.empty() ) {
+    if( !codec_hint.empty() )
+    {
         fmt = av_find_input_format(codec_hint.c_str());
     }
 
@@ -159,7 +162,8 @@ void FfmpegVideo::InitUrl(const std::string url, const std::string strfmtout, co
 #endif
         throw VideoException("Couldn't find stream information");
 
-    if(dump_info) {
+    if(dump_info)
+    {
         // Dump information about file onto standard error
 #ifdef CODEC_TYPE_VIDEO
         // Old (deprecated) interface
@@ -181,7 +185,8 @@ void FfmpegVideo::InitUrl(const std::string url, const std::string strfmtout, co
         if(pFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO)
         {
             videoStreams.push_back(i);
-        }else if(pFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO)
+        }
+        else if(pFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO)
         {
             audioStreams.push_back(i);
         }
@@ -190,9 +195,12 @@ void FfmpegVideo::InitUrl(const std::string url, const std::string strfmtout, co
     if(videoStreams.size()==0)
         throw VideoException("Couldn't find a video stream");
 
-    if(0 <= user_video_stream && user_video_stream < (int)videoStreams.size() ) {
+    if(0 <= user_video_stream && user_video_stream < (int)videoStreams.size() )
+    {
         videoStream = videoStreams[user_video_stream];
-    }else{
+    }
+    else
+    {
         videoStream = videoStreams[0];
     }
 
@@ -242,10 +250,11 @@ void FfmpegVideo::InitUrl(const std::string url, const std::string strfmtout, co
 
     // Allocate SWS for converting pixel formats
     img_convert_ctx = sws_getContext(w, h,
-                    pVidCodecCtx->pix_fmt,
-                    w, h, fmtout, FFMPEG_POINT,
-                    NULL, NULL, NULL);
-    if(img_convert_ctx == NULL) {
+                                     pVidCodecCtx->pix_fmt,
+                                     w, h, fmtout, FFMPEG_POINT,
+                                     NULL, NULL, NULL);
+    if(img_convert_ctx == NULL)
+    {
         throw VideoException("Cannot initialize the conversion context");
     }
 }
@@ -253,7 +262,7 @@ void FfmpegVideo::InitUrl(const std::string url, const std::string strfmtout, co
 FfmpegVideo::~FfmpegVideo()
 {
     // Free the RGB image
-	delete[] buffer;
+    delete[] buffer;
     av_free(pFrameOut);
 
     // Free the YUV frame
@@ -317,7 +326,8 @@ bool FfmpegVideo::GrabNext(unsigned char* image, bool /*wait*/)
         }
 
         // Did we get a video frame?
-        if(gotFrame) {
+        if(gotFrame)
+        {
             sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0, pVidCodecCtx->height, pFrameOut->data, pFrameOut->linesize);
             memcpy(image,pFrameOut->data[0],numBytesOut);
         }
@@ -335,23 +345,23 @@ bool FfmpegVideo::GrabNewest(unsigned char *image, bool wait)
 }
 
 FfmpegConverter::FfmpegConverter(VideoInterface* videoin, const std::string pixelfmtout, FfmpegMethod method )
-	:videoin(videoin)
+    :videoin(videoin)
 {
-	if( !videoin )
-		throw VideoException("Source video interface not specified");
+    if( !videoin )
+        throw VideoException("Source video interface not specified");
 
-	w = videoin->Width();
-	h = videoin->Height();
-	fmtsrc = FfmpegFmtFromString(videoin->PixFormat());
-	fmtdst = FfmpegFmtFromString(pixelfmtout);
+    w = videoin->Width();
+    h = videoin->Height();
+    fmtsrc = FfmpegFmtFromString(videoin->PixFormat());
+    fmtdst = FfmpegFmtFromString(pixelfmtout);
 
-	img_convert_ctx = sws_getContext(
-		w, h, fmtsrc,
-		w, h, fmtdst,
-		method, NULL, NULL, NULL
-	);
-	if(!img_convert_ctx)
-		throw VideoException("Could not create SwScale context for pixel conversion");
+    img_convert_ctx = sws_getContext(
+                          w, h, fmtsrc,
+                          w, h, fmtdst,
+                          method, NULL, NULL, NULL
+                      );
+    if(!img_convert_ctx)
+        throw VideoException("Could not create SwScale context for pixel conversion");
 
     numbytessrc=avpicture_get_size(fmtsrc, w, h);
     numbytesdst=avpicture_get_size(fmtdst, w, h);

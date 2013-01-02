@@ -66,8 +66,8 @@ inline basetime TimeAdd(basetime t1, basetime t2)
     t.tv_usec = t1.tv_usec + t2.tv_usec;
     if(t.tv_usec >= 1E6 )
     {
-       t.tv_usec -= 1E6;
-       t.tv_sec += 1;
+        t.tv_usec -= 1E6;
+        t.tv_sec += 1;
     }
 
     return t;
@@ -124,7 +124,8 @@ inline basetime WaitUntil(basetime t)
 
 struct Timer
 {
-    Timer() {
+    Timer()
+    {
         Reset();
     }
 

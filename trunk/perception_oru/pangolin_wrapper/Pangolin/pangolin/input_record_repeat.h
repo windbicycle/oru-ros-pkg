@@ -62,7 +62,8 @@ struct InputRecordRepeat
     void UpdateVariable(const std::string& name );
 
     template<typename T>
-    inline void UpdateVariable(const Var<T>& var ) {
+    inline void UpdateVariable(const Var<T>& var )
+    {
         GuiVarChanged((void*)this, var.var->meta_full_name, *var.var);
     }
 

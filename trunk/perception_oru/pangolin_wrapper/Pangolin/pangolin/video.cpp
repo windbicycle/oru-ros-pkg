@@ -116,7 +116,9 @@ Uri ParseUri(string str_uri)
     if( ns != string::npos )
     {
         uri.scheme = str_uri.substr(0,ns);
-    }else{
+    }
+    else
+    {
 //        throw VideoException("Bad video URI","no device scheme specified");
         uri.scheme = "file";
         uri.url = str_uri;
@@ -146,7 +148,9 @@ Uri ParseUri(string str_uri)
                         uri.params[args[0]] = args[1];
                     }
                 }
-            }else{
+            }
+            else
+            {
                 throw VideoException("Bad video URI");
             }
         }
@@ -189,7 +193,8 @@ dc1394video_mode_t get_firewire_format7_mode(const string fmt)
         int fmt7_mode = 0;
         std::istringstream iss( fmt.substr(FMT7_prefix.size()) );
         iss >> fmt7_mode;
-        if( !iss.fail() ) {
+        if( !iss.fail() )
+        {
             return (dc1394video_mode_t)(DC1394_VIDEO_MODE_FORMAT7_0 + fmt7_mode);
         }
     }
@@ -236,142 +241,184 @@ VideoInterface* OpenVideo(std::string str_uri)
     if(!uri.scheme.compare("file") && algorithm::ends_with(uri.url,"pvn") )
     {
         bool realtime = true;
-        if(uri.params.find("realtime")!=uri.params.end()){
+        if(uri.params.find("realtime")!=uri.params.end())
+        {
             std::istringstream iss(uri.params["realtime"]);
             iss >> realtime;
         }
         video = new PvnVideo(uri.url.c_str(), realtime);
-    }else
+    }
+    else
 #ifdef HAVE_FFMPEG
-    if(!uri.scheme.compare("ffmpeg") || !uri.scheme.compare("file") || !uri.scheme.compare("files") ){
-        string outfmt = "RGB24";
-        if(uri.params.find("fmt")!=uri.params.end()){
-            outfmt = uri.params["fmt"];
+        if(!uri.scheme.compare("ffmpeg") || !uri.scheme.compare("file") || !uri.scheme.compare("files") )
+        {
+            string outfmt = "RGB24";
+            if(uri.params.find("fmt")!=uri.params.end())
+            {
+                outfmt = uri.params["fmt"];
+            }
+            int video_stream = -1;
+            if(uri.params.find("stream")!=uri.params.end())
+            {
+                std::istringstream iss(uri.params["stream"]);
+                iss >> video_stream;
+            }
+            video = new FfmpegVideo(uri.url.c_str(), outfmt, "", false, video_stream);
         }
-        int video_stream = -1;
-        if(uri.params.find("stream")!=uri.params.end()){
-            std::istringstream iss(uri.params["stream"]);
-            iss >> video_stream;
+        else if( !uri.scheme.compare("mjpeg"))
+        {
+            video = new FfmpegVideo(uri.url.c_str(),"RGB24", "MJPEG" );
         }
-        video = new FfmpegVideo(uri.url.c_str(), outfmt, "", false, video_stream);
-    }else if( !uri.scheme.compare("mjpeg")) {
-        video = new FfmpegVideo(uri.url.c_str(),"RGB24", "MJPEG" );
-    }else if( !uri.scheme.compare("convert") ) {
-        string outfmt = "RGB24";
-        if(uri.params.find("fmt")!=uri.params.end()){
-            outfmt = uri.params["fmt"];
+        else if( !uri.scheme.compare("convert") )
+        {
+            string outfmt = "RGB24";
+            if(uri.params.find("fmt")!=uri.params.end())
+            {
+                outfmt = uri.params["fmt"];
+            }
+            VideoInterface* subvid = OpenVideo(uri.url);
+            video = new FfmpegConverter(subvid,outfmt,FFMPEG_POINT);
         }
-        VideoInterface* subvid = OpenVideo(uri.url);
-        video = new FfmpegConverter(subvid,outfmt,FFMPEG_POINT);
-    }else
+        else
 #endif //HAVE_FFMPEG
 #ifdef HAVE_V4L
-    if(!uri.scheme.compare("v4l")) {
-        video = new V4lVideo(uri.url.c_str());
-    }else
+            if(!uri.scheme.compare("v4l"))
+            {
+                video = new V4lVideo(uri.url.c_str());
+            }
+            else
 #endif // HAVE_V4L
 #ifdef HAVE_DC1394
-    if(!uri.scheme.compare("firewire") || !uri.scheme.compare("dc1394") ) {
-        // Default parameters
-        int desired_x = 0;
-        int desired_y = 0;
-        int desired_width = 640;
-        int desired_height = 480;
-        int desired_dma = 10;
-        int desired_iso = 400;
-        float desired_fps = 30;
-        string desired_format = "RGB24";
+                if(!uri.scheme.compare("firewire") || !uri.scheme.compare("dc1394") )
+                {
+                    // Default parameters
+                    int desired_x = 0;
+                    int desired_y = 0;
+                    int desired_width = 640;
+                    int desired_height = 480;
+                    int desired_dma = 10;
+                    int desired_iso = 400;
+                    float desired_fps = 30;
+                    string desired_format = "RGB24";
 
-        // Parse parameters
-        if(uri.params.find("fmt")!=uri.params.end()){
-            desired_format = uri.params["fmt"];
-            boost::to_upper(desired_format);
-        }
-        if(uri.params.find("size")!=uri.params.end()){
-            std::istringstream iss(uri.params["size"]);
-            iss >> desired_width;
-            iss.get();
-            iss >> desired_height;
-        }
-        if(uri.params.find("pos")!=uri.params.end()){
-            std::istringstream iss(uri.params["pos"]);
-            iss >> desired_x;
-            iss.get();
-            iss >> desired_y;
-        }
-        if(uri.params.find("dma")!=uri.params.end()){
-            std::istringstream iss(uri.params["dma"]);
-            iss >> desired_dma;
-        }
-        if(uri.params.find("iso")!=uri.params.end()){
-            std::istringstream iss(uri.params["iso"]);
-            iss >> desired_iso;
-        }
-        if(uri.params.find("fps")!=uri.params.end()){
-            std::istringstream iss(uri.params["fps"]);
-            iss >> desired_fps;
-        }
+                    // Parse parameters
+                    if(uri.params.find("fmt")!=uri.params.end())
+                    {
+                        desired_format = uri.params["fmt"];
+                        boost::to_upper(desired_format);
+                    }
+                    if(uri.params.find("size")!=uri.params.end())
+                    {
+                        std::istringstream iss(uri.params["size"]);
+                        iss >> desired_width;
+                        iss.get();
+                        iss >> desired_height;
+                    }
+                    if(uri.params.find("pos")!=uri.params.end())
+                    {
+                        std::istringstream iss(uri.params["pos"]);
+                        iss >> desired_x;
+                        iss.get();
+                        iss >> desired_y;
+                    }
+                    if(uri.params.find("dma")!=uri.params.end())
+                    {
+                        std::istringstream iss(uri.params["dma"]);
+                        iss >> desired_dma;
+                    }
+                    if(uri.params.find("iso")!=uri.params.end())
+                    {
+                        std::istringstream iss(uri.params["iso"]);
+                        iss >> desired_iso;
+                    }
+                    if(uri.params.find("fps")!=uri.params.end())
+                    {
+                        std::istringstream iss(uri.params["fps"]);
+                        iss >> desired_fps;
+                    }
 
-        Guid guid = 0;
-        unsigned deviceid = 0;
-        dc1394framerate_t framerate = get_firewire_framerate(desired_fps);
-        dc1394speed_t iso_speed = (dc1394speed_t)(log(desired_iso/100) / log(2));
-        int dma_buffers = desired_dma;
+                    Guid guid = 0;
+                    unsigned deviceid = 0;
+                    dc1394framerate_t framerate = get_firewire_framerate(desired_fps);
+                    dc1394speed_t iso_speed = (dc1394speed_t)(log(desired_iso/100) / log(2));
+                    int dma_buffers = desired_dma;
 
-        if( algorithm::starts_with(desired_format, "FORMAT7") )
-        {
-            dc1394video_mode_t video_mode = get_firewire_format7_mode(desired_format);
-            if( guid.guid == 0 ) {
-                video = new FirewireVideo(deviceid,video_mode,FirewireVideo::MAX_FR,desired_width, desired_height, desired_x, desired_y, iso_speed, dma_buffers,true);
-            }else{
-                video = new FirewireVideo(guid,video_mode,FirewireVideo::MAX_FR,desired_width, desired_height, desired_x, desired_y, iso_speed, dma_buffers,true);
-            }
-        }else{
-            dc1394video_mode_t video_mode = get_firewire_mode(desired_width,desired_height,desired_format);
-            if( guid.guid == 0 ) {
-                video = new FirewireVideo(deviceid,video_mode,framerate,iso_speed,dma_buffers);
-            }else{
-                video = new FirewireVideo(guid,video_mode,framerate,iso_speed,dma_buffers);
-            }
-        }
-    }else
+                    if( algorithm::starts_with(desired_format, "FORMAT7") )
+                    {
+                        dc1394video_mode_t video_mode = get_firewire_format7_mode(desired_format);
+                        if( guid.guid == 0 )
+                        {
+                            video = new FirewireVideo(deviceid,video_mode,FirewireVideo::MAX_FR,desired_width, desired_height, desired_x, desired_y, iso_speed, dma_buffers,true);
+                        }
+                        else
+                        {
+                            video = new FirewireVideo(guid,video_mode,FirewireVideo::MAX_FR,desired_width, desired_height, desired_x, desired_y, iso_speed, dma_buffers,true);
+                        }
+                    }
+                    else
+                    {
+                        dc1394video_mode_t video_mode = get_firewire_mode(desired_width,desired_height,desired_format);
+                        if( guid.guid == 0 )
+                        {
+                            video = new FirewireVideo(deviceid,video_mode,framerate,iso_speed,dma_buffers);
+                        }
+                        else
+                        {
+                            video = new FirewireVideo(guid,video_mode,framerate,iso_speed,dma_buffers);
+                        }
+                    }
+                }
+                else
 #endif //HAVE_DC1394
 #ifdef HAVE_OPENNI
-    if(!uri.scheme.compare("openni") || !uri.scheme.compare("kinect"))
-    {
-        OpenNiSensorType img1 = OpenNiRgb;
-        OpenNiSensorType img2 = OpenNiUnassigned;
+                    if(!uri.scheme.compare("openni") || !uri.scheme.compare("kinect"))
+                    {
+                        OpenNiSensorType img1 = OpenNiRgb;
+                        OpenNiSensorType img2 = OpenNiUnassigned;
 
-        if(uri.params.find("img1")!=uri.params.end()){
-            std::istringstream iss(uri.params["img1"]);
+                        if(uri.params.find("img1")!=uri.params.end())
+                        {
+                            std::istringstream iss(uri.params["img1"]);
 
-            if( boost::iequals(iss.str(),"rgb") ) {
-                img1 = OpenNiRgb;
-            }else if( boost::iequals(iss.str(),"ir") ) {
-                img1 = OpenNiIr;
-            }else if( boost::iequals(iss.str(),"depth") ) {
-                img1 = OpenNiDepth;
-            }
-        }
+                            if( boost::iequals(iss.str(),"rgb") )
+                            {
+                                img1 = OpenNiRgb;
+                            }
+                            else if( boost::iequals(iss.str(),"ir") )
+                            {
+                                img1 = OpenNiIr;
+                            }
+                            else if( boost::iequals(iss.str(),"depth") )
+                            {
+                                img1 = OpenNiDepth;
+                            }
+                        }
 
-        if(uri.params.find("img2")!=uri.params.end()){
-            std::istringstream iss(uri.params["img2"]);
+                        if(uri.params.find("img2")!=uri.params.end())
+                        {
+                            std::istringstream iss(uri.params["img2"]);
 
-            if( boost::iequals(iss.str(),"rgb") ) {
-                img2 = OpenNiRgb;
-            }else if( boost::iequals(iss.str(),"ir") ) {
-                img2 = OpenNiIr;
-            }else if( boost::iequals(iss.str(),"depth") ) {
-                img2 = OpenNiDepth;
-            }
-        }
+                            if( boost::iequals(iss.str(),"rgb") )
+                            {
+                                img2 = OpenNiRgb;
+                            }
+                            else if( boost::iequals(iss.str(),"ir") )
+                            {
+                                img2 = OpenNiIr;
+                            }
+                            else if( boost::iequals(iss.str(),"depth") )
+                            {
+                                img2 = OpenNiDepth;
+                            }
+                        }
 
-        video = new OpenNiVideo(img1,img2);
-    }else
+                        video = new OpenNiVideo(img1,img2);
+                    }
+                    else
 #endif
-    {
-        throw VideoException("Unable to open video URI");
-    }
+                    {
+                        throw VideoException("Unable to open video URI");
+                    }
 
     return video;
 }
@@ -380,7 +427,8 @@ void VideoInput::Open(std::string uri)
 {
     this->uri = uri;
 
-    if(video) {
+    if(video)
+    {
         delete video;
         video = 0;
     }

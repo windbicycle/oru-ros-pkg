@@ -21,7 +21,7 @@ bool setUnseenToMaxRange = false;
 // --------------
 // -----Help-----
 // --------------
-    void 
+void
 printUsage (const char* progName)
 {
     std::cout << "\n\nUsage: "<<progName<<"moving_cloud.wrl static_cloud.wrl\n\n";
@@ -30,38 +30,39 @@ printUsage (const char* progName)
 // --------------
 // -----Main-----
 // --------------
-    int 
+int
 main (int argc, char** argv)
 {
-    if(argc!=3) {
-	printUsage(argv[0]);
-	return 0;
+    if(argc!=3)
+    {
+        printUsage(argv[0]);
+        return 0;
     }
-    
+
     pcl::PointCloud<PointType>::Ptr point_cloud_ptr (new pcl::PointCloud<PointType>);
     pcl::PointCloud<PointType>& point_cloud = *point_cloud_ptr;
     pcl::PointCloud<pcl::PointWithViewpoint> far_ranges;
     Eigen::Affine3f scene_sensor_pose (Eigen::Affine3f::Identity ());
-    
+
     std::string filename = argv[1];
     point_cloud = lslgeneric::readVRML(filename.c_str());
-	
+
     scene_sensor_pose = Eigen::Affine3f (Eigen::Translation3f (point_cloud.sensor_origin_[0],
-		point_cloud.sensor_origin_[1],
-		point_cloud.sensor_origin_[2])) *
-	Eigen::Affine3f (point_cloud.sensor_orientation_);
-    
+                                         point_cloud.sensor_origin_[1],
+                                         point_cloud.sensor_origin_[2])) *
+                        Eigen::Affine3f (point_cloud.sensor_orientation_);
+
     // -----------------------------------------------
     // -----Create RangeImage from the PointCloud-----
     // -----------------------------------------------
     float noise_level = 0.0;
     float min_range = 0.0f;
     int border_size = 1;
-    
+
     boost::shared_ptr<pcl::RangeImage> range_image_ptr (new pcl::RangeImage);
-    pcl::RangeImage& range_image = *range_image_ptr;   
+    pcl::RangeImage& range_image = *range_image_ptr;
     range_image.createFromPointCloud (point_cloud, angular_resolution, pcl::deg2rad (360.0f), pcl::deg2rad (180.0f),
-	    scene_sensor_pose, coordinate_frame, noise_level, min_range, border_size);
+                                      scene_sensor_pose, coordinate_frame, noise_level, min_range, border_size);
     range_image.integrateFarRanges (far_ranges);
 
     // --------------------------------
@@ -85,7 +86,7 @@ main (int argc, char** argv)
     pcl::PointCloud<pcl::PointXYZ>& keypoints = *keypoints_ptr;
     keypoints.points.resize (keypoint_indices.points.size ());
     for (size_t i=0; i<keypoint_indices.points.size (); ++i)
-	keypoints.points[i].getVector3fMap () = range_image.points[keypoint_indices.points[i]].getVector3fMap ();
+        keypoints.points[i].getVector3fMap () = range_image.points[keypoint_indices.points[i]].getVector3fMap ();
 
     //pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> keypoints_color_handler (keypoints_ptr, 0, 255, 0);
     //viewer.addPointCloud<pcl::PointXYZ> (keypoints_ptr, keypoints_color_handler, "keypoints");

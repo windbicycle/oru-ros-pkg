@@ -39,56 +39,58 @@
 #include <vector>
 #include <ndt_cell.h>
 
-namespace lslgeneric {
+namespace lslgeneric
+{
 
-    /** \brief Implements an OctTree with adaptive leaf splitting as a post process step
-        \details The OctTree is split unitl a conservative initial size. After this, a post
-	processing step is used to determine if the gaussians in each leaf are well-fitting.
-	At the moment one heuristic option is available - using the residual squares sum and 
-	the residual variance. A second option using the omnibus normality test will be added
-	soon.
-     */
-    template<typename PointT>
-    class AdaptiveOctTree : public OctTree<PointT> {
-	protected:
-	    std::vector<OctTree<PointT>*> splitTree(OctTree<PointT> *leaf);
-	    std::vector<OctTree<PointT>*> myTreeLeafs;
-	    virtual void computeTreeLeafs();
-	    
-	    double computeResidualSquare(NDTCell<PointT> *cell);
-	    double computeDornikHansen(NDTCell<PointT> *cell);
-	    
-	    bool useDornikHansen;
-	    bool useFlatness;
-	    double RSS_THRESHOLD, DH_SIGNIFICANCE_LVL, FLAT_FACTOR;
-	    bool parametersSet;
+/** \brief Implements an OctTree with adaptive leaf splitting as a post process step
+    \details The OctTree is split unitl a conservative initial size. After this, a post
+processing step is used to determine if the gaussians in each leaf are well-fitting.
+At the moment one heuristic option is available - using the residual squares sum and
+the residual variance. A second option using the omnibus normality test will be added
+soon.
+ */
+template<typename PointT>
+class AdaptiveOctTree : public OctTree<PointT>
+{
+protected:
+    std::vector<OctTree<PointT>*> splitTree(OctTree<PointT> *leaf);
+    std::vector<OctTree<PointT>*> myTreeLeafs;
+    virtual void computeTreeLeafs();
 
-	public:
-	    
-	    ///dummy default constructor
-	    AdaptiveOctTree();
-	    ///creates an oct tree node with known center and size
-	    AdaptiveOctTree(pcl::PointXYZ center, double xsize, double ysize, 
-		    double zsize, NDTCell<PointT>* type, OctTree<PointT> *_parent=NULL, unsigned int _depth=0);
-	    virtual ~AdaptiveOctTree();
+    double computeResidualSquare(NDTCell<PointT> *cell);
+    double computeDornikHansen(NDTCell<PointT> *cell);
 
-	    virtual void postProcessPoints();
-	    virtual SpatialIndex<PointT>* clone();
+    bool useDornikHansen;
+    bool useFlatness;
+    double RSS_THRESHOLD, DH_SIGNIFICANCE_LVL, FLAT_FACTOR;
+    bool parametersSet;
 
-	    ///use this to set the parameters for the OctTree. If not called before creating the
-	    ///first leaf, default parameters will be used. \note be careful, remember that the parameters are static, thus global
-	    void setParameters(bool _useDornikHansen = false,    
-		    bool _useFlatness = true,
-		    double _RSS_THRESHOLD = 1000,
-		    double _DH_SIGNIFICANCE_LVL = 0.5,
-		    double _MIN_CELL_SIZE = 1,
-		    double _FLAT_FACTOR = 10,
-		    double _BIG_CELL_SIZE = 5,
-		    double _SMALL_CELL_SIZE = 5
-		    ); 
-	    double MIN_CELL_SIZE;
+public:
 
-    };
+    ///dummy default constructor
+    AdaptiveOctTree();
+    ///creates an oct tree node with known center and size
+    AdaptiveOctTree(pcl::PointXYZ center, double xsize, double ysize,
+                    double zsize, NDTCell<PointT>* type, OctTree<PointT> *_parent=NULL, unsigned int _depth=0);
+    virtual ~AdaptiveOctTree();
+
+    virtual void postProcessPoints();
+    virtual SpatialIndex<PointT>* clone();
+
+    ///use this to set the parameters for the OctTree. If not called before creating the
+    ///first leaf, default parameters will be used. \note be careful, remember that the parameters are static, thus global
+    void setParameters(bool _useDornikHansen = false,
+                       bool _useFlatness = true,
+                       double _RSS_THRESHOLD = 1000,
+                       double _DH_SIGNIFICANCE_LVL = 0.5,
+                       double _MIN_CELL_SIZE = 1,
+                       double _FLAT_FACTOR = 10,
+                       double _BIG_CELL_SIZE = 5,
+                       double _SMALL_CELL_SIZE = 5
+                      );
+    double MIN_CELL_SIZE;
+
+};
 
 } //end namespace
 

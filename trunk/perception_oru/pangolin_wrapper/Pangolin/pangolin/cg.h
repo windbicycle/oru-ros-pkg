@@ -98,15 +98,16 @@ struct CgLoader
 
 inline bool cgOkay()
 {
-  CGerror error;
-  const char *string = cgGetLastErrorString(&error);
+    CGerror error;
+    const char *string = cgGetLastErrorString(&error);
 
-  if (error != CG_NO_ERROR) {
-    std::cout << "CG Error: " << string << std::endl;
+    if (error != CG_NO_ERROR)
+    {
+        std::cout << "CG Error: " << string << std::endl;
 //    assert(0);
-    return false;
-  }
-  return true;
+        return false;
+    }
+    return true;
 }
 
 inline CgLoader::CgLoader()
@@ -126,17 +127,17 @@ inline CgLoader::~CgLoader()
 
 inline void CgLoader::Initialise()
 {
-  mContext = cgCreateContext();
-  cgSetParameterSettingMode(mContext, CG_DEFERRED_PARAMETER_SETTING);
-  cgOkay();
+    mContext = cgCreateContext();
+    cgSetParameterSettingMode(mContext, CG_DEFERRED_PARAMETER_SETTING);
+    cgOkay();
 
-  mFragmentProfile = cgGLGetLatestProfile(CG_GL_FRAGMENT);
-  cgGLSetOptimalOptions(mFragmentProfile);
-  cgOkay();
+    mFragmentProfile = cgGLGetLatestProfile(CG_GL_FRAGMENT);
+    cgGLSetOptimalOptions(mFragmentProfile);
+    cgOkay();
 
-  mVertexProfile = cgGLGetLatestProfile(CG_GL_VERTEX);
-  cgGLSetOptimalOptions(mVertexProfile);
-  cgOkay();
+    mVertexProfile = cgGLGetLatestProfile(CG_GL_VERTEX);
+    cgGLSetOptimalOptions(mVertexProfile);
+    cgOkay();
 }
 
 inline CgProgram CgLoader::LoadProgram(const std::string& file, const std::string& function, bool isVertexShader )
@@ -152,19 +153,19 @@ inline CgProgram CgLoader::LoadProgram(const std::string& file, const std::strin
 
     if( !cgOkay() )
     {
-      std::cout << cgGetLastListing(mContext) << std::endl;
-      assert(0);
+        std::cout << cgGetLastListing(mContext) << std::endl;
+        assert(0);
     }
 
     cgGLLoadProgram(prog.mProg);
     if( !cgOkay() )
     {
-      const char* err = cgGetProgramString( prog.mProg, CG_COMPILED_PROGRAM );
-      int pos;
-      glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &pos);
-      std::cout << err << std::endl;
-      std::cout << "@ " << pos << std::endl;
-      assert(0);
+        const char* err = cgGetProgramString( prog.mProg, CG_COMPILED_PROGRAM );
+        int pos;
+        glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &pos);
+        std::cout << err << std::endl;
+        std::cout << "@ " << pos << std::endl;
+        assert(0);
     }
     return prog;
 }
@@ -244,8 +245,8 @@ void CgProgram::SetUniform(const std::string& name, const TooN::Matrix<R,C>& M )
 
     int i=0;
     for( int r=0; r<R; ++r )
-      for( int c=0; c<C; ++c )
-        Mdata[i++] = (float)(M[r][c]);
+        for( int c=0; c<C; ++c )
+            Mdata[i++] = (float)(M[r][c]);
 
     cgGLSetMatrixParameterfr(p, Mdata );
     cgUpdateProgramParameters(mProg);

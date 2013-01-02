@@ -39,46 +39,47 @@
 #include <pcl/point_types.h>
 #include <Eigen/Core>
 
-namespace lslgeneric {
+namespace lslgeneric
+{
 /* \brief Routines to read/write point clouds from VRML files */
 
-    template< typename PointT>
-    pcl::PointCloud<PointT> readVRML(const char* fname);
-    template< typename PointT>
-    pcl::PointCloud<PointT> readVRML(FILE* fout);
+template< typename PointT>
+pcl::PointCloud<PointT> readVRML(const char* fname);
+template< typename PointT>
+pcl::PointCloud<PointT> readVRML(FILE* fout);
 
-    template< typename PointT>
-    pcl::PointCloud<PointT> readVRMLIntensity(const char* fname);
-    template< typename PointT>
-    pcl::PointCloud<PointT> readVRMLIntensity(FILE* fout);
+template< typename PointT>
+pcl::PointCloud<PointT> readVRMLIntensity(const char* fname);
+template< typename PointT>
+pcl::PointCloud<PointT> readVRMLIntensity(FILE* fout);
 
-    template< typename PointT>
-    void writeToVRMLColor(const char* fname, pcl::PointCloud<PointT> &pc); 
-    template< typename PointT>
-    void writeToVRMLColor(FILE* fout, pcl::PointCloud<PointT> &pc);
+template< typename PointT>
+void writeToVRMLColor(const char* fname, pcl::PointCloud<PointT> &pc);
+template< typename PointT>
+void writeToVRMLColor(FILE* fout, pcl::PointCloud<PointT> &pc);
 
-    template< typename PointT>
-    void writeToVRMLIntensity(const char* fname, pcl::PointCloud<PointT> &pc, 
-	    Eigen::Vector3d col = Eigen::Vector3d(1,1,1)); 
-    template< typename PointT>
-    void writeToVRMLIntensity(FILE* fout, pcl::PointCloud<PointT> &pc, 
-	    Eigen::Vector3d col = Eigen::Vector3d(1,1,1));
+template< typename PointT>
+void writeToVRMLIntensity(const char* fname, pcl::PointCloud<PointT> &pc,
+                          Eigen::Vector3d col = Eigen::Vector3d(1,1,1));
+template< typename PointT>
+void writeToVRMLIntensity(FILE* fout, pcl::PointCloud<PointT> &pc,
+                          Eigen::Vector3d col = Eigen::Vector3d(1,1,1));
 
-    template< typename PointT>
-    void writeToVRML(const char* fname, pcl::PointCloud<PointT> &pc, 
-	    Eigen::Vector3d col = Eigen::Vector3d(1,1,1)); 
-    template< typename PointT>
-    void writeToVRML(FILE* fout, pcl::PointCloud<PointT> &pc, 
-	    Eigen::Vector3d col = Eigen::Vector3d(1,1,1));
-    
-    template< typename PointT>
-    pcl::PointCloud<PointT> transformPointCloud(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, 
-	    const pcl::PointCloud<PointT> &pc);
-    template< typename PointT>
-    void transformPointCloudInPlace(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, pcl::PointCloud<PointT> &pc);
+template< typename PointT>
+void writeToVRML(const char* fname, pcl::PointCloud<PointT> &pc,
+                 Eigen::Vector3d col = Eigen::Vector3d(1,1,1));
+template< typename PointT>
+void writeToVRML(FILE* fout, pcl::PointCloud<PointT> &pc,
+                 Eigen::Vector3d col = Eigen::Vector3d(1,1,1));
 
-    template< typename PointT>
-    double geomDist(PointT p1, PointT p2);
+template< typename PointT>
+pcl::PointCloud<PointT> transformPointCloud(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T,
+        const pcl::PointCloud<PointT> &pc);
+template< typename PointT>
+void transformPointCloudInPlace(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, pcl::PointCloud<PointT> &pc);
+
+template< typename PointT>
+double geomDist(PointT p1, PointT p2);
 
 };
 #include<impl/pointcloud_utils.hpp>

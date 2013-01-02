@@ -7,7 +7,7 @@ namespace pangolin
 
 VideoRecordRepeat::VideoRecordRepeat(
     std::string uri, std::string save_filename, int buffer_size_bytes
-    ) : video_src(0), video_file(0), video_recorder(0),
+) : video_src(0), video_file(0), video_recorder(0),
     filename(save_filename), buffer_size_bytes(buffer_size_bytes), frame_num(0)
 {
     video_src = OpenVideo(uri);
@@ -25,13 +25,15 @@ VideoRecordRepeat::~VideoRecordRepeat()
 
 void VideoRecordRepeat::Record()
 {
-    if( video_recorder ) {
+    if( video_recorder )
+    {
         video_src->Stop();
         delete video_recorder;
         video_recorder = 0;
     }
 
-    if(video_file) {
+    if(video_file)
+    {
         delete video_file;
         video_file = 0;
     }
@@ -47,14 +49,16 @@ void VideoRecordRepeat::Record()
 
 void VideoRecordRepeat::Play(bool realtime)
 {
-    if( video_file ) {
+    if( video_file )
+    {
         delete video_file;
         video_file = 0;
     }
 
     video_src->Stop();
 
-    if(video_recorder) {
+    if(video_recorder)
+    {
         delete video_recorder;
         video_recorder = 0;
     }
@@ -65,12 +69,14 @@ void VideoRecordRepeat::Play(bool realtime)
 
 void VideoRecordRepeat::Source()
 {
-    if(video_file) {
+    if(video_file)
+    {
         delete video_file;
         video_file = 0;
     }
 
-    if(video_recorder) {
+    if(video_recorder)
+    {
         delete video_recorder;
         video_recorder = 0;
     }
@@ -113,7 +119,8 @@ void VideoRecordRepeat::Start()
 void VideoRecordRepeat::Stop()
 {
     // Semantics of this?
-    if(video_recorder) {
+    if(video_recorder)
+    {
         delete video_recorder;
         video_recorder = 0;
     }
@@ -126,13 +133,18 @@ bool VideoRecordRepeat::GrabNext( unsigned char* image, bool wait )
     if( video_recorder != 0 )
     {
         bool success = video_src->GrabNext(image,wait);
-        if( success ) {
+        if( success )
+        {
             video_recorder->RecordFrame(image);
         }
         return success;
-    }else if( video_file != 0 ) {
+    }
+    else if( video_file != 0 )
+    {
         return video_file->GrabNext(image,wait);
-    }else{
+    }
+    else
+    {
         return video_src->GrabNext(image,wait);
     }
 }
@@ -144,13 +156,18 @@ bool VideoRecordRepeat::GrabNewest( unsigned char* image, bool wait )
     if( video_recorder != 0 )
     {
         bool success = video_src->GrabNewest(image,wait);
-        if( success ) {
+        if( success )
+        {
             video_recorder->RecordFrame(image);
         }
         return success;
-    }else if( video_file != 0 ) {
+    }
+    else if( video_file != 0 )
+    {
         return video_file->GrabNewest(image,wait);
-    }else{
+    }
+    else
+    {
         return video_src->GrabNewest(image,wait);
     }
 }

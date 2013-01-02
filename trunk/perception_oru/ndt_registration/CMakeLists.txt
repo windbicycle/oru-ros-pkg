@@ -7,7 +7,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+#set(ROS_BUILD_TYPE Debug)
 
 rosbuild_init()
 
@@ -21,18 +21,17 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
-#add_definitions (-DEIGEN2_SUPPORT)
-# -DEIGEN_DONT_ALIGN
-
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} ${LIBRARY_SOURCES})
 #target_link_libraries(${PROJECT_NAME} another_library)
 rosbuild_add_boost_directories()
 rosbuild_add_executable(ndt_registration_test test/ndt_registration_test.cc)
-#target_link_libraries(ndt_registration_test)
+rosbuild_add_openmp_flags(ndt_registration_test)
 
-rosbuild_add_executable(ndt_feature_test test/ndt_feature_test.cc)
-rosbuild_link_boost(ndt_feature_test program_options)
+#target_link_libraries(ndt_registration_test ndt_map pointcloud_vrml)
+
+#rosbuild_add_executable(ndt_feature_test test/ndt_feature_test.cc)
+#rosbuild_link_boost(ndt_feature_test program_options)
 
 #target_link_libraries(ndt_feature_test ${PROJECT_NAME} ndt_map pointcloud_vrml)
 

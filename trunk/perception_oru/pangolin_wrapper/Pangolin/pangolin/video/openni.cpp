@@ -8,7 +8,8 @@ OpenNiVideo::OpenNiVideo(OpenNiSensorType s1, OpenNiSensorType s2)
 {
     XnStatus nRetVal = XN_STATUS_OK;
     nRetVal = context.Init();
-    if (nRetVal != XN_STATUS_OK) {
+    if (nRetVal != XN_STATUS_OK)
+    {
         std::cerr << "context.Init: " << xnGetStatusString(nRetVal) << std::endl;
     }
 
@@ -17,7 +18,8 @@ OpenNiVideo::OpenNiVideo(OpenNiSensorType s1, OpenNiSensorType s2)
     mapMode.nYRes = XN_VGA_Y_RES;
     mapMode.nFPS = 30;
 
-    switch(s1) {
+    switch(s1)
+    {
     case OpenNiDepth:
     case OpenNiIr:
         s1SizeBytes = XN_VGA_X_RES * XN_VGA_Y_RES * sizeof(XnDepthPixel);
@@ -30,7 +32,8 @@ OpenNiVideo::OpenNiVideo(OpenNiSensorType s1, OpenNiSensorType s2)
         s1SizeBytes = 0;
     }
 
-    switch(s2) {
+    switch(s2)
+    {
     case OpenNiDepth:
     case OpenNiIr:
         s2SizeBytes = XN_VGA_X_RES * XN_VGA_Y_RES * sizeof(XnDepthPixel);
@@ -45,37 +48,52 @@ OpenNiVideo::OpenNiVideo(OpenNiSensorType s1, OpenNiSensorType s2)
 
     sizeBytes = s1SizeBytes + s2SizeBytes;
 
-    if( s1 == OpenNiDepth || s2 == OpenNiDepth ) {
+    if( s1 == OpenNiDepth || s2 == OpenNiDepth )
+    {
         nRetVal = depthNode.Create(context);
-        if (nRetVal != XN_STATUS_OK) {
+        if (nRetVal != XN_STATUS_OK)
+        {
             std::cerr << "depthNode.Create: " << xnGetStatusString(nRetVal) << std::endl;
-        }else{
+        }
+        else
+        {
             nRetVal = depthNode.SetMapOutputMode(mapMode);
-            if (nRetVal != XN_STATUS_OK) {
+            if (nRetVal != XN_STATUS_OK)
+            {
                 std::cerr << "depthNode.SetMapOutputMode: " << xnGetStatusString(nRetVal) << std::endl;
             }
         }
     }
 
-    if( s1 == OpenNiIr || s2 == OpenNiIr ) {
+    if( s1 == OpenNiIr || s2 == OpenNiIr )
+    {
         nRetVal = irNode.Create(context);
-        if (nRetVal != XN_STATUS_OK) {
+        if (nRetVal != XN_STATUS_OK)
+        {
             std::cerr << "irNode.Create: " << xnGetStatusString(nRetVal) << std::endl;
-        }else{
+        }
+        else
+        {
             nRetVal = irNode.SetMapOutputMode(mapMode);
-            if (nRetVal != XN_STATUS_OK) {
+            if (nRetVal != XN_STATUS_OK)
+            {
                 std::cerr << "irNode.SetMapOutputMode: " << xnGetStatusString(nRetVal) << std::endl;
             }
         }
     }
 
-    if( s1 == OpenNiRgb || s2 == OpenNiRgb ) {
+    if( s1 == OpenNiRgb || s2 == OpenNiRgb )
+    {
         nRetVal = imageNode.Create(context);
-        if (nRetVal != XN_STATUS_OK) {
+        if (nRetVal != XN_STATUS_OK)
+        {
             std::cerr << "imageNode.Create: " << xnGetStatusString(nRetVal) << std::endl;
-        }else{
+        }
+        else
+        {
             nRetVal = imageNode.SetMapOutputMode(mapMode);
-            if (nRetVal != XN_STATUS_OK) {
+            if (nRetVal != XN_STATUS_OK)
+            {
                 std::cerr << "imageNode.SetMapOutputMode: " << xnGetStatusString(nRetVal) << std::endl;
             }
         }
@@ -106,9 +124,12 @@ size_t OpenNiVideo::SizeBytes() const
 
 std::string OpenNiVideo::PixFormat() const
 {
-    if(s1 == OpenNiRgb) {
+    if(s1 == OpenNiRgb)
+    {
         return "RGB24";
-    }else{
+    }
+    else
+    {
         return "GRAY16LE";
     }
 }
@@ -130,27 +151,40 @@ bool OpenNiVideo::GrabNext( unsigned char* image, bool wait )
     XnStatus nRetVal = context.WaitAnyUpdateAll();
 //    nRetVal = context.WaitOneUpdateAll(imageNode);
 
-    if (nRetVal != XN_STATUS_OK) {
+    if (nRetVal != XN_STATUS_OK)
+    {
         std::cerr << "Failed updating data: " << xnGetStatusString(nRetVal) << std::endl;
-    }else{
-        if(s1==OpenNiDepth) {
+    }
+    else
+    {
+        if(s1==OpenNiDepth)
+        {
             const XnDepthPixel* pDepthMap = depthNode.GetDepthMap();
             memcpy(image,pDepthMap, s1SizeBytes );
-        }else if(s1==OpenNiIr) {
+        }
+        else if(s1==OpenNiIr)
+        {
             const XnIRPixel* pIrMap = irNode.GetIRMap();
             memcpy(image,pIrMap, s1SizeBytes);
-        }else if(s1==OpenNiRgb) {
+        }
+        else if(s1==OpenNiRgb)
+        {
             const XnUInt8* pImageMap = imageNode.GetImageMap();
             memcpy(image,pImageMap, s1SizeBytes);
         }
 
-        if(s2==OpenNiDepth) {
+        if(s2==OpenNiDepth)
+        {
             const XnDepthPixel* pDepthMap = depthNode.GetDepthMap();
             memcpy(image+s1SizeBytes,pDepthMap, s2SizeBytes);
-        }else if(s2==OpenNiIr) {
+        }
+        else if(s2==OpenNiIr)
+        {
             const XnIRPixel* pIrMap = irNode.GetIRMap();
             memcpy(image+s1SizeBytes,pIrMap, s2SizeBytes);
-        }else if(s2==OpenNiRgb) {
+        }
+        else if(s2==OpenNiRgb)
+        {
             const XnUInt8* pImageMap = imageNode.GetImageMap();
             memcpy(image+s1SizeBytes,pImageMap, s2SizeBytes);
         }

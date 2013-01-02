@@ -1,7 +1,7 @@
 <package>
   <description brief="ndt_visualisation">
 
-     contains the implementation of and the methods necesary
+     Contains the implementation of and the methods necesary
      to use the .jff format for 3D NDT maps.
 
   </description>

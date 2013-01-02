@@ -49,8 +49,8 @@ threadedfilebuf::~threadedfilebuf()
 {
     if( write_thread.joinable() )
     {
-      write_thread.interrupt();
-      write_thread.join();
+        write_thread.interrupt();
+        write_thread.join();
     }
 
     if( mem_buffer) delete mem_buffer;
@@ -66,7 +66,8 @@ std::streamsize threadedfilebuf::xsputn(const char* data, std::streamsize num_by
         boost::unique_lock<boost::mutex> lock(update_mutex);
 
         // wait until there is space to write into buffer
-        while( mem_size + num_bytes > mem_max_size ) {
+        while( mem_size + num_bytes > mem_max_size )
+        {
             cond_dequeued.wait(lock);
         }
 
@@ -80,7 +81,9 @@ std::streamsize threadedfilebuf::xsputn(const char* data, std::streamsize num_by
             memcpy(mem_buffer + mem_end, data, num_bytes);
             mem_end += num_bytes;
             mem_size += num_bytes;
-        }else{
+        }
+        else
+        {
             const int array_b_size = num_bytes - array_a_size;
             memcpy(mem_buffer + mem_end, data, array_a_size);
             memcpy(mem_buffer, data+array_a_size, array_b_size);
@@ -110,9 +113,9 @@ void threadedfilebuf::operator()()
                 cond_queued.wait(lock);
 
             data_to_write =
-                    (mem_start < mem_end) ?
-                        mem_end - mem_start :
-                        mem_max_size - mem_start;
+                (mem_start < mem_end) ?
+                mem_end - mem_start :
+                mem_max_size - mem_start;
         }
 
         std::streamsize bytes_written =

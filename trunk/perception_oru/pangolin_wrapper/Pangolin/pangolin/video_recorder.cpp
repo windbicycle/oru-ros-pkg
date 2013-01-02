@@ -36,7 +36,7 @@ VideoRecorder::VideoRecorder(
     const std::string& filename,
     int stream0_width, int stream0_height, std::string stream0_fmt,
     unsigned int buffer_size_bytes
-    ) : frames(0), buffer(filename, buffer_size_bytes), writer(&buffer)
+) : frames(0), buffer(filename, buffer_size_bytes), writer(&buffer)
 {
     VideoStream strm0;
     strm0.name = "main";

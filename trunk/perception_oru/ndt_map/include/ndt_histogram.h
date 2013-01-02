@@ -38,66 +38,70 @@
 #include <ndt_map.h>
 #include <vector>
 
-namespace lslgeneric {
+namespace lslgeneric
+{
 
-template <typename PointT>    
-class NDTHistogram {
+template <typename PointT>
+class NDTHistogram
+{
 
-    private:
-	std::vector<int> histogramBinsFlat;
-	std::vector<int> histogramBinsLine;
-	std::vector<int> histogramBinsSphere;
-	
-	int N_LINE_BINS;
-	int N_FLAT_BINS;
-	int N_SPHERE_BINS;
-        double D1, D2;
-	bool inited;
+private:
+    std::vector<int> histogramBinsFlat;
+    std::vector<int> histogramBinsLine;
+    std::vector<int> histogramBinsSphere;
 
-	std::vector< Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>, 
-	    Eigen::aligned_allocator<Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> > > topThree;
-	double topThreeS[3];
+    int N_LINE_BINS;
+    int N_FLAT_BINS;
+    int N_SPHERE_BINS;
+    double D1, D2;
+    bool inited;
 
-	std::vector<int> dist_histogramBinsFlat[3];
-	std::vector<int> dist_histogramBinsLine[3];
-	std::vector<int> dist_histogramBinsSphere[3];
+    std::vector< Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>,
+        Eigen::aligned_allocator<Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> > > topThree;
+    double topThreeS[3];
 
-	std::vector<Eigen::Vector3d,Eigen::aligned_allocator<Eigen::Vector3d> > averageDirections;
-	void constructHistogram(NDTMap<PointT> &map);
-	void incrementLineBin(double d);
-	void incrementFlatBin(Eigen::Vector3d &normal, double d);
-	void incrementSphereBin(double d);
+    std::vector<int> dist_histogramBinsFlat[3];
+    std::vector<int> dist_histogramBinsLine[3];
+    std::vector<int> dist_histogramBinsSphere[3];
 
-	void computeDirections();
-	void closedFormSolution(pcl::PointCloud<PointT> &src, pcl::PointCloud<PointT> &trgt,
-				Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T);
-    public:
-	NDTHistogram();
-	NDTHistogram (NDTMap<PointT> &map);
-	NDTHistogram (const NDTHistogram<PointT>& other);
+    std::vector<Eigen::Vector3d,Eigen::aligned_allocator<Eigen::Vector3d> > averageDirections;
+    void constructHistogram(NDTMap<PointT> &map);
+    void incrementLineBin(double d);
+    void incrementFlatBin(Eigen::Vector3d &normal, double d);
+    void incrementSphereBin(double d);
 
-	//get the transform that brings me close to target
-	void bestFitToHistogram(NDTHistogram<PointT> &target, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, bool bound_transform = true);
-	void printHistogram(bool bMatlab=false);
+    void computeDirections();
+    void closedFormSolution(pcl::PointCloud<PointT> &src, pcl::PointCloud<PointT> &trgt,
+                            Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T);
+public:
+    NDTHistogram();
+    NDTHistogram (NDTMap<PointT> &map);
+    NDTHistogram (const NDTHistogram<PointT>& other);
 
-	//call this to get the 1/2/3 best option, AFTER a call to bestFitToHistogram
-	double getTransform(size_t FIT_NUMBER, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T) {
-	    double ret = -1;
-	    T.setIdentity();
-	    if(FIT_NUMBER >=0 && FIT_NUMBER<3) {
-		T = topThree[FIT_NUMBER];
-		ret = topThreeS[FIT_NUMBER];
-	    }
-	    return ret;
-	}
+    //get the transform that brings me close to target
+    void bestFitToHistogram(NDTHistogram<PointT> &target, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T, bool bound_transform = true);
+    void printHistogram(bool bMatlab=false);
 
-	pcl::PointCloud<PointT> getDominantDirections(int nDirections);
-	double getSimilarity(NDTHistogram<PointT> &other);
-	double getSimilarity(NDTHistogram<PointT> &other, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T);
-	
-	std::vector<Eigen::Vector3d,Eigen::aligned_allocator<Eigen::Vector3d> > directions;
-    public:
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    //call this to get the 1/2/3 best option, AFTER a call to bestFitToHistogram
+    double getTransform(size_t FIT_NUMBER, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T)
+    {
+        double ret = -1;
+        T.setIdentity();
+        if(FIT_NUMBER >=0 && FIT_NUMBER<3)
+        {
+            T = topThree[FIT_NUMBER];
+            ret = topThreeS[FIT_NUMBER];
+        }
+        return ret;
+    }
+
+    pcl::PointCloud<PointT> getDominantDirections(int nDirections);
+    double getSimilarity(NDTHistogram<PointT> &other);
+    double getSimilarity(NDTHistogram<PointT> &other, Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &T);
+
+    std::vector<Eigen::Vector3d,Eigen::aligned_allocator<Eigen::Vector3d> > directions;
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 };
 

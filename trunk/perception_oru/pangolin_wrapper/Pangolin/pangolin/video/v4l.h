@@ -37,13 +37,15 @@
 namespace pangolin
 {
 
-typedef enum {
+typedef enum
+{
     IO_METHOD_READ,
     IO_METHOD_MMAP,
     IO_METHOD_USERPTR,
 } io_method;
 
-struct buffer {
+struct buffer
+{
     void*  start;
     size_t length;
 };

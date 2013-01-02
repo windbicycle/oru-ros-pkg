@@ -40,83 +40,94 @@
 //#include <pcl/kdtree/kdtree_ann.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
-namespace lslgeneric {
+namespace lslgeneric
+{
 
-    /** \brief A spatial index represented as a grid map
-        \details A grid map with delayed allocation of cells.
-    */
-    template <typename PointT>
-    class LazyGrid : public SpatialIndex<PointT> {
-    public:
-	LazyGrid(double cellSize);
-	LazyGrid(LazyGrid *prot);
-	LazyGrid(double sizeXmeters, double sizeYmeters, double sizeZmeters,
-		  double cellSizeX, double cellSizeY, double cellSizeZ,
-		  double _centerX, double _centerY, double _centerZ, 
-		  Cell<PointT> *cellPrototype ); 
-	virtual ~LazyGrid();
+/** \brief A spatial index represented as a grid map
+    \details A grid map with delayed allocation of cells.
+*/
+template <typename PointT>
+class LazyGrid : public SpatialIndex<PointT>
+{
+public:
+    LazyGrid(double cellSize);
+    LazyGrid(LazyGrid *prot);
+    LazyGrid(double sizeXmeters, double sizeYmeters, double sizeZmeters,
+             double cellSizeX, double cellSizeY, double cellSizeZ,
+             double _centerX, double _centerY, double _centerZ,
+             Cell<PointT> *cellPrototype );
+    virtual ~LazyGrid();
 
-	virtual Cell<PointT>* getCellForPoint(const PointT &point);
-	virtual void addPoint(const PointT &point);
+    virtual Cell<PointT>* getCellForPoint(const PointT &point);
+    virtual void addPoint(const PointT &point);
 
-	//these two don't make much sense...
-	///iterator through all cells in index, points at the begining
-	virtual typename SpatialIndex<PointT>::CellVectorItr begin();
-	///iterator through all cells in index, points at the end
-	virtual typename SpatialIndex<PointT>::CellVectorItr end();
-	virtual int size();
+    //these two don't make much sense...
+    ///iterator through all cells in index, points at the begining
+    virtual typename SpatialIndex<PointT>::CellVectorItr begin();
+    ///iterator through all cells in index, points at the end
+    virtual typename SpatialIndex<PointT>::CellVectorItr end();
+    virtual int size();
 
-	///clone - create an empty object with same type
-	virtual SpatialIndex<PointT>* clone() const;
-	virtual SpatialIndex<PointT>* copy() const;
+    ///clone - create an empty object with same type
+    virtual SpatialIndex<PointT>* clone() const;
+    virtual SpatialIndex<PointT>* copy() const;
 
-	///method to return all cells within a certain radius from a point
-	virtual void getNeighbors(const PointT &point, const double &radius, std::vector<Cell<PointT>*> &cells);
+    ///method to return all cells within a certain radius from a point
+    virtual void getNeighbors(const PointT &point, const double &radius, std::vector<Cell<PointT>*> &cells);
 
-	///sets the cell factory type
-	virtual void setCellType(Cell<PointT> *type);
+    ///sets the cell factory type
+    virtual void setCellType(Cell<PointT> *type);
 
-	virtual void setCenter(const double &cx, const double &cy, const double &cz);
-	virtual void setSize(const double &sx, const double &sy, const double &sz);
+    virtual void setCenter(const double &cx, const double &cy, const double &cz);
+    virtual void setSize(const double &sx, const double &sy, const double &sz);
 
-	virtual NDTCell<PointT>* getClosestNDTCell(const PointT &pt);
-	virtual std::vector<NDTCell<PointT>*> getClosestNDTCells(const PointT &pt, double &radius);
+    virtual NDTCell<PointT>* getClosestNDTCell(const PointT &pt, bool checkForGaussian=true);
+    virtual std::vector<NDTCell<PointT>*> getClosestNDTCells(const PointT &pt, int &n_neigh, bool checkForGaussian=true);
+    virtual std::vector<NDTCell<PointT>*> getClosestCells(const PointT &pt);
 
-	virtual Cell<PointT>* getCellAt(int indX, int indY, int indZ);
-	virtual bool getLinkedAt(int indX, int indY, int indZ);
+    virtual Cell<PointT>* getCellAt(int indX, int indY, int indZ);
+    virtual bool getLinkedAt(int indX, int indY, int indZ);
 
-	void getCellSize(double &cx, double &cy, double &cz);
-	void getGridSize(int &cx, int &cy, int &cz);
-	void getGridSizeInMeters(double &cx, double &cy, double &cz);
-	void getCenter(double &cx, double &cy, double &cz);
-	void getIndexForPoint(const PointT& pt, int &idx, int &idy, int &idz);
-	Cell<PointT> * getProtoType() { return protoType; }
+    void getCellSize(double &cx, double &cy, double &cz);
+    void getGridSize(int &cx, int &cy, int &cz);
+    void getGridSizeInMeters(double &cx, double &cy, double &cz);
+    void getCenter(double &cx, double &cy, double &cz);
+    void getIndexForPoint(const PointT& pt, int &idx, int &idy, int &idz);
+    Cell<PointT> * getProtoType()
+    {
+        return protoType;
+    }
 
-	void initKDTree();
-	void initialize();
-    
-	void initializeAll() ;
+    void initKDTree();
+    void initialize();
 
-	///reads map contents from .jff file
-	virtual int loadFromJFF(FILE * jffin);
+    void initializeAll() ;
 
-    private:
-	bool initialized;
-	Cell<PointT> ****dataArray;
-	bool ***linkedCells;
-	Cell<PointT> *protoType;
-	std::vector<Cell<PointT>*> activeCells;
-	pcl::KdTreeFLANN<PointT> meansTree;
-	bool centerIsSet, sizeIsSet;
-	typename pcl::KdTree<PointT>::PointCloudPtr mp;
+    Cell<PointT> ****getDataArrayPtr()
+    {
+        return dataArray;
+    }
 
-	double sizeXmeters, sizeYmeters, sizeZmeters;
-	double cellSizeX, cellSizeY, cellSizeZ;
-	double centerX, centerY, centerZ;
-	int sizeX,sizeY,sizeZ;
+    ///reads map contents from .jff file
+    virtual int loadFromJFF(FILE * jffin);
 
-	bool checkCellforNDT(int indX, int indY, int indZ);
-	//void getIndexArrayForPoint(const PointT& pt, int *&idx, int *&idy, int *&idz);
+private:
+    bool initialized;
+    Cell<PointT> ****dataArray;
+    bool ***linkedCells;
+    Cell<PointT> *protoType;
+    std::vector<Cell<PointT>*> activeCells;
+    pcl::KdTreeFLANN<PointT> meansTree;
+    bool centerIsSet, sizeIsSet;
+    typename pcl::KdTree<PointT>::PointCloudPtr mp;
+
+    double sizeXmeters, sizeYmeters, sizeZmeters;
+    double cellSizeX, cellSizeY, cellSizeZ;
+    double centerX, centerY, centerZ;
+    int sizeX,sizeY,sizeZ;
+
+    bool checkCellforNDT(int indX, int indY, int indZ, bool checkForGaussian=true);
+    //void getIndexArrayForPoint(const PointT& pt, int *&idx, int *&idy, int *&idz);
 };
 
 

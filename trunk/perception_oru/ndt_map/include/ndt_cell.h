@@ -46,195 +46,322 @@
 
 #include <fstream>
 
-/// A rather unsophisticated way of determining the 
+/// A rather unsophisticated way of determining the
 /// update method for a cell
-/// Covariance intersection based estimation []
-#define CELL_UPDATE_MODE_COVARIANCE_INTERSECTION 		0 
-/// Recursive Sample variance method [Chan, Gene, Randall, Updating Formulae and pairwise algorithm for computing sample variances, tech report Standford, 1979] 
-#define CELL_UPDATE_MODE_SAMPLE_VARIANCE 				1 
+/// Covariance intersection based on estimation
+#define CELL_UPDATE_MODE_COVARIANCE_INTERSECTION 		0
+/// Recursive Sample variance method [Chan, Gene, Randall, Updating Formulae and pairwise algorithm for computing sample variances, tech report Standford, 1979]
+#define CELL_UPDATE_MODE_SAMPLE_VARIANCE 				1
 /// Yguel, Vasquez, Aycard, Siegward, Laugier, Error-Driven Refinement of Multi-scale gaussian maps
 #define CELL_UPDATE_MODE_ERROR_REFINEMENT				2
-///Combined CI and SV
-#define CELL_UPDATE_MODE_SAMPLE_VARIANCE_WITH_RESET		3
+/// Estimate the surface (reduce the sensor noise)
+#define CELL_UPDATE_MODE_SAMPLE_VARIANCE_SURFACE_ESTIMATION 3
 
-namespace lslgeneric {
+namespace lslgeneric
+{
 
-    /** \brief implements a normal distibution cell
-        \details The base class for all NDT indeces, contains
-	mean, covariance matrix as well as eigen decomposition of covariance
+/** \brief implements a normal distibution cell
+    \details The base class for all NDT indeces, contains
+mean, covariance matrix as well as eigen decomposition of covariance
+*/
+template<typename PointT>
+class NDTCell : public Cell<PointT>
+{
+public:
+    bool hasGaussian_;	///< indicates if the cell has a gaussian in it
+    double cost; 				///FIXME:: Am I used in some context?
+    char isEmpty;				///<based on the most recent observation, is the cell seen empty (1), occupied (-1) or not at all (0)
+    double consistency_score;
+
+    std::vector<PointT> points_; ///The points falling into the cell - cleared after update
+
+    enum CellClass {HORIZONTAL=0, VERTICAL, INCLINED, ROUGH, UNKNOWN};
+
+    NDTCell()
+    {
+        hasGaussian_ = false;
+        if(!parametersSet_)
+        {
+            setParameters();
+        }
+        N = 0;
+        R = 0;
+        G = 0;
+        B = 0;
+        occ = 0;
+        emptyval = 0;
+        isEmpty=0;
+        emptylik = 0;
+        emptydist = 0;
+        max_occu_ = 1;
+        consistency_score=0;
+    }
+
+    virtual ~NDTCell()
+    {
+        points_.clear();
+    }
+
+    NDTCell(PointT &center, double &xsize, double &ysize, double &zsize):
+        Cell<PointT>(center,xsize,ysize,zsize)
+    {
+        hasGaussian_ = false;
+        N = 0;
+        R = 0;
+        G = 0;
+        B = 0;
+        occ = 0;
+        emptyval = 0;
+        isEmpty = 0;
+        emptylik = 0;
+        emptydist = 0;
+        if(!parametersSet_)
+        {
+            setParameters();
+        }
+        consistency_score=0;
+    }
+
+    NDTCell(const NDTCell& other):Cell<PointT>()
+    {
+        this->center_ = other.center_;
+        this->xsize_ = other.xsize_;
+        this->ysize_ = other.ysize_;
+        this->zsize_ = other.zsize_;
+        this->hasGaussian_ = other.hasGaussian_;
+        this->R = other.R;
+        this->G = other.G;
+        this->B = other.B;
+        this->N = other.N;
+        this->occ = other.occ;
+        this->emptyval = other.emptyval;
+        this->edata = other.edata;
+        this->consistency_score=other.consistency_score;
+    }
+
+    virtual Cell<PointT>* clone() const;
+    virtual Cell<PointT>* copy() const;
+
+    /**
+    * Updates the current Sample mean and covariance based on
+    * give new sample mean @m2 and covariance @cov2,
+    * which have been computed from @numpointsindistribution number of points
     */
-    template<typename PointT>
-    class NDTCell : public Cell<PointT> {
-	public:
-	    bool hasGaussian_;
-	    double cost;
-	    std::vector<PointT> points_;
-	    
-	    enum CellClass {HORIZONTAL=0, VERTICAL, INCLINED, ROUGH, UNKNOWN};
-	    
-	    NDTCell() {
-				hasGaussian_ = false;
-				if(!parametersSet_) {
-						setParameters();
-				}
-				N = 0;
-				R = 0.5;
-				G = 0.5;
-				B = 0.5;
-				occ = 0;
-				emptyval = 0;
-				cellConfidence = 0.5;
-	    }
-	    virtual ~NDTCell() 
-	    { 
-				points_.clear(); 
-	    }
 
-	    NDTCell(PointT &center, double &xsize, double &ysize, double &zsize):
-	        Cell<PointT>(center,xsize,ysize,zsize) 
-	    { 
-				hasGaussian_ = false;
-				N = 0;
-				R = 0.5;
-				G = 0.5;
-				B = 0.5;
-				occ = 0;
-				emptyval = 0;
-				cellConfidence = 0.5;
-				if(!parametersSet_) {
-						setParameters();
-				}
-	    }
+    inline void updateSampleVariance(Eigen::Matrix3d &cov2, Eigen::Vector3d &m2, unsigned int numpointsindistribution);
 
-	    NDTCell(const NDTCell& other):Cell<PointT>() {
-				this->center_ = other.center_;
-				this->xsize_ = other.xsize_;
-				this->ysize_ = other.ysize_;
-				this->zsize_ = other.zsize_;
-				this->hasGaussian_ = other.hasGaussian_;
-				this->R = other.R;
-				this->G = other.G;
-				this->B = other.B;
-				this->N = other.N;
-				this->occ = other.occ;
-				this->emptyval = other.emptyval;
-				this->edata = other.edata;
-				this->cellConfidence = other.cellConfidence;
-	    }
-	    
-	    virtual Cell<PointT>* clone() const;
-	    virtual Cell<PointT>* copy() const;
+    /**
+    * Fits and updates the sample mean and covariance for the cell after the scan has been added.
+    * This function updates the occupancy, it uses the given method for the update.
+    * The behavior of the update can be altered with axnumpoints and occupancy_limit
+    *
+    * @param mode Determines the mode of the cell update - the mode defines are in the beginning of the header
+    * @param maxnumpoints This adapts the cell content in the presence of non-stationary distribution. The lower the value the faster the adaptation
+    * @param occupancy_limit This sets the limit for the confidence (in log-odds) that the cell can obtain.
+    * @param origin The CELL_UPDATE_MODE_SAMPLE_VARIANCE_SURFACE_ESTIMATION requires to know the sensor origin, so in case You use that, you should provide the
+    * 							position of the sensor, from where the measurement was taken for the method
+    * @param sensor_noise A standard deviation of the sensor noise, used only by method CELL_UPDATE_MODE_SAMPLE_VARIANCE_SURFACE_ESTIMATION
+    * if (maxnumpoints<=0) then the cell adaptation strategy is not used
+    */
+    inline void computeGaussian(int mode=CELL_UPDATE_MODE_SAMPLE_VARIANCE, unsigned int maxnumpoints=1e6, float occupancy_limit=255, Eigen::Vector3d origin = Eigen::Vector3d(0,0,0), double sensor_noise=0.1);
 
-	    inline void computeGaussian(int mode=CELL_UPDATE_MODE_SAMPLE_VARIANCE_WITH_RESET);
-			//template<typename PointT>
-			//void NDTCell<pcl::PointXYZRGB>::computeGaussian()
-			
-	    void rescaleCovariance();
-			/**
-			* Rescales the covariance to protect against near sigularities
-			* and computes the inverse - This does not change class member values
-			* @return true if success, false if eigen values were negative
-			*/
-			bool rescaleCovariance(Eigen::Matrix3d &cov, Eigen::Matrix3d &invCov);
-			
-	    //void updateObservation();
-	    void classify();
-	    
-	    void writeToVRML(FILE *fout, Eigen::Vector3d col = Eigen::Vector3d(0,0,0));
-	    int writeToJFF(FILE * jffout);
-	    int loadFromJFF(FILE * jffin);
+    /**
+    * Calculates the average color for cell if the point type is pcl::PointXYZI or pcl::PointXYZRGB
+    */
+    inline void updateColorInformation();
 
-	    inline CellClass getClass() const { return cl_; }
-	    inline Eigen::Matrix3d getCov() const { return cov_; }
-	    inline Eigen::Matrix3d getInverseCov() const { return icov_; }
-	    inline Eigen::Vector3d getMean() const { return mean_; }
-	    inline Eigen::Matrix3d getEvecs() const { return evecs_; }	    
-	    inline Eigen::Vector3d getEvals() const { return evals_; }
-	    inline Eigen::Matrix3d getCovSum() const { return covSum_; }
-	    inline Eigen::Vector3d getMeanSum() const { return meanSum_; }
-	    inline float getCellConfidence() const { return cellConfidence; }
 
-	    void setCov(const Eigen::Matrix3d &cov);
-	    inline void setMean(const Eigen::Vector3d &mean) { mean_ = mean; }
-	    inline void setEvals(const Eigen::Vector3d &ev) { evals_ = ev; }
-	    inline void setCovSum(const Eigen::Matrix3d &covSum) { covSum_ = covSum; }
-	    inline void setMeanSum(const Eigen::Vector3d &meanSum) { meanSum_ = meanSum; }		
-	    
-	    ///use this to set the parameters for the NDTCell. \note be careful, remember that the parameters are static, thus global
-	    static void setParameters(double _EVAL_ROUGH_THR   =0.1, 
-				      double _EVEC_INCLINED_THR=8*M_PI/18, 
-				      double _EVAL_FACTOR      =100 
-				     );
-	    double getLikelihood(const PointT &pt) const;
-	    
-	    virtual void addPoint(PointT &pt) {
-				points_.push_back(pt);
-	    }
-	    
-	    
-	    virtual void addPoints(pcl::PointCloud<PointT> &pt) {
-				points_.insert(points_.begin(),pt.points.begin(),pt.points.end());
-	    }
-	    
-	    void setRGB(float r, float g, float b){
-				R=r; G = g; B = b;
-			}
-	    void getRGB(float &r, float &g, float &b){
-				r = R; g = G; b = B;
-			}
-			
-			/**
-			* Updates the occupancy value of the cell by summing @occ_val to 
-			* class variable
-			*/
-			void updateOccupancy(float occ_val){
-				occ+=occ_val;
-				if(occ>255.0) occ = 255.0;
-				if(occ<-255.0) occ = -255.0;
-			}
-			
-			/**
-			* Returns the current accumulated occupancy value
-			*/
-			float getOccupancy(){return occ;}
-			
-			void updateEmpty(){
-				emptyval++;
-			}
-			
-			float getDynamicLikelihood(unsigned int N){
-				return edata.computeSemiStaticLikelihood(N);
-			}
-			void setOccupancy(float occ_){occ = occ_;}
-			void setEmptyval(int emptyval_){emptyval=emptyval_;}
-			void setEventData(TEventData _ed){edata = _ed;}
-			void setCellConfidence(float conf){cellConfidence = conf; }
-			void setN(int N_){N = N_;}
+    void rescaleCovariance();
+    /**
+    * Rescales the covariance to protect against near sigularities
+    * and computes the inverse - This does not change class member values
+    * @return true if success, false if eigen values were negative
+    */
+    bool rescaleCovariance(Eigen::Matrix3d &cov, Eigen::Matrix3d &invCov);
 
-	private:
-	    Eigen::Matrix3d cov_;
-		Eigen::Matrix3d covSum_;
-	    Eigen::Matrix3d icov_;
-	    Eigen::Matrix3d evecs_;
-	    Eigen::Vector3d mean_;
-		Eigen::Vector3d meanSum_;
-	    Eigen::Vector3d evals_;
-	    CellClass cl_;
-	    static bool parametersSet_;													// ???
-	    static double EVAL_ROUGH_THR;		// = 0.1;								// ???
-	    static double EVEC_INCLINED_THR; 	// = cos(8*M_PI/18);//10 degree slope;	// ???
-	    static double EVAL_FACTOR;													// ???
-	    double d1_,d2_;
-		unsigned int N; 	///Number of points used for Normal distribution estimation so far
-		int emptyval;
-		float R,G,B; 		///RGB values [0..1] - Special implementations for PointXYZRGB & PointXYZI
-		float occ;   		///Occupancy value stored as "Log odds" (if you wish)
-		float cellConfidence;
-		TEventData edata;
-	public:
-	      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    //void updateObservation();
+    void classify();
 
-    };
+    void writeToVRML(FILE *fout, Eigen::Vector3d col = Eigen::Vector3d(0,0,0));
+    int writeToJFF(FILE * jffout);
+    int loadFromJFF(FILE * jffin);
+
+    inline CellClass getClass() const
+    {
+        return cl_;
+    }
+    inline Eigen::Matrix3d getCov() const
+    {
+        return cov_;
+    }
+    inline Eigen::Matrix3d getInverseCov() const
+    {
+        return icov_;
+    }
+    inline Eigen::Vector3d getMean() const
+    {
+        return mean_;
+    }
+    inline Eigen::Matrix3d getEvecs() const
+    {
+        return evecs_;
+    }
+    inline Eigen::Vector3d getEvals() const
+    {
+        return evals_;
+    }
+
+
+    void setCov(const Eigen::Matrix3d &cov);
+
+    inline void setMean(const Eigen::Vector3d &mean)
+    {
+        mean_ = mean;
+    }
+    inline void setEvals(const Eigen::Vector3d &ev)
+    {
+        evals_ = ev;
+    }
+
+
+
+    ///use this to set the parameters for the NDTCell. \note be careful, remember that the parameters are static, thus global
+    static void setParameters(double _EVAL_ROUGH_THR   =0.1,
+                              double _EVEC_INCLINED_THR=8*M_PI/18,
+                              double _EVAL_FACTOR      =100);
+    /**
+    * Get likelihood for a given point
+    */
+    double getLikelihood(const PointT &pt) const;
+
+    /**
+    * Adds a new point to distribution (does not update the distribution)
+    * Call computeGaussian() to update the content
+    */
+    virtual void addPoint(PointT &pt)
+    {
+        points_.push_back(pt);
+    }
+
+
+    virtual void addPoints(pcl::PointCloud<PointT> &pt)
+    {
+        points_.insert(points_.begin(),pt.points.begin(),pt.points.end());
+    }
+
+    /// Set the RGB value for this cell
+    void setRGB(float r, float g, float b)
+    {
+        R=r;
+        G = g;
+        B = b;
+    }
+    void getRGB(float &r, float &g, float &b)
+    {
+        r = R;
+        g = G;
+        b = B;
+    }
+
+    /**
+    * Updates the occupancy value of the cell by summing @occ_val to
+    * class variable
+    */
+    void updateOccupancy(float occ_val, float max_occu=255.0)
+    {
+        occ+=occ_val;
+        if(occ>max_occu) occ = max_occu;
+        if(occ<-max_occu) occ = -max_occu;
+        max_occu_= max_occu;
+    }
+
+    /**
+    * Returns the current accumulated occupancy value
+    */
+    float getOccupancy()
+    {
+        return occ;
+    }
+    /**
+    * Returns the current accumulated occupancy value (rescaled)
+    */
+    float getOccupancyRescaled()
+    {
+        float occupancy = 1 - 1/(1+exp(occ));
+        return occupancy > 1 ? 1 : (occupancy < 0 ? 0 : occupancy);
+    }
+
+    void updateEmpty(double elik, double dist)
+    {
+        emptyval++;
+        emptylik+=elik;
+        emptydist+=dist;
+    }
+
+    float getDynamicLikelihood(unsigned int N)
+    {
+        return edata.computeSemiStaticLikelihood(N);
+    }
+    void setOccupancy(float occ_)
+    {
+        occ = occ_;
+    }
+    void setEmptyval(int emptyval_)
+    {
+        emptyval=emptyval_;
+    }
+    void setEventData(TEventData _ed)
+    {
+        edata = _ed;
+    }
+    void setN(int N_)
+    {
+        N = N_;
+    }
+    int getN()
+    {
+        return N;
+    }
+    /**
+    * Computes the maximum likelihood that a point moving along a line
+    * defined by two points p1 and p2, gets measured agains the normaldistribution that
+    * is within this cell.
+    * This is used in raytracing to check if a measurement ray passes through a previously
+    * mapped object (thus provides evidence of inconsistency)
+    *
+    * @param p1 One point along the ray
+    * @param p2 second point along the ray (it must hold that p1 != p2);
+    * @param &out Gives out the exact maximum likelihood point
+    */
+    double computeMaximumLikelihoodAlongLine(PointT p1, PointT p2, Eigen::Vector3d &out);
+
+private:
+    Eigen::Matrix3d cov_;		/// Contains the covatiance of the normal distribution
+    Eigen::Matrix3d icov_;  /// Precomputed inverse covariance (updated every time the cell is updated)
+    Eigen::Matrix3d evecs_; /// Eigen vectors
+    Eigen::Vector3d mean_;  /// Mean of the normal distribution
+    Eigen::Vector3d evals_; /// Eigen values
+    CellClass cl_;
+    static bool parametersSet_;													// ???
+    static double EVAL_ROUGH_THR;		// = 0.1;								// ???
+    static double EVEC_INCLINED_THR; 	// = cos(8*M_PI/18);//10 degree slope;	// ???
+    static double EVAL_FACTOR;													// ???
+    double d1_,d2_;
+    unsigned int N; 	///Number of points used for Normal distribution estimation so far
+    int emptyval;			///The number of times a cell was observed empty (using ray casting)
+    double emptylik;
+    double emptydist;
+    float R,G,B; 			///RGB values [0..1] - Special implementations for PointXYZRGB & PointXYZI
+    float occ;   			///Occupancy value stored as "Log odds" (if you wish)
+    float max_occu_;
+    TEventData edata;
+
+
+
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+};
 };
 
 #include<impl/ndt_cell.hpp>

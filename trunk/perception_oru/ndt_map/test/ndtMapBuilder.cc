@@ -10,12 +10,12 @@
 #include "pcl/features/feature.h"
 #include <cstdio>
 
-#include <opencv/cv.h> 
+#include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
-//#include <cv_bridge/CvBridge.h> 
-#include <cv_bridge/cv_bridge.h> 
+//#include <cv_bridge/CvBridge.h>
+#include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 
 #include <Eigen/Eigen>
@@ -25,48 +25,50 @@ static cv::Mat color_img;
 static boost::mutex mutex;
 static bool fresh = false;
 
-void ndtCallback(const sensor_msgs::PointCloud2ConstPtr &msg) {
+void ndtCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
+{
     pcl::PointCloud<pcl::PointXYZ> cloud;
     pcl::fromROSMsg(*msg,cloud);
-   
+
     ROS_INFO ("Received %d data points with the following fields: %s", (int)(msg->width * msg->height),
-	                pcl::getFieldsList (*msg).c_str ());
+              pcl::getFieldsList (*msg).c_str ());
 
     //lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::OctTree<pcl::PointXYZ>());
     lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::LazyGrid<pcl::PointXYZ>(0.2));
-   
+
     nd.loadPointCloud(cloud);
-    nd.computeNDTCells(); 
-   
+    nd.computeNDTCells();
+
     ROS_INFO("Loaded point cloud");
     char fname[50];
     snprintf(fname,49,"ndt_map%05d.wrl",ctr);
     nd.writeToVRML(fname);
-    ctr++;    
+    ctr++;
 
 }
 
-void ndtCallbackDepthImg(const sensor_msgs::ImageConstPtr &msg) {
+void ndtCallbackDepthImg(const sensor_msgs::ImageConstPtr &msg)
+{
 
     cv::Mat depth_img(cv_bridge::toCvCopy(msg, "")->image);
     cv::Mat color_img_loc;
-    
+
     mutex.lock();
-    if(!fresh) 
+    if(!fresh)
     {
-	mutex.unlock();
-	return;
+        mutex.unlock();
+        return;
     }
     color_img.copyTo(color_img_loc);
     mutex.unlock();
-    
-   
+
+
     ROS_INFO ("Received image data");
 
     //lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::OctTree<pcl::PointXYZ>());
     //lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::LazyGrid<pcl::PointXYZ>(0.2));
     lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::CellVector<pcl::PointXYZ>());
-   
+
     // TODO - this are the values from the Freiburg 1 camera.
     double fx = 517.3;
     double fy = 516.5;
@@ -81,14 +83,15 @@ void ndtCallbackDepthImg(const sensor_msgs::ImageConstPtr &msg) {
     double ds = 1.035; // Depth scaling factor.
     bool isFloat = (depth_img.depth() == CV_32F);
     double scale = 1; //0.0002;
-    if(!isFloat) {
-	scale = 0.002; //raw scale conversion
+    if(!isFloat)
+    {
+        scale = 0.002; //raw scale conversion
     }
 
     lslgeneric::DepthCamera<pcl::PointXYZ> cameraParams (fx,fy,cx,cy,dist,ds*scale,isFloat);
- //   pcl::PointCloud<pcl::PointXYZ> pc;
- //   cameraParams.convertDepthImageToPointCloud(depth_img, pc);
-    
+//   pcl::PointCloud<pcl::PointXYZ> pc;
+//   cameraParams.convertDepthImageToPointCloud(depth_img, pc);
+
     std::vector<cv::KeyPoint> kpts;
     cv::Ptr<cv::FeatureDetector> detector = cv::FeatureDetector::create("SURF");
     detector->detect(color_img_loc, kpts);
@@ -99,30 +102,31 @@ void ndtCallbackDepthImg(const sensor_msgs::ImageConstPtr &msg) {
 //    nd.loadDepthImage(depth_img, cameraParams);
     //nd.loadDepthImageFeatures(depth_img, kpts, support, maxVar, cameraParams);
     nd.loadDepthImageFeatures(depth_img, kpts, support, maxVar, cameraParams,true);
-    nd.computeNDTCells(); 
-  
+    nd.computeNDTCells();
+
     lslgeneric::CellVector<pcl::PointXYZ> *cv = dynamic_cast<lslgeneric::CellVector<pcl::PointXYZ>* > (nd.getMyIndex());
-    if(cv!=NULL) 
+    if(cv!=NULL)
     {
-	cv->cleanCellsAboveSize(maxVar);
+        cv->cleanCellsAboveSize(maxVar);
     }
 
     ROS_INFO("Loaded point cloud");
     char fname[50];
     snprintf(fname,49,"ndt_map%05d.wrl",ctr2);
     nd.writeToVRML(fname);
-/*    snprintf(fname,49,"cloud%05d.wrl",ctr2);
-    lslgeneric::writeToVRML(fname,pc);
-    snprintf(fname,49,"depth%05d.png",ctr2);
-    cv::imwrite(fname,depth_img);
-    snprintf(fname,49,"depth_raw%05d.png",ctr2);
-    cv::imwrite(fname,depth_img_raw);
-*/
-    ctr2++;    
+    /*    snprintf(fname,49,"cloud%05d.wrl",ctr2);
+        lslgeneric::writeToVRML(fname,pc);
+        snprintf(fname,49,"depth%05d.png",ctr2);
+        cv::imwrite(fname,depth_img);
+        snprintf(fname,49,"depth_raw%05d.png",ctr2);
+        cv::imwrite(fname,depth_img_raw);
+    */
+    ctr2++;
     //std::exit(0);
 }
 
-void callColorImg(const sensor_msgs::ImageConstPtr &msg) {
+void callColorImg(const sensor_msgs::ImageConstPtr &msg)
+{
 
     //sensor_msgs::CvBridge _imBridge;
     mutex.lock();

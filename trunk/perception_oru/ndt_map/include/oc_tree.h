@@ -41,116 +41,121 @@
 #include <cstdio>
 #include <Eigen/Core>
 
-namespace lslgeneric {
+namespace lslgeneric
+{
 
-    template <typename PointT>
-    class AdaptiveOctTree;	
-    /** \brief An Oct Tree data structure for storing 3D points
-      * \details This is an implementation of a \ref SpatialIndex that splits space 
-      * using a tree structure. Each node has 8 children that do not necessarily have
-      * associated points. Points are stored using \ref NDTCell cells. When inserting 
-      * points the tree is split until the size BIG_CELL is reached. Further splits occur
-      * when the number of points in a leaf goes above the MAX_POINTS threshold
-      */
-    template <typename PointT> 
-    class OctTree : public SpatialIndex<PointT> {
-	protected:
-	    OctTree* parent_;
-	    OctTree *children_[8];
-	    NDTCell<PointT> *myCell_; 
-	    
-	    std::vector< Cell<PointT>* > myLeafs_;
-	    unsigned int depth_;
-	    bool leaf_;
-	    bool leafsCached_;
-	    
-	    ///checks in which child node a point would belong
-	    virtual size_t getIndexForPoint(const PointT &pt) const;
-	    
-	    ///fills in the leafs vector when needed
-	    virtual void computeLeafCells();
+template <typename PointT>
+class AdaptiveOctTree;
+/** \brief An Oct Tree data structure for storing 3D points
+  * \details This is an implementation of a \ref SpatialIndex that splits space
+  * using a tree structure. Each node has 8 children that do not necessarily have
+  * associated points. Points are stored using \ref NDTCell cells. When inserting
+  * points the tree is split until the size BIG_CELL is reached. Further splits occur
+  * when the number of points in a leaf goes above the MAX_POINTS threshold
+  */
+template <typename PointT>
+class OctTree : public SpatialIndex<PointT>
+{
+protected:
+    OctTree* parent_;
+    OctTree *children_[8];
+    NDTCell<PointT> *myCell_;
+
+    std::vector< Cell<PointT>* > myLeafs_;
+    unsigned int depth_;
+    bool leaf_;
+    bool leafsCached_;
+
+    ///checks in which child node a point would belong
+    virtual size_t getIndexForPoint(const PointT &pt) const;
+
+    ///fills in the leafs vector when needed
+    virtual void computeLeafCells();
 
 
-	public:
-	    //--- OctTree Parameters ---//
-	    /// @param maximum depth of the tree, after which no more splits
-	    int MAX_DEPTH;
-	    /// @param number of points after which to split cell
-	    int MAX_POINTS;
-	    /// @param at this level do not split any more
-	    double SMALL_CELL_SIZE;
-	    /// @param split tree up to this size before allocating a cell
-	    double BIG_CELL_SIZE;
-	    bool parametersSet_;
-	    
-	    ///dummy default constructor
-	    OctTree();
-	    ///creates an oct tree node with known center and size
-	    OctTree(PointT center, double xsize, double ysize, 
-		    double zsize, NDTCell<PointT>* type, OctTree<PointT> *_parent=NULL, unsigned int _depth=0);
-	    virtual ~OctTree();
+public:
+    //--- OctTree Parameters ---//
+    /// @param maximum depth of the tree, after which no more splits
+    int MAX_DEPTH;
+    /// @param number of points after which to split cell
+    int MAX_POINTS;
+    /// @param at this level do not split any more
+    double SMALL_CELL_SIZE;
+    /// @param split tree up to this size before allocating a cell
+    double BIG_CELL_SIZE;
+    bool parametersSet_;
 
-	    ///use this to set the parameters for the OctTree - will *only* apply to leafs of the current node. 
-	    void setParameters(double _BIG_CELL_SIZE	=4,
-				      double _SMALL_CELL_SIZE   =0.5 ,	
-			              int _MAX_POINTS		=10,
-				      int _MAX_DEPTH		=20
-				     );
-	    
-	    ///add a point to the index
-	    virtual void addPoint(const PointT &point);
+    ///dummy default constructor
+    OctTree();
+    ///creates an oct tree node with known center and size
+    OctTree(PointT center, double xsize, double ysize,
+            double zsize, NDTCell<PointT>* type, OctTree<PointT> *_parent=NULL, unsigned int _depth=0);
+    virtual ~OctTree();
 
-	    ///returns a pointer to the cell containing the point or NULL if not found
-	    virtual Cell<PointT>* getCellForPoint(const PointT &point);
-	    inline virtual Cell<PointT>* getMyCell() 
-	    {
-		return myCell_;
-	    }
-	    virtual OctTree<PointT>* getLeafForPoint(const PointT &point);
-	
-	    ///sets the prototype for a cell
-	    virtual void setCellType(Cell<PointT> *type);
+    ///use this to set the parameters for the OctTree - will *only* apply to leafs of the current node.
+    void setParameters(double _BIG_CELL_SIZE	=4,
+                       double _SMALL_CELL_SIZE   =0.5 ,
+                       int _MAX_POINTS		=10,
+                       int _MAX_DEPTH		=20
+                      );
 
-	    ///iterator through all cells in index, points at the begining
-	    virtual typename SpatialIndex<PointT>::CellVectorItr begin();
-	    ///iterator through all cells in index, points at the end
-	    virtual typename SpatialIndex<PointT>::CellVectorItr end();
+    ///add a point to the index
+    virtual void addPoint(const PointT &point);
 
-	    ///recursively print the tree
-	    void print();
-	    
-	    ///output methods to a vrml file. draws the cell sizes and all points
-	    void writeToVRML(const char* filename);
-	    void writeToVRML(FILE* fout);
+    ///returns a pointer to the cell containing the point or NULL if not found
+    virtual Cell<PointT>* getCellForPoint(const PointT &point);
+    inline virtual Cell<PointT>* getMyCell()
+    {
+        return myCell_;
+    }
+    virtual OctTree<PointT>* getLeafForPoint(const PointT &point);
 
-	    ///returns a child at the specified index
-	    inline OctTree<PointT>* getChild(int idx) { 
-		if(idx<8 && idx>=0) {
-		    return children_[idx];
-		} 
-		return NULL;
-	    }
-	    inline bool isLeaf() {
-		return leaf_;
-	    }
-	    
-	    /// cloning method inherited from spatial index
-	    virtual SpatialIndex<PointT>* clone() const;
-	    virtual SpatialIndex<PointT>* copy() const;
+    ///sets the prototype for a cell
+    virtual void setCellType(Cell<PointT> *type);
 
-	    virtual void setCenter(const double &cx, const double &cy, const double &cz);
-	    virtual void setSize(const double &sx, const double &sy, const double &sz);
-	    
-	    virtual void getNeighbors(const PointT &point, const double &radius, std::vector<Cell<PointT>*> &cells);
-	    virtual bool intersectSphere(const PointT center, const double &radius) const;
+    ///iterator through all cells in index, points at the begining
+    virtual typename SpatialIndex<PointT>::CellVectorItr begin();
+    ///iterator through all cells in index, points at the end
+    virtual typename SpatialIndex<PointT>::CellVectorItr end();
 
-	    virtual Cell<PointT>* getClosestLeafCell(const PointT &pt);
-	    virtual NDTCell<PointT>* getClosestNDTCell(const PointT &pt);
+    ///recursively print the tree
+    void print();
 
-	    friend class AdaptiveOctTree<PointT>;
-	public:
-	      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    };
+    ///output methods to a vrml file. draws the cell sizes and all points
+    void writeToVRML(const char* filename);
+    void writeToVRML(FILE* fout);
+
+    ///returns a child at the specified index
+    inline OctTree<PointT>* getChild(int idx)
+    {
+        if(idx<8 && idx>=0)
+        {
+            return children_[idx];
+        }
+        return NULL;
+    }
+    inline bool isLeaf()
+    {
+        return leaf_;
+    }
+
+    /// cloning method inherited from spatial index
+    virtual SpatialIndex<PointT>* clone() const;
+    virtual SpatialIndex<PointT>* copy() const;
+
+    virtual void setCenter(const double &cx, const double &cy, const double &cz);
+    virtual void setSize(const double &sx, const double &sy, const double &sz);
+
+    virtual void getNeighbors(const PointT &point, const double &radius, std::vector<Cell<PointT>*> &cells);
+    virtual bool intersectSphere(const PointT center, const double &radius) const;
+
+    virtual Cell<PointT>* getClosestLeafCell(const PointT &pt);
+    virtual NDTCell<PointT>* getClosestNDTCell(const PointT &pt);
+
+    friend class AdaptiveOctTree<PointT>;
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
 
 } //end namespace
 
