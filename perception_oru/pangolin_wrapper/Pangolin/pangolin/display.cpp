@@ -43,290 +43,316 @@ using namespace std;
 namespace pangolin
 {
 
-  const int panal_v_margin = 6;
+const int panal_v_margin = 6;
 
-  typedef boost::ptr_unordered_map<string,PangolinGl> ContextMap;
+typedef boost::ptr_unordered_map<string,PangolinGl> ContextMap;
 
-  // Map of active contexts
-  ContextMap contexts;
+// Map of active contexts
+ContextMap contexts;
 
-  // Context active for current thread
-  __thread PangolinGl* context = 0;
+// Context active for current thread
+__thread PangolinGl* context = 0;
 
-  PangolinGl::PangolinGl()
-   : quit(false), mouse_state(0), activeDisplay(0)
-  {
-  }
+PangolinGl::PangolinGl()
+    : quit(false), mouse_state(0), activeDisplay(0)
+{
+}
 
-  void BindToContext(std::string name)
-  {
+void BindToContext(std::string name)
+{
     ContextMap::iterator ic = contexts.find(name);
 
     if( ic == contexts.end() )
     {
-      // Create and add if not found
-      ic = contexts.insert( name,new PangolinGl ).first;
-      context = ic->second;
-      View& dc = context->base;
-      dc.left = 0.0;
-      dc.bottom = 0.0;
-      dc.top = 1.0;
-      dc.right = 1.0;
-      dc.aspect = 0;
-      dc.handler = &StaticHandler;
-      context->is_fullscreen = false;
-    #ifdef HAVE_GLUT
-      process::Resize(
-        glutGet(GLUT_WINDOW_WIDTH),
-        glutGet(GLUT_WINDOW_HEIGHT)
-      );
-    #else
-      process::Resize(640,480);
-    #endif //HAVE_GLUT
-    }else{
-      context = ic->second;
+        // Create and add if not found
+        ic = contexts.insert( name,new PangolinGl ).first;
+        context = ic->second;
+        View& dc = context->base;
+        dc.left = 0.0;
+        dc.bottom = 0.0;
+        dc.top = 1.0;
+        dc.right = 1.0;
+        dc.aspect = 0;
+        dc.handler = &StaticHandler;
+        context->is_fullscreen = false;
+#ifdef HAVE_GLUT
+        process::Resize(
+            glutGet(GLUT_WINDOW_WIDTH),
+            glutGet(GLUT_WINDOW_HEIGHT)
+        );
+#else
+        process::Resize(640,480);
+#endif //HAVE_GLUT
     }
-  }
+    else
+    {
+        context = ic->second;
+    }
+}
 
-  void Quit()
-  {
+void Quit()
+{
     context->quit = true;
-  }
+}
 
-  bool ShouldQuit()
-  {
+bool ShouldQuit()
+{
 #ifdef HAVE_GLUT
     return context->quit || !glutGetWindow();
 #else
     return context->quit;
 #endif
-  }
+}
 
-  bool HadInput()
-  {
+bool HadInput()
+{
     if( context->had_input > 0 )
     {
-      --context->had_input;
-      return true;
+        --context->had_input;
+        return true;
     }
     return false;
-  }
+}
 
-  bool HasResized()
-  {
+bool HasResized()
+{
     if( context->has_resized > 0 )
     {
-      --context->has_resized;
-      return true;
+        --context->has_resized;
+        return true;
     }
     return false;
-  }
+}
 
-  void RenderViews()
-  {
-      DisplayBase().Render();
-  }
+void RenderViews()
+{
+    DisplayBase().Render();
+}
 
-  View& DisplayBase()
-  {
+View& DisplayBase()
+{
     return context->base;
-  }
+}
 
-  View& CreateDisplay()
-  {
-      int iguid = rand();
-      std::stringstream ssguid;
-      ssguid << iguid;
-      return Display(ssguid.str());
-  }
+View& CreateDisplay()
+{
+    int iguid = rand();
+    std::stringstream ssguid;
+    ssguid << iguid;
+    return Display(ssguid.str());
+}
 
-  View& Display(const std::string& name)
-  {
+View& Display(const std::string& name)
+{
     // Get / Create View
     boost::ptr_unordered_map<std::string,View>::iterator vi = context->named_managed_views.find(name);
     if( vi != context->named_managed_views.end() )
     {
-      return *(vi->second);
-    }else{
-      View * v = new View();
-      bool inserted = context->named_managed_views.insert(name, v).second;
-      if(!inserted) throw exception();
-      v->handler = &StaticHandler;
-      context->base.views.push_back(v);
-      return *v;
+        return *(vi->second);
     }
-  }
-
-  void RegisterKeyPressCallback(int key, boost::function<void(void)> func)
-  {
-      context->keypress_hooks[key] = func;
-  }
-
-  namespace process
-  {
-    unsigned int last_x;
-    unsigned int last_y;
-
-    void Keyboard( unsigned char key, int x, int y)
+    else
     {
-      context->had_input = context->is_double_buffered ? 2 : 1;
+        View * v = new View();
+        bool inserted = context->named_managed_views.insert(name, v).second;
+        if(!inserted) throw exception();
+        v->handler = &StaticHandler;
+        context->base.views.push_back(v);
+        return *v;
+    }
+}
 
-      // Force coords to match OpenGl Window Coords
-      y = context->base.v.h - y;
+void RegisterKeyPressCallback(int key, boost::function<void(void)> func)
+{
+    context->keypress_hooks[key] = func;
+}
 
-      if( key == GLUT_KEY_ESCAPE) {
-              context->quit = true;
-      }
-      #ifdef HAVE_CVARS
-      else if(key == '`') {
-          context->console.ToggleConsole();
-          // Force refresh for several frames whilst panel opens/closes
-          context->had_input = 60*2;
-      }else if(context->console.IsOpen()) {
-          // Direct input to console
-          if( key > 128 ) {
-              context->console.SpecialFunc(key - 128 );
-          }else{
-              context->console.KeyboardFunc(key);
-          }
-      }
-      #endif // HAVE_CVARS
-      #ifdef HAVE_GLUT
-      else if( key == GLUT_KEY_TAB) {
+namespace process
+{
+unsigned int last_x;
+unsigned int last_y;
+
+void Keyboard( unsigned char key, int x, int y)
+{
+    context->had_input = context->is_double_buffered ? 2 : 1;
+
+    // Force coords to match OpenGl Window Coords
+    y = context->base.v.h - y;
+
+    if( key == GLUT_KEY_ESCAPE)
+    {
+        context->quit = true;
+    }
+#ifdef HAVE_CVARS
+    else if(key == '`')
+    {
+        context->console.ToggleConsole();
+        // Force refresh for several frames whilst panel opens/closes
+        context->had_input = 60*2;
+    }
+    else if(context->console.IsOpen())
+    {
+        // Direct input to console
+        if( key > 128 )
+        {
+            context->console.SpecialFunc(key - 128 );
+        }
+        else
+        {
+            context->console.KeyboardFunc(key);
+        }
+    }
+#endif // HAVE_CVARS
+#ifdef HAVE_GLUT
+    else if( key == GLUT_KEY_TAB)
+    {
         if( context->is_fullscreen )
         {
-          glutReshapeWindow(context->windowed_size[0],context->windowed_size[1]);
-          context->is_fullscreen = false;
-        }else{
-          glutFullScreen();
-          context->is_fullscreen = true;
+            glutReshapeWindow(context->windowed_size[0],context->windowed_size[1]);
+            context->is_fullscreen = false;
         }
-      }
-      #endif // HAVE_GLUT
-      else if(context->keypress_hooks.find(key) != context->keypress_hooks.end() ) {
-          context->keypress_hooks[key]();
-      } else if(context->activeDisplay && context->activeDisplay->handler) {
-        context->activeDisplay->handler->Keyboard(*(context->activeDisplay),key,x,y,true);
-      }
-    }
-
-    void KeyboardUp(unsigned char key, int x, int y)
-    {
-        // Force coords to match OpenGl Window Coords
-        y = context->base.v.h - y;
-
-        if(context->activeDisplay && context->activeDisplay->handler)
+        else
         {
-          context->activeDisplay->handler->Keyboard(*(context->activeDisplay),key,x,y,false);
+            glutFullScreen();
+            context->is_fullscreen = true;
         }
     }
-
-    void SpecialFunc(int key, int x, int y)
+#endif // HAVE_GLUT
+    else if(context->keypress_hooks.find(key) != context->keypress_hooks.end() )
     {
-        Keyboard(key+128,x,y);
+        context->keypress_hooks[key]();
     }
-
-    void SpecialFuncUp(int key, int x, int y)
+    else if(context->activeDisplay && context->activeDisplay->handler)
     {
-        KeyboardUp(key+128,x,y);
+        context->activeDisplay->handler->Keyboard(*(context->activeDisplay),key,x,y,true);
     }
+}
 
+void KeyboardUp(unsigned char key, int x, int y)
+{
+    // Force coords to match OpenGl Window Coords
+    y = context->base.v.h - y;
 
-    void Mouse( int button_raw, int state, int x, int y)
+    if(context->activeDisplay && context->activeDisplay->handler)
     {
-      last_x = x;
-      last_y = y;
+        context->activeDisplay->handler->Keyboard(*(context->activeDisplay),key,x,y,false);
+    }
+}
 
-      const MouseButton button = (MouseButton)(1 << button_raw);
-      const bool pressed = (state == 0);
+void SpecialFunc(int key, int x, int y)
+{
+    Keyboard(key+128,x,y);
+}
 
-      context->had_input = context->is_double_buffered ? 2 : 1;
+void SpecialFuncUp(int key, int x, int y)
+{
+    KeyboardUp(key+128,x,y);
+}
 
-      // Force coords to match OpenGl Window Coords
-      y = context->base.v.h - y;
 
-      const bool fresh_input = (context->mouse_state == 0);
+void Mouse( int button_raw, int state, int x, int y)
+{
+    last_x = x;
+    last_y = y;
 
-      if( pressed ) {
+    const MouseButton button = (MouseButton)(1 << button_raw);
+    const bool pressed = (state == 0);
+
+    context->had_input = context->is_double_buffered ? 2 : 1;
+
+    // Force coords to match OpenGl Window Coords
+    y = context->base.v.h - y;
+
+    const bool fresh_input = (context->mouse_state == 0);
+
+    if( pressed )
+    {
         context->mouse_state |= button;
-      }else{
+    }
+    else
+    {
         context->mouse_state &= ~button;
-      }
+    }
 
-      if(fresh_input) {
+    if(fresh_input)
+    {
         context->base.handler->Mouse(context->base,button,x,y,pressed,context->mouse_state);
-      }else if(context->activeDisplay && context->activeDisplay->handler) {
+    }
+    else if(context->activeDisplay && context->activeDisplay->handler)
+    {
         context->activeDisplay->handler->Mouse(*(context->activeDisplay),button,x,y,pressed,context->mouse_state);
-      }
     }
+}
 
-    void MouseMotion( int x, int y)
+void MouseMotion( int x, int y)
+{
+    last_x = x;
+    last_y = y;
+
+    context->had_input = context->is_double_buffered ? 2 : 1;
+
+    // Force coords to match OpenGl Window Coords
+    y = context->base.v.h - y;
+
+    if( context->activeDisplay)
     {
-      last_x = x;
-      last_y = y;
-
-      context->had_input = context->is_double_buffered ? 2 : 1;
-
-      // Force coords to match OpenGl Window Coords
-      y = context->base.v.h - y;
-
-      if( context->activeDisplay)
-      {
         if( context->activeDisplay->handler )
-          context->activeDisplay->handler->MouseMotion(*(context->activeDisplay),x,y,context->mouse_state);
-      }else{
+            context->activeDisplay->handler->MouseMotion(*(context->activeDisplay),x,y,context->mouse_state);
+    }
+    else
+    {
         context->base.handler->MouseMotion(context->base,x,y,context->mouse_state);
-      }
     }
+}
 
-    void PassiveMouseMotion(int x, int y)
-    {
-        last_x = x;
-        last_y = y;
-    }
+void PassiveMouseMotion(int x, int y)
+{
+    last_x = x;
+    last_y = y;
+}
 
-    void Resize( int width, int height )
+void Resize( int width, int height )
+{
+    if( !context->is_fullscreen )
     {
-      if( !context->is_fullscreen )
-      {
         context->windowed_size[0] = width;
         context->windowed_size[1] = width;
-      }
-      // TODO: Fancy display managers seem to cause this to mess up?
-      context->had_input = 20; //context->is_double_buffered ? 2 : 1;
-      context->has_resized = 20; //context->is_double_buffered ? 2 : 1;
-      Viewport win(0,0,width,height);
-      context->base.Resize(win);
     }
+    // TODO: Fancy display managers seem to cause this to mess up?
+    context->had_input = 20; //context->is_double_buffered ? 2 : 1;
+    context->has_resized = 20; //context->is_double_buffered ? 2 : 1;
+    Viewport win(0,0,width,height);
+    context->base.Resize(win);
+}
 
-    void Scroll(float x, float y)
+void Scroll(float x, float y)
+{
+    cout << "Scroll: " << x << ", " << y << endl;
+
+    if(x==0)
     {
-        cout << "Scroll: " << x << ", " << y << endl;
-
-        if(x==0) {
-          Mouse(y>0?3:4,0, last_x, last_y);
-          context->mouse_state &= !MouseWheelUp;
-          context->mouse_state &= !MouseWheelDown;
-        }
+        Mouse(y>0?3:4,0, last_x, last_y);
+        context->mouse_state &= !MouseWheelUp;
+        context->mouse_state &= !MouseWheelDown;
     }
+}
 
-    void Zoom(float m)
-    {
-        cout << "Zoom: " << m << endl;
-    }
-  }
+void Zoom(float m)
+{
+    cout << "Zoom: " << m << endl;
+}
+}
 
 #ifdef HAVE_GLUT
-  void PangoGlutRedisplay()
-  {
-      glutPostRedisplay();
+void PangoGlutRedisplay()
+{
+    glutPostRedisplay();
 
 //      RenderViews();
 //      FinishGlutFrame();
-  }
+}
 
-  void TakeGlutCallbacks()
-  {
+void TakeGlutCallbacks()
+{
     glutKeyboardFunc(&process::Keyboard);
     glutKeyboardUpFunc(&process::KeyboardUp);
     glutReshapeFunc(&process::Resize);
@@ -343,28 +369,30 @@ namespace pangolin
     // https://github.com/nanoant/osxglut
     typedef void (*glutScrollFunc_t)(void (*)(float, float));
     glutScrollFunc_t glutScrollFunc = (glutScrollFunc_t)glutGetProcAddress("glutScrollFunc");
-    if(glutScrollFunc) {
+    if(glutScrollFunc)
+    {
         glutScrollFunc(&process::Scroll);
     }
     typedef void (*glutZoomFunc_t)(void (*)(float));
     glutZoomFunc_t glutZoomFunc = (glutZoomFunc_t)glutGetProcAddress("glutZoomFunc");
-    if(glutZoomFunc) {
+    if(glutZoomFunc)
+    {
         cout << "Registering zoom func" << endl;
         glutZoomFunc(&process::Zoom);
     }
 
 #endif
-  }
+}
 
-  void CreateGlutWindowAndBind(string window_title, int w, int h, unsigned int mode)
-  {
-  #ifdef HAVE_FREEGLUT
+void CreateGlutWindowAndBind(string window_title, int w, int h, unsigned int mode)
+{
+#ifdef HAVE_FREEGLUT
     if( glutGet(GLUT_INIT_STATE) == 0)
-  #endif
+#endif
     {
-      int argc = 0;
-      glutInit(&argc, 0);
-      glutInitDisplayMode(mode);
+        int argc = 0;
+        glutInit(&argc, 0);
+        glutInitDisplayMode(mode);
     }
     glutInitWindowSize(w,h);
     glutCreateWindow(window_title.c_str());
@@ -376,10 +404,10 @@ namespace pangolin
 
     context->is_double_buffered = mode & GLUT_DOUBLE;
     TakeGlutCallbacks();
-  }
+}
 
-  void FinishGlutFrame()
-  {
+void FinishGlutFrame()
+{
     RenderViews();
     DisplayBase().Activate();
     Viewport::DisableScissor();
@@ -387,10 +415,10 @@ namespace pangolin
     context->console.RenderConsole();
 #endif // HAVE_CVARS
     SwapGlutBuffersProcessGlutEvents();
-  }
+}
 
-  void SwapGlutBuffersProcessGlutEvents()
-  {
+void SwapGlutBuffersProcessGlutEvents()
+{
     glutSwapBuffers();
 
 #ifdef HAVE_FREEGLUT
@@ -400,178 +428,196 @@ namespace pangolin
 #ifdef HAVE_GLUT_APPLE_FRAMEWORK
     glutCheckLoop();
 #endif
-  }
+}
 #endif // HAVE_GLUT
 
-  void Viewport::Activate() const
-  {
+void Viewport::Activate() const
+{
     glViewport(l,b,w,h);
-  }
+}
 
-  void Viewport::Scissor() const
-  {
+void Viewport::Scissor() const
+{
     glEnable(GL_SCISSOR_TEST);
     glScissor(l,b,w,h);
-  }
+}
 
-  void Viewport::ActivateAndScissor() const
-  {
+void Viewport::ActivateAndScissor() const
+{
     glViewport(l,b,w,h);
     glEnable(GL_SCISSOR_TEST);
     glScissor(l,b,w,h);
-  }
+}
 
 
-  void Viewport::DisableScissor()
-  {
+void Viewport::DisableScissor()
+{
     glDisable(GL_SCISSOR_TEST);
-  }
+}
 
-  bool Viewport::Contains(int x, int y) const
-  {
+bool Viewport::Contains(int x, int y) const
+{
     return l <= x && x < (l+w) && b <= y && y < (b+h);
-  }
+}
 
-  Viewport Viewport::Inset(int i) const
-  {
+Viewport Viewport::Inset(int i) const
+{
     return Viewport(l+i, b+i, w-2*i, h-2*i);
-  }
+}
 
-  Viewport Viewport::Inset(int horiz, int vert) const
-  {
+Viewport Viewport::Inset(int horiz, int vert) const
+{
     return Viewport(l+horiz, b+vert, w-horiz, h-vert);
-  }
+}
 
-  void OpenGlMatrix::Load() const
-  {
+void OpenGlMatrix::Load() const
+{
     glLoadMatrixd(m);
-  }
+}
 
-  void OpenGlMatrix::Multiply() const
-  {
+void OpenGlMatrix::Multiply() const
+{
     glMultMatrixd(m);
-  }
+}
 
-  void OpenGlMatrix::SetIdentity()
-  {
-      m[0] = 1.0f;  m[1] = 0.0f;  m[2] = 0.0f;  m[3] = 0.0f;
-      m[4] = 0.0f;  m[5] = 1.0f;  m[6] = 0.0f;  m[7] = 0.0f;
-      m[8] = 0.0f;  m[9] = 0.0f; m[10] = 1.0f; m[11] = 0.0f;
-     m[12] = 0.0f; m[13] = 0.0f; m[14] = 0.0f; m[15] = 1.0f;
-  }
+void OpenGlMatrix::SetIdentity()
+{
+    m[0] = 1.0f;
+    m[1] = 0.0f;
+    m[2] = 0.0f;
+    m[3] = 0.0f;
+    m[4] = 0.0f;
+    m[5] = 1.0f;
+    m[6] = 0.0f;
+    m[7] = 0.0f;
+    m[8] = 0.0f;
+    m[9] = 0.0f;
+    m[10] = 1.0f;
+    m[11] = 0.0f;
+    m[12] = 0.0f;
+    m[13] = 0.0f;
+    m[14] = 0.0f;
+    m[15] = 1.0f;
+}
 
-  void OpenGlRenderState::Apply() const
-  {
+void OpenGlRenderState::Apply() const
+{
     // Apply any stack matrices we have
     for(map<OpenGlStack,OpenGlMatrix>::const_iterator i = stacks.begin(); i != stacks.end(); ++i )
     {
-      glMatrixMode(i->first);
-      i->second.Load();
+        glMatrixMode(i->first);
+        i->second.Load();
     }
 
     // Leave in MODEVIEW mode
     glMatrixMode(GL_MODELVIEW);
-  }
+}
 
-  OpenGlRenderState::OpenGlRenderState()
-  {
-  }
+OpenGlRenderState::OpenGlRenderState()
+{
+}
 
-  OpenGlRenderState::OpenGlRenderState(const OpenGlMatrix& projection_matrix)
-  {
+OpenGlRenderState::OpenGlRenderState(const OpenGlMatrix& projection_matrix)
+{
     stacks[GlProjectionStack] = projection_matrix;
     stacks[GlModelViewStack] = IdentityMatrix();
-  }
+}
 
-  OpenGlRenderState::OpenGlRenderState(const OpenGlMatrix& projection_matrix, const OpenGlMatrix& modelview_matrx)
-  {
+OpenGlRenderState::OpenGlRenderState(const OpenGlMatrix& projection_matrix, const OpenGlMatrix& modelview_matrx)
+{
     stacks[GlProjectionStack] = projection_matrix;
     stacks[GlModelViewStack] = modelview_matrx;
-  }
+}
 
-  void OpenGlRenderState::ApplyIdentity()
-  {
+void OpenGlRenderState::ApplyIdentity()
+{
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-  }
+}
 
-  void OpenGlRenderState::ApplyWindowCoords()
-  {
+void OpenGlRenderState::ApplyWindowCoords()
+{
     context->base.v.Activate();
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluOrtho2D(0, context->base.v.w, 0, context->base.v.h);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-  }
+}
 
-  OpenGlRenderState& OpenGlRenderState::SetProjectionMatrix(OpenGlMatrix spec)
-  {
-      stacks[GlProjectionStack] = spec;
-      return *this;
-  }
+OpenGlRenderState& OpenGlRenderState::SetProjectionMatrix(OpenGlMatrix spec)
+{
+    stacks[GlProjectionStack] = spec;
+    return *this;
+}
 
-  OpenGlRenderState& OpenGlRenderState::SetModelViewMatrix(OpenGlMatrix spec)
-  {
-      stacks[GlModelViewStack] = spec;
-      return *this;
-  }
+OpenGlRenderState& OpenGlRenderState::SetModelViewMatrix(OpenGlMatrix spec)
+{
+    stacks[GlModelViewStack] = spec;
+    return *this;
+}
 
-  OpenGlRenderState& OpenGlRenderState::Set(OpenGlMatrixSpec spec)
-  {
+OpenGlRenderState& OpenGlRenderState::Set(OpenGlMatrixSpec spec)
+{
     stacks[spec.type] = spec;
     return *this;
-  }
+}
 
-  OpenGlMatrix& OpenGlRenderState::GetProjectionMatrix()
-  {
-      return stacks[GlProjectionStack];
-  }
+OpenGlMatrix& OpenGlRenderState::GetProjectionMatrix()
+{
+    return stacks[GlProjectionStack];
+}
 
-  OpenGlMatrix OpenGlRenderState::GetProjectionMatrix() const
-  {
-      std::map<OpenGlStack,OpenGlMatrix>::const_iterator i = stacks.find(GlProjectionStack);
-      if( i == stacks.end() ) {
+OpenGlMatrix OpenGlRenderState::GetProjectionMatrix() const
+{
+    std::map<OpenGlStack,OpenGlMatrix>::const_iterator i = stacks.find(GlProjectionStack);
+    if( i == stacks.end() )
+    {
         return IdentityMatrix();
-      }else{
+    }
+    else
+    {
         return i->second;
-      }
-  }
+    }
+}
 
-  OpenGlMatrix& OpenGlRenderState::GetModelViewMatrix()
-  {
-      return stacks[GlModelViewStack];
-  }
+OpenGlMatrix& OpenGlRenderState::GetModelViewMatrix()
+{
+    return stacks[GlModelViewStack];
+}
 
-  OpenGlMatrix OpenGlRenderState::GetModelViewMatrix() const
-  {
-      std::map<OpenGlStack,OpenGlMatrix>::const_iterator i = stacks.find(GlModelViewStack);
-      if( i == stacks.end() ) {
+OpenGlMatrix OpenGlRenderState::GetModelViewMatrix() const
+{
+    std::map<OpenGlStack,OpenGlMatrix>::const_iterator i = stacks.find(GlModelViewStack);
+    if( i == stacks.end() )
+    {
         return IdentityMatrix();
-      }else{
+    }
+    else
+    {
         return i->second;
-      }
-  }
+    }
+}
 
-  int AttachAbs( int low, int high, Attach a)
-  {
+int AttachAbs( int low, int high, Attach a)
+{
     if( a.unit == Pixel ) return low + a.p;
     if( a.unit == ReversePixel ) return high - a.p;
     return low + a.p * (high - low);
-  }
+}
 
-  float AspectAreaWithinTarget(double target, double test)
-  {
+float AspectAreaWithinTarget(double target, double test)
+{
     if( test < target )
-      return test / target;
+        return test / target;
     else
-      return target / test;
-  }
+        return target / test;
+}
 
-  void View::Resize(const Viewport& p)
-  {
+void View::Resize(const Viewport& p)
+{
     // Compute Bounds based on specification
     v.l = AttachAbs(p.l,p.r(),left);
     v.b = AttachAbs(p.b,p.t(),bottom);
@@ -590,217 +636,230 @@ namespace pangolin
     // Adjust based on aspect requirements
     if( aspect != 0 )
     {
-      const float current_aspect = (float)v.w / (float)v.h;
-      if( aspect > 0 )
-      {
-        // Fit to space
-        if( current_aspect < aspect )
+        const float current_aspect = (float)v.w / (float)v.h;
+        if( aspect > 0 )
         {
-          //Adjust height
-          const int nh = (int)(v.w / aspect);
-          v.b += vlock == LockBottom ? 0 : (vlock == LockCenter ? (v.h-nh)/2 : (v.h-nh) );
-          v.h = nh;
-        }else if( current_aspect > aspect )
-        {
-          //Adjust width
-          const int nw = (int)(v.h * aspect);
-          v.l += hlock == LockLeft? 0 : (hlock == LockCenter ? (v.w-nw)/2 : (v.w-nw) );
-          v.w = nw;
+            // Fit to space
+            if( current_aspect < aspect )
+            {
+                //Adjust height
+                const int nh = (int)(v.w / aspect);
+                v.b += vlock == LockBottom ? 0 : (vlock == LockCenter ? (v.h-nh)/2 : (v.h-nh) );
+                v.h = nh;
+            }
+            else if( current_aspect > aspect )
+            {
+                //Adjust width
+                const int nw = (int)(v.h * aspect);
+                v.l += hlock == LockLeft? 0 : (hlock == LockCenter ? (v.w-nw)/2 : (v.w-nw) );
+                v.w = nw;
+            }
         }
-      }else{
-        // Overfit
-        double true_aspect = -aspect;
-        if( current_aspect < true_aspect )
+        else
         {
-          //Adjust width
-          const int nw = (int)(v.h * true_aspect);
-          v.l += hlock == LockLeft? 0 : (hlock == LockCenter ? (v.w-nw)/2 : (v.w-nw) );
-          v.w = nw;
-        }else if( current_aspect > true_aspect )
-        {
-          //Adjust height
-          const int nh = (int)(v.w / true_aspect);
-          v.b += vlock == LockBottom ? 0 : (vlock == LockCenter ? (v.h-nh)/2 : (v.h-nh) );
-          v.h = nh;
+            // Overfit
+            double true_aspect = -aspect;
+            if( current_aspect < true_aspect )
+            {
+                //Adjust width
+                const int nw = (int)(v.h * true_aspect);
+                v.l += hlock == LockLeft? 0 : (hlock == LockCenter ? (v.w-nw)/2 : (v.w-nw) );
+                v.w = nw;
+            }
+            else if( current_aspect > true_aspect )
+            {
+                //Adjust height
+                const int nh = (int)(v.w / true_aspect);
+                v.b += vlock == LockBottom ? 0 : (vlock == LockCenter ? (v.h-nh)/2 : (v.h-nh) );
+                v.h = nh;
+            }
         }
-      }
     }
 
     ResizeChildren();
-  }
+}
 
-  void View::ResizeChildren()
-  {
+void View::ResizeChildren()
+{
     if( layout == LayoutOverlay )
     {
-      foreach(View* i, views)
+        foreach(View* i, views)
         i->Resize(v);
-    }else if( layout == LayoutVertical )
+    }
+    else if( layout == LayoutVertical )
     {
-      // Allocate space incrementally
-      Viewport space = v.Inset(panal_v_margin);
-      int num_children = 0;
-      foreach(View* i, views )
-      {
-        num_children++;
-        if(scroll_offset > num_children ) {
-            i->show = false;
-        }else{
-            i->show = true;
+        // Allocate space incrementally
+        Viewport space = v.Inset(panal_v_margin);
+        int num_children = 0;
+        foreach(View* i, views )
+        {
+            num_children++;
+            if(scroll_offset > num_children )
+            {
+                i->show = false;
+            }
+            else
+            {
+                i->show = true;
+                i->Resize(space);
+                space.h = i->v.b - panal_v_margin - space.b;
+            }
+        }
+    }
+    else if(layout == LayoutHorizontal )
+    {
+        // Allocate space incrementally
+        const int margin = 8;
+        Viewport space = v.Inset(margin);
+        foreach(View* i, views )
+        {
             i->Resize(space);
-            space.h = i->v.b - panal_v_margin - space.b;
+            space.w = i->v.l + margin + space.l;
         }
-      }
-    }else if(layout == LayoutHorizontal )
+    }
+    else if(layout == LayoutEqual )
     {
-      // Allocate space incrementally
-      const int margin = 8;
-      Viewport space = v.Inset(margin);
-      foreach(View* i, views )
-      {
-        i->Resize(space);
-        space.w = i->v.l + margin + space.l;
-      }
-    }else if(layout == LayoutEqual )
-    {
-      // TODO: Make this neater, and make fewer assumptions!
-      if( views.size() > 0 )
-      {
-        const double this_a = abs(v.aspect());
-        const double child_a = abs(views[0]->aspect);
-        double a = views.size()*child_a;
-        double area = AspectAreaWithinTarget(this_a, a);
-
-        int cols = views.size()-1;
-        for(; cols > 0; --cols)
+        // TODO: Make this neater, and make fewer assumptions!
+        if( views.size() > 0 )
         {
-          const int rows = views.size() / cols + (views.size() % cols == 0 ? 0 : 1);
-          const double na = cols * child_a / rows;
-          const double new_area = views.size()*AspectAreaWithinTarget(this_a,na)/(rows*cols);
-          if( new_area <= area )
-            break;
-          area = new_area;
-          a = na;
-        }
+            const double this_a = abs(v.aspect());
+            const double child_a = abs(views[0]->aspect);
+            double a = views.size()*child_a;
+            double area = AspectAreaWithinTarget(this_a, a);
 
-        cols++;
-        const int rows = views.size() / cols + (views.size() % cols == 0 ? 0 : 1);
-        int cw,ch;
-        if( a > this_a )
-        {
-          cw = v.w / cols;
-          ch = cw / child_a; //v.h / rows;
-        }else{
-          ch = v.h / rows;
-          cw = ch * child_a;
-        }
+            int cols = views.size()-1;
+            for(; cols > 0; --cols)
+            {
+                const int rows = views.size() / cols + (views.size() % cols == 0 ? 0 : 1);
+                const double na = cols * child_a / rows;
+                const double new_area = views.size()*AspectAreaWithinTarget(this_a,na)/(rows*cols);
+                if( new_area <= area )
+                    break;
+                area = new_area;
+                a = na;
+            }
 
-        for( unsigned int i=0; i< views.size(); ++i )
-        {
-          int c = i % cols;
-          int r = i / cols;
-          Viewport space(v.l + c*cw, v.t() - (r+1)*ch, cw,ch);
-          views[i]->Resize(space);
+            cols++;
+            const int rows = views.size() / cols + (views.size() % cols == 0 ? 0 : 1);
+            int cw,ch;
+            if( a > this_a )
+            {
+                cw = v.w / cols;
+                ch = cw / child_a; //v.h / rows;
+            }
+            else
+            {
+                ch = v.h / rows;
+                cw = ch * child_a;
+            }
+
+            for( unsigned int i=0; i< views.size(); ++i )
+            {
+                int c = i % cols;
+                int r = i / cols;
+                Viewport space(v.l + c*cw, v.t() - (r+1)*ch, cw,ch);
+                views[i]->Resize(space);
+            }
         }
-      }
     }
 
-  }
+}
 
-  void View::Render()
-  {
-    if(!extern_draw_function.empty()) {
-      extern_draw_function(*this);
+void View::Render()
+{
+    if(!extern_draw_function.empty())
+    {
+        extern_draw_function(*this);
     }
     RenderChildren();
-  }
+}
 
-  void View::RenderChildren()
-  {
+void View::RenderChildren()
+{
     foreach(View* v, views)
-      if(v->show) v->Render();
-  }
+    if(v->show) v->Render();
+}
 
-  void View::Activate() const
-  {
+void View::Activate() const
+{
     v.Activate();
-  }
+}
 
-  void View::ActivateAndScissor() const
-  {
+void View::ActivateAndScissor() const
+{
     vp.Scissor();
     v.Activate();
-  }
+}
 
-  void View::ActivateScissorAndClear() const
-  {
+void View::ActivateScissorAndClear() const
+{
     vp.Scissor();
     v.Activate();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  }
+}
 
-  void View::Activate(const OpenGlRenderState& state ) const
-  {
+void View::Activate(const OpenGlRenderState& state ) const
+{
     v.Activate();
     state.Apply();
-  }
+}
 
-  void View::ActivateAndScissor(const OpenGlRenderState& state) const
-  {
+void View::ActivateAndScissor(const OpenGlRenderState& state) const
+{
     vp.Scissor();
     v.Activate();
     state.Apply();
-  }
+}
 
-  void View::ActivateScissorAndClear(const OpenGlRenderState& state ) const
-  {
+void View::ActivateScissorAndClear(const OpenGlRenderState& state ) const
+{
     vp.Scissor();
     v.Activate();
     state.Apply();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  }
+}
 
-  GLfloat View::GetClosestDepth(int x, int y, int radius) const
-  {
-      glReadBuffer(GL_FRONT);
-      const int zl = (radius*2+1);
-      const int zsize = zl*zl;
-      GLfloat zs[zsize];
-      glReadPixels(x-radius,y-radius,zl,zl,GL_DEPTH_COMPONENT,GL_FLOAT,zs);
-      const GLfloat mindepth = *(std::min_element(zs,zs+zsize));
-      return mindepth;
-  }
+GLfloat View::GetClosestDepth(int x, int y, int radius) const
+{
+    glReadBuffer(GL_FRONT);
+    const int zl = (radius*2+1);
+    const int zsize = zl*zl;
+    GLfloat zs[zsize];
+    glReadPixels(x-radius,y-radius,zl,zl,GL_DEPTH_COMPONENT,GL_FLOAT,zs);
+    const GLfloat mindepth = *(std::min_element(zs,zs+zsize));
+    return mindepth;
+}
 
-  void View::GetObjectCoordinates(const OpenGlRenderState& cam_state, double winx, double winy, double winzdepth, double& x, double& y, double& z) const
-  {
-      const GLint viewport[4] = {v.l,v.b,v.w,v.h};
-      const OpenGlMatrix proj = cam_state.GetProjectionMatrix();
-      const OpenGlMatrix mv = cam_state.GetModelViewMatrix();
-      gluUnProject(winx, winy, winzdepth, mv.m, proj.m, viewport, &x, &y, &z);
-  }
+void View::GetObjectCoordinates(const OpenGlRenderState& cam_state, double winx, double winy, double winzdepth, double& x, double& y, double& z) const
+{
+    const GLint viewport[4] = {v.l,v.b,v.w,v.h};
+    const OpenGlMatrix proj = cam_state.GetProjectionMatrix();
+    const OpenGlMatrix mv = cam_state.GetModelViewMatrix();
+    gluUnProject(winx, winy, winzdepth, mv.m, proj.m, viewport, &x, &y, &z);
+}
 
-  void View::GetCamCoordinates(const OpenGlRenderState& cam_state, double winx, double winy, double winzdepth, double& x, double& y, double& z) const
-  {
-      const GLint viewport[4] = {v.l,v.b,v.w,v.h};
-      const OpenGlMatrix proj = cam_state.GetProjectionMatrix();
-      gluUnProject(winx, winy, winzdepth, Identity4d, proj.m, viewport, &x, &y, &z);
-  }
+void View::GetCamCoordinates(const OpenGlRenderState& cam_state, double winx, double winy, double winzdepth, double& x, double& y, double& z) const
+{
+    const GLint viewport[4] = {v.l,v.b,v.w,v.h};
+    const OpenGlMatrix proj = cam_state.GetProjectionMatrix();
+    gluUnProject(winx, winy, winzdepth, Identity4d, proj.m, viewport, &x, &y, &z);
+}
 
-  View& View::SetFocus()
-  {
+View& View::SetFocus()
+{
     context->activeDisplay = this;
     return *this;
-  }
+}
 
-  View& View::SetBounds(Attach bottom, Attach top,  Attach left, Attach right, bool keep_aspect)
-  {
+View& View::SetBounds(Attach bottom, Attach top,  Attach left, Attach right, bool keep_aspect)
+{
     SetBounds(top,bottom,left,right,0.0);
     aspect = keep_aspect ? v.aspect() : 0;
     return *this;
-  }
+}
 
-  View& View::SetBounds(Attach bottom, Attach top,  Attach left, Attach right, double aspect)
-  {
+View& View::SetBounds(Attach bottom, Attach top,  Attach left, Attach right, double aspect)
+{
     this->left = left;
     this->top = top;
     this->right = right;
@@ -808,123 +867,125 @@ namespace pangolin
     this->aspect = aspect;
     this->Resize(context->base.v);
     return *this;
-  }
+}
 
-  View& View::SetAspect(double aspect)
-  {
+View& View::SetAspect(double aspect)
+{
     this->aspect = aspect;
     this->Resize(context->base.v);
     return *this;
-  }
+}
 
-  View& View::SetLock(Lock horizontal, Lock vertical )
-  {
+View& View::SetLock(Lock horizontal, Lock vertical )
+{
     vlock = vertical;
     hlock = horizontal;
     return *this;
-  }
+}
 
-  View& View::SetLayout(Layout l)
-  {
+View& View::SetLayout(Layout l)
+{
     layout = l;
     return *this;
-  }
+}
 
 
-  View& View::AddDisplay(View& child)
-  {
+View& View::AddDisplay(View& child)
+{
     // detach child from any other view, and add to this
     vector<View*>::iterator f = std::find(
-      context->base.views.begin(), context->base.views.end(), &child
-    );
+                                    context->base.views.begin(), context->base.views.end(), &child
+                                );
 
     if( f != context->base.views.end() )
-      context->base.views.erase(f);
+        context->base.views.erase(f);
 
     views.push_back(&child);
     return *this;
-  }
+}
 
-  View& View::operator[](int i)
-  {
-      return *views[i];
-  }
+View& View::operator[](int i)
+{
+    return *views[i];
+}
 
-  View& View::SetHandler(Handler* h)
-  {
+View& View::SetHandler(Handler* h)
+{
     handler = h;
     return *this;
-  }
+}
 
-  View& View::SetDrawFunction(const boost::function<void(View&)>& drawFunc)
-  {
+View& View::SetDrawFunction(const boost::function<void(View&)>& drawFunc)
+{
     extern_draw_function = drawFunc;
     return *this;
-  }
+}
 
-  View* FindChild(View& parent, int x, int y)
-  {
+View* FindChild(View& parent, int x, int y)
+{
     // Find in reverse order to mirror draw order
     for( vector<View*>::const_reverse_iterator i = parent.views.rbegin(); i != parent.views.rend(); ++i )
-      if( (*i)->show && (*i)->vp.Contains(x,y) )
-        return (*i);
+        if( (*i)->show && (*i)->vp.Contains(x,y) )
+            return (*i);
     return 0;
-  }
+}
 
-  void Handler::Keyboard(View& d, unsigned char key, int x, int y, bool pressed)
-  {
+void Handler::Keyboard(View& d, unsigned char key, int x, int y, bool pressed)
+{
     View* child = FindChild(d,x,y);
     if( child)
     {
-      context->activeDisplay = child;
-      if( child->handler)
-        child->handler->Keyboard(*child,key,x,y,pressed);
+        context->activeDisplay = child;
+        if( child->handler)
+            child->handler->Keyboard(*child,key,x,y,pressed);
     }
-  }
+}
 
-  void Handler::Mouse(View& d, MouseButton button, int x, int y, bool pressed, int button_state)
-  {
+void Handler::Mouse(View& d, MouseButton button, int x, int y, bool pressed, int button_state)
+{
     View* child = FindChild(d,x,y);
     if( child )
     {
-      context->activeDisplay = child;
-      if( child->handler)
-        child->handler->Mouse(*child,button,x,y,pressed,button_state);
+        context->activeDisplay = child;
+        if( child->handler)
+            child->handler->Mouse(*child,button,x,y,pressed,button_state);
     }
-  }
+}
 
-  void Handler::MouseMotion(View& d, int x, int y, int button_state)
-  {
+void Handler::MouseMotion(View& d, int x, int y, int button_state)
+{
     View* child = FindChild(d,x,y);
     if( child )
     {
-      context->activeDisplay = child;
-      if( child->handler)
-        child->handler->MouseMotion(*child,x,y,button_state);
+        context->activeDisplay = child;
+        if( child->handler)
+            child->handler->MouseMotion(*child,x,y,button_state);
     }
-  }
+}
 
-  void HandlerScroll::Mouse(View& d, MouseButton button, int x, int y, bool pressed, int button_state)
-  {
+void HandlerScroll::Mouse(View& d, MouseButton button, int x, int y, bool pressed, int button_state)
+{
     if( button == button_state && (button == MouseWheelUp || button == MouseWheelDown) )
     {
         if( button == MouseWheelUp) d.scroll_offset   -= 1;
         if( button == MouseWheelDown) d.scroll_offset += 1;
         d.scroll_offset = max(0, min(d.scroll_offset, (int)d.views.size()) );
         d.ResizeChildren();
-    }else{
+    }
+    else
+    {
         Handler::Mouse(d,button,x,y,pressed,button_state);
     }
 
-  }
+}
 
-  void Handler3D::Keyboard(View&, unsigned char key, int x, int y, bool pressed)
-  {
+void Handler3D::Keyboard(View&, unsigned char key, int x, int y, bool pressed)
+{
     // TODO: hooks for reset / changing mode (perspective / ortho etc)
-  }
+}
 
-  void Handler3D::Mouse(View& display, MouseButton button, int x, int y, bool pressed, int button_state)
-  {
+void Handler3D::Mouse(View& display, MouseButton button, int x, int y, bool pressed, int button_state)
+{
     // mouse down
     last_pos[0] = x;
     last_pos[1] = y;
@@ -934,42 +995,46 @@ namespace pangolin
 
     if( pressed && cam_state->stacks.find(GlProjectionStack) != cam_state->stacks.end() )
     {
-      const GLfloat mindepth = display.GetClosestDepth(x,y,hwin);
-      last_z = mindepth != 1 ? mindepth : last_z;
+        const GLfloat mindepth = display.GetClosestDepth(x,y,hwin);
+        last_z = mindepth != 1 ? mindepth : last_z;
 
-      if( last_z != 1 ) {
-        display.GetCamCoordinates(*cam_state, x, y, last_z, rot_center[0], rot_center[1], rot_center[2]);
-      }else{
-        SetZero<3,1>(rot_center);
-      }
-
-      if( button == MouseWheelUp || button == MouseWheelDown)
-      {
-
-        LieSetIdentity(T_nc);
-        const double t[] = { 0,0,(button==MouseWheelUp?1:-1)*100*tf};
-        LieSetTranslation<>(T_nc,t);
-        if( !(button_state & MouseButtonRight) && !(rot_center[0]==0 && rot_center[1]==0 && rot_center[2]==0) )
+        if( last_z != 1 )
         {
-          LieSetTranslation<>(T_nc,rot_center);
-          MatMul<3,1>(T_nc+(3*3),(button==MouseWheelUp?-1.0:1.0)/5.0);
+            display.GetCamCoordinates(*cam_state, x, y, last_z, rot_center[0], rot_center[1], rot_center[2]);
         }
-        OpenGlMatrix& spec = cam_state->stacks[GlModelViewStack];
-        LieMul4x4bySE3<>(spec.m,T_nc,spec.m);
-      }
+        else
+        {
+            SetZero<3,1>(rot_center);
+        }
+
+        if( button == MouseWheelUp || button == MouseWheelDown)
+        {
+
+            LieSetIdentity(T_nc);
+            const double t[] = { 0,0,(button==MouseWheelUp?1:-1)*100*tf};
+            LieSetTranslation<>(T_nc,t);
+            if( !(button_state & MouseButtonRight) && !(rot_center[0]==0 && rot_center[1]==0 && rot_center[2]==0) )
+            {
+                LieSetTranslation<>(T_nc,rot_center);
+                MatMul<3,1>(T_nc+(3*3),(button==MouseWheelUp?-1.0:1.0)/5.0);
+            }
+            OpenGlMatrix& spec = cam_state->stacks[GlModelViewStack];
+            LieMul4x4bySE3<>(spec.m,T_nc,spec.m);
+        }
     }
-  }
+}
 
-  // Direction vector for each AxisDirection enum
-  const static GLdouble AxisDirectionVector[][3] = {
-      {0,0,0},
-      {-1,0,0}, {1,0,0},
-      {0,-1,0}, {0,1,0},
-      {0,0,-1}, {0,0,1}
-  };
+// Direction vector for each AxisDirection enum
+const static GLdouble AxisDirectionVector[][3] =
+{
+    {0,0,0},
+    {-1,0,0}, {1,0,0},
+    {0,-1,0}, {0,1,0},
+    {0,0,-1}, {0,0,1}
+};
 
-  void Handler3D::MouseMotion(View& display, int x, int y, int button_state)
-  {
+void Handler3D::MouseMotion(View& display, int x, int y, int button_state)
+{
     const int delta[2] = {(x-last_pos[0]),(y-last_pos[1])};
     const float mag = delta[0]*delta[0] + delta[1]*delta[1];
 
@@ -978,88 +1043,95 @@ namespace pangolin
 
     if( mag < 50*50 )
     {
-      OpenGlMatrix& mv = cam_state->GetModelViewMatrix();
-      const GLdouble* up = AxisDirectionVector[enforce_up];
-      double T_nc[3*4];
-      LieSetIdentity(T_nc);
-      bool rotation_changed = false;
+        OpenGlMatrix& mv = cam_state->GetModelViewMatrix();
+        const GLdouble* up = AxisDirectionVector[enforce_up];
+        double T_nc[3*4];
+        LieSetIdentity(T_nc);
+        bool rotation_changed = false;
 
-      if( button_state == MouseButtonMiddle )
-      {
-        // Middle Drag: in plane translate
-        Rotation<>(T_nc,-delta[1]*0.01, -delta[0]*0.01, 0.0);
-      }else if( button_state == MouseButtonLeft )
-      {
-        // Left Drag: in plane translate
-        if( last_z != 1 )
+        if( button_state == MouseButtonMiddle )
         {
-          GLdouble np[3];
-          display.GetCamCoordinates(*cam_state,x,y,last_z, np[0], np[1], np[2]);
-          const double t[] = { np[0] - rot_center[0], np[1] - rot_center[1], 0};
-          LieSetTranslation<>(T_nc,t);
-          std::copy(np,np+3,rot_center);
-        }else{
-          const double t[] = { -10*delta[0]*tf, 10*delta[1]*tf, 0};
-          LieSetTranslation<>(T_nc,t);
+            // Middle Drag: in plane translate
+            Rotation<>(T_nc,-delta[1]*0.01, -delta[0]*0.01, 0.0);
         }
-      }else if( button_state == (MouseButtonLeft | MouseButtonRight) )
-      {
-        // Left and Right Drag: in plane rotate about object
+        else if( button_state == MouseButtonLeft )
+        {
+            // Left Drag: in plane translate
+            if( last_z != 1 )
+            {
+                GLdouble np[3];
+                display.GetCamCoordinates(*cam_state,x,y,last_z, np[0], np[1], np[2]);
+                const double t[] = { np[0] - rot_center[0], np[1] - rot_center[1], 0};
+                LieSetTranslation<>(T_nc,t);
+                std::copy(np,np+3,rot_center);
+            }
+            else
+            {
+                const double t[] = { -10*delta[0]*tf, 10*delta[1]*tf, 0};
+                LieSetTranslation<>(T_nc,t);
+            }
+        }
+        else if( button_state == (MouseButtonLeft | MouseButtonRight) )
+        {
+            // Left and Right Drag: in plane rotate about object
 //        Rotation<>(T_nc,0.0,0.0, delta[0]*0.01);
 
-        double T_2c[3*4];
-        Rotation<>(T_2c,0.0,0.0, delta[0]*0.01);
-        double mrotc[3];
-        MatMul<3,1>(mrotc, rot_center, -1.0);
-        LieApplySO3<>(T_2c+(3*3),T_2c,mrotc);
-        double T_n2[3*4];
-        LieSetIdentity<>(T_n2);
-        LieSetTranslation<>(T_n2,rot_center);
-        LieMulSE3(T_nc, T_n2, T_2c );
-        rotation_changed = true;
-      }else if( button_state == MouseButtonRight)
-      {
-        double aboutx = -0.01 * delta[1];
-        double abouty =  0.01 * delta[0];
+            double T_2c[3*4];
+            Rotation<>(T_2c,0.0,0.0, delta[0]*0.01);
+            double mrotc[3];
+            MatMul<3,1>(mrotc, rot_center, -1.0);
+            LieApplySO3<>(T_2c+(3*3),T_2c,mrotc);
+            double T_n2[3*4];
+            LieSetIdentity<>(T_n2);
+            LieSetTranslation<>(T_n2,rot_center);
+            LieMulSE3(T_nc, T_n2, T_2c );
+            rotation_changed = true;
+        }
+        else if( button_state == MouseButtonRight)
+        {
+            double aboutx = -0.01 * delta[1];
+            double abouty =  0.01 * delta[0];
 
-        if(enforce_up) {
-            // Special case if view direction is parallel to up vector
-            const double updotz = mv.m[2]*up[0] + mv.m[6]*up[1] + mv.m[10]*up[2];
-            if(updotz > 0.98) aboutx = std::min(aboutx,0.0);
-            if(updotz <-0.98) aboutx = std::max(aboutx,0.0);
-            // Module rotation around y so we don't spin too fast!
-            abouty *= (1-0.6*abs(updotz));
+            if(enforce_up)
+            {
+                // Special case if view direction is parallel to up vector
+                const double updotz = mv.m[2]*up[0] + mv.m[6]*up[1] + mv.m[10]*up[2];
+                if(updotz > 0.98) aboutx = std::min(aboutx,0.0);
+                if(updotz <-0.98) aboutx = std::max(aboutx,0.0);
+                // Module rotation around y so we don't spin too fast!
+                abouty *= (1-0.6*abs(updotz));
+            }
+
+            // Right Drag: object centric rotation
+            double T_2c[3*4];
+            Rotation<>(T_2c, aboutx, abouty, 0.0);
+            double mrotc[3];
+            MatMul<3,1>(mrotc, rot_center, -1.0);
+            LieApplySO3<>(T_2c+(3*3),T_2c,mrotc);
+            double T_n2[3*4];
+            LieSetIdentity<>(T_n2);
+            LieSetTranslation<>(T_n2,rot_center);
+            LieMulSE3(T_nc, T_n2, T_2c );
+            rotation_changed = true;
         }
 
-        // Right Drag: object centric rotation
-        double T_2c[3*4];
-        Rotation<>(T_2c, aboutx, abouty, 0.0);
-        double mrotc[3];
-        MatMul<3,1>(mrotc, rot_center, -1.0);
-        LieApplySO3<>(T_2c+(3*3),T_2c,mrotc);
-        double T_n2[3*4];
-        LieSetIdentity<>(T_n2);
-        LieSetTranslation<>(T_n2,rot_center);
-        LieMulSE3(T_nc, T_n2, T_2c );
-        rotation_changed = true;
-      }
+        LieMul4x4bySE3<>(mv.m,T_nc,mv.m);
 
-      LieMul4x4bySE3<>(mv.m,T_nc,mv.m);
-
-      if(enforce_up != AxisNone && rotation_changed) {
-          EnforceUpT_cw(mv.m, up);
-      }
+        if(enforce_up != AxisNone && rotation_changed)
+        {
+            EnforceUpT_cw(mv.m, up);
+        }
     }
 
     last_pos[0] = x;
     last_pos[1] = y;
-  }
+}
 
-  // Use OpenGl's default frame of reference
-  OpenGlMatrixSpec ProjectionMatrix(int w, int h, double fu, double fv, double u0, double v0, double zNear, double zFar )
-  {
-      return ProjectionMatrixRUB_BottomLeft(w,h,fu,fv,u0,v0,zNear,zFar);
-  }
+// Use OpenGl's default frame of reference
+OpenGlMatrixSpec ProjectionMatrix(int w, int h, double fu, double fv, double u0, double v0, double zNear, double zFar )
+{
+    return ProjectionMatrixRUB_BottomLeft(w,h,fu,fv,u0,v0,zNear,zFar);
+}
 
 OpenGlMatrixSpec ProjectionMatrixOrthographic(double t, double b, double l, double r, double n, double f )
 {
@@ -1091,96 +1163,96 @@ OpenGlMatrixSpec ProjectionMatrixOrthographic(double t, double b, double l, doub
 }
 
 
-  // Camera Axis:
-  //   X - Right, Y - Up, Z - Back
-  // Image Origin:
-  //   Bottom Left
-  // Caution: Principal point defined with respect to image origin (0,0) at
-  //          top left of top-left pixel (not center, and in different frame
-  //          of reference to projection function image)
-  OpenGlMatrixSpec ProjectionMatrixRUB_BottomLeft(int w, int h, double fu, double fv, double u0, double v0, double zNear, double zFar )
-  {
-      // http://www.songho.ca/opengl/gl_projectionmatrix.html
-      const double L = +(u0) * zNear / -fu;
-      const double T = +(v0) * zNear / fv;
-      const double R = -(w-u0) * zNear / -fu;
-      const double B = -(h-v0) * zNear / fv;
+// Camera Axis:
+//   X - Right, Y - Up, Z - Back
+// Image Origin:
+//   Bottom Left
+// Caution: Principal point defined with respect to image origin (0,0) at
+//          top left of top-left pixel (not center, and in different frame
+//          of reference to projection function image)
+OpenGlMatrixSpec ProjectionMatrixRUB_BottomLeft(int w, int h, double fu, double fv, double u0, double v0, double zNear, double zFar )
+{
+    // http://www.songho.ca/opengl/gl_projectionmatrix.html
+    const double L = +(u0) * zNear / -fu;
+    const double T = +(v0) * zNear / fv;
+    const double R = -(w-u0) * zNear / -fu;
+    const double B = -(h-v0) * zNear / fv;
 
-      OpenGlMatrixSpec P;
-      P.type = GlProjectionStack;
-      std::fill_n(P.m,4*4,0);
+    OpenGlMatrixSpec P;
+    P.type = GlProjectionStack;
+    std::fill_n(P.m,4*4,0);
 
-      P.m[0*4+0] = 2 * zNear / (R-L);
-      P.m[1*4+1] = 2 * zNear / (T-B);
-      P.m[2*4+2] = -(zFar +zNear) / (zFar - zNear);
-      P.m[2*4+0] = (R+L)/(R-L);
-      P.m[2*4+1] = (T+B)/(T-B);
-      P.m[2*4+3] = -1.0;
-      P.m[3*4+2] =  -(2*zFar*zNear)/(zFar-zNear);
+    P.m[0*4+0] = 2 * zNear / (R-L);
+    P.m[1*4+1] = 2 * zNear / (T-B);
+    P.m[2*4+2] = -(zFar +zNear) / (zFar - zNear);
+    P.m[2*4+0] = (R+L)/(R-L);
+    P.m[2*4+1] = (T+B)/(T-B);
+    P.m[2*4+3] = -1.0;
+    P.m[3*4+2] =  -(2*zFar*zNear)/(zFar-zNear);
 
-      return P;
-  }
+    return P;
+}
 
-  // Camera Axis:
-  //   X - Right, Y - Down, Z - Forward
-  // Image Origin:
-  //   Top Left
-  // Pricipal point specified with image origin (0,0) at top left of top-left pixel (not center)
-  OpenGlMatrixSpec ProjectionMatrixRDF_TopLeft(int w, int h, double fu, double fv, double u0, double v0, double zNear, double zFar )
-  {
-      // http://www.songho.ca/opengl/gl_projectionmatrix.html
-      const double L = -(u0) * zNear / fu;
-      const double R = +(w-u0) * zNear / fu;
-      const double T = -(v0) * zNear / fv;
-      const double B = +(h-v0) * zNear / fv;
+// Camera Axis:
+//   X - Right, Y - Down, Z - Forward
+// Image Origin:
+//   Top Left
+// Pricipal point specified with image origin (0,0) at top left of top-left pixel (not center)
+OpenGlMatrixSpec ProjectionMatrixRDF_TopLeft(int w, int h, double fu, double fv, double u0, double v0, double zNear, double zFar )
+{
+    // http://www.songho.ca/opengl/gl_projectionmatrix.html
+    const double L = -(u0) * zNear / fu;
+    const double R = +(w-u0) * zNear / fu;
+    const double T = -(v0) * zNear / fv;
+    const double B = +(h-v0) * zNear / fv;
 
-      OpenGlMatrixSpec P;
-      P.type = GlProjectionStack;
-      std::fill_n(P.m,4*4,0);
+    OpenGlMatrixSpec P;
+    P.type = GlProjectionStack;
+    std::fill_n(P.m,4*4,0);
 
-      P.m[0*4+0] = 2 * zNear / (R-L);
-      P.m[1*4+1] = 2 * zNear / (T-B);
+    P.m[0*4+0] = 2 * zNear / (R-L);
+    P.m[1*4+1] = 2 * zNear / (T-B);
 
-      P.m[2*4+0] = (R+L)/(L-R);
-      P.m[2*4+1] = (T+B)/(B-T);
-      P.m[2*4+2] = (zFar +zNear) / (zFar - zNear);
-      P.m[2*4+3] = 1.0;
+    P.m[2*4+0] = (R+L)/(L-R);
+    P.m[2*4+1] = (T+B)/(B-T);
+    P.m[2*4+2] = (zFar +zNear) / (zFar - zNear);
+    P.m[2*4+3] = 1.0;
 
-      P.m[3*4+2] =  (2*zFar*zNear)/(zNear - zFar);
-      return P;
-  }
+    P.m[3*4+2] =  (2*zFar*zNear)/(zNear - zFar);
+    return P;
+}
 
-  // Camera Axis:
-  //   X - Right, Y - Down, Z - Forward
-  // Image Origin:
-  //   Bottom Left
-  // Pricipal point specified with image origin (0,0) at top left of top-left pixel (not center)
-  OpenGlMatrixSpec ProjectionMatrixRDF_BottomLeft(int w, int h, double fu, double fv, double u0, double v0, double zNear, double zFar )
-  {
-      // http://www.songho.ca/opengl/gl_projectionmatrix.html
-      const double L = -(u0) * zNear / fu;
-      const double R = +(w-u0) * zNear / fu;
-      const double B = -(v0) * zNear / fv;
-      const double T = +(h-v0) * zNear / fv;
+// Camera Axis:
+//   X - Right, Y - Down, Z - Forward
+// Image Origin:
+//   Bottom Left
+// Pricipal point specified with image origin (0,0) at top left of top-left pixel (not center)
+OpenGlMatrixSpec ProjectionMatrixRDF_BottomLeft(int w, int h, double fu, double fv, double u0, double v0, double zNear, double zFar )
+{
+    // http://www.songho.ca/opengl/gl_projectionmatrix.html
+    const double L = -(u0) * zNear / fu;
+    const double R = +(w-u0) * zNear / fu;
+    const double B = -(v0) * zNear / fv;
+    const double T = +(h-v0) * zNear / fv;
 
-      OpenGlMatrixSpec P;
-      P.type = GlProjectionStack;
-      std::fill_n(P.m,4*4,0);
+    OpenGlMatrixSpec P;
+    P.type = GlProjectionStack;
+    std::fill_n(P.m,4*4,0);
 
-      P.m[0*4+0] = 2 * zNear / (R-L);
-      P.m[1*4+1] = 2 * zNear / (T-B);
+    P.m[0*4+0] = 2 * zNear / (R-L);
+    P.m[1*4+1] = 2 * zNear / (T-B);
 
-      P.m[2*4+0] = (R+L)/(L-R);
-      P.m[2*4+1] = (T+B)/(B-T);
-      P.m[2*4+2] = (zFar +zNear) / (zFar - zNear);
-      P.m[2*4+3] = 1.0;
+    P.m[2*4+0] = (R+L)/(L-R);
+    P.m[2*4+1] = (T+B)/(B-T);
+    P.m[2*4+2] = (zFar +zNear) / (zFar - zNear);
+    P.m[2*4+3] = 1.0;
 
-      P.m[3*4+2] =  (2*zFar*zNear)/(zNear - zFar);
-      return P;
-  }
+    P.m[3*4+2] =  (2*zFar*zNear)/(zNear - zFar);
+    return P;
+}
 
-  OpenGlMatrix ModelViewLookAt(double ex, double ey, double ez, double lx, double ly, double lz, double ux, double uy, double uz)
-  {
+OpenGlMatrix ModelViewLookAt(double ex, double ey, double ez, double lx, double ly, double lz, double ux, double uy, double uz)
+{
     OpenGlMatrix mat;
     GLdouble* m = mat.m;
 
@@ -1196,7 +1268,7 @@ OpenGlMatrixSpec ProjectionMatrixOrthographic(double t, double b, double l, doub
     Normalise<3>(x);
     Normalise<3>(y);
 
-  #define M(row,col)  m[col*4+row]
+#define M(row,col)  m[col*4+row]
     M(0,0) = x[0];
     M(0,1) = x[1];
     M(0,2) = x[2];
@@ -1216,33 +1288,33 @@ OpenGlMatrixSpec ProjectionMatrixOrthographic(double t, double b, double l, doub
 #undef M
 
     return mat;
-  }
+}
 
-  OpenGlMatrix ModelViewLookAt(double ex, double ey, double ez, double lx, double ly, double lz, AxisDirection up)
-  {
+OpenGlMatrix ModelViewLookAt(double ex, double ey, double ez, double lx, double ly, double lz, AxisDirection up)
+{
     const double* u = AxisDirectionVector[up];
     return ModelViewLookAt(ex,ey,ez,lx,ly,lz,u[0],u[1],u[2]);
-  }
+}
 
-  OpenGlMatrix IdentityMatrix()
-  {
+OpenGlMatrix IdentityMatrix()
+{
     OpenGlMatrix P;
     std::fill_n(P.m,4*4,0);
     for( int i=0; i<4; ++i ) P.m[i*4+i] = 1;
     return P;
-  }
+}
 
-  OpenGlMatrixSpec IdentityMatrix(OpenGlStack type)
-  {
+OpenGlMatrixSpec IdentityMatrix(OpenGlStack type)
+{
     OpenGlMatrixSpec P;
     P.type = type;
     std::fill_n(P.m,4*4,0);
     for( int i=0; i<4; ++i ) P.m[i*4+i] = 1;
     return P;
-  }
+}
 
-  OpenGlMatrixSpec  negIdentityMatrix(OpenGlStack type)
-  {
+OpenGlMatrixSpec  negIdentityMatrix(OpenGlStack type)
+{
     OpenGlMatrixSpec P;
     P.type = type;
     std::fill_n(P.m,4*4,0);
@@ -1250,10 +1322,10 @@ OpenGlMatrixSpec ProjectionMatrixOrthographic(double t, double b, double l, doub
 
     P.m[3*4+3] =1;
     return P;
-  }
+}
 
-  void DrawTextureToViewport(GLuint texid)
-  {
+void DrawTextureToViewport(GLuint texid)
+{
     OpenGlRenderState::ApplyIdentity();
     glBindTexture(GL_TEXTURE_2D, texid);
     glEnable(GL_TEXTURE_2D);
@@ -1268,6 +1340,6 @@ OpenGlMatrixSpec ProjectionMatrixOrthographic(double t, double b, double l, doub
     glVertex2d(-1,1);
     glEnd();
     glDisable(GL_TEXTURE_2D);
-  }
+}
 
 }

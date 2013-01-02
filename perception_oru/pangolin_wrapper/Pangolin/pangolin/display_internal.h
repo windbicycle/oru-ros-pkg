@@ -39,8 +39,8 @@
 namespace pangolin
 {
 
-  struct PangolinGl
-  {
+struct PangolinGl
+{
     PangolinGl();
 
     // Base container for displays
@@ -68,7 +68,7 @@ namespace pangolin
     GLConsole console;
 #endif // HAVE_CVARS
 
-  };
+};
 
 }
 

@@ -107,7 +107,8 @@ bool PvnVideo::GrabNext( unsigned char* image, bool /*wait*/ )
 
     const basetime next_frame = TimeAdd(last_frame, frame_interval);
 
-    if( realtime ) {
+    if( realtime )
+    {
         WaitUntil(next_frame);
     }
 

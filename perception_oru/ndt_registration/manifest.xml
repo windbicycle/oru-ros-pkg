@@ -5,7 +5,7 @@
     Used to find the relative positions of two point clouds.
 
   </description>
-  <author>Todor Stoyanov</author>
+  <author>Todor Stoyanov, Jari Saarinen, Henrik Andreasson</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_registration</url>
@@ -18,7 +18,7 @@
   <depend package="tf_conversions"/>
 
   <export>
-  <cpp cflags="-I${prefix}/include"/>
+  <cpp cflags="-I${prefix}/include -fopenmp"/>
   </export>
 
 

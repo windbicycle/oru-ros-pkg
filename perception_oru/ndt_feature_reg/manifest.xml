@@ -1,10 +1,10 @@
 <package>
   <description brief="ndt_feature_reg">
 
-     Utilize intensity images in combination with range data, typically from a ToF camera, to perform registration. Shortly, correspondances are detected in the intensity images, for each corresponding feature a NDT representaion is extraced and are feed into the Todor's cool and fancy NDT-NDT registration method.
+  Utilize intensity images in combination with range data, typically from a ToF camera, to perform registration. Shortly, correspondances are detected in the intensity images, for each corresponding feature a NDT representaion is extraced and are feed into the NDT distribution to distribution registration method.
 
   </description>
-  <author>Henrik Andreasson</author>
+  <author>Henrik Andreasson, Todor Stoyanov</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_feature_reg</url>

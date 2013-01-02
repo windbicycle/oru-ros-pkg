@@ -50,168 +50,186 @@ void Dc1394ModeDetails(dc1394video_mode_t mode, unsigned& w, unsigned& h, std::s
 
 class FirewireFrame
 {
-  friend class FirewireVideo;
+    friend class FirewireVideo;
 public:
-  bool isValid() { return frame; }
-  unsigned char* Image() { return frame ? frame->image : 0; }
-  unsigned Width() const { return frame ? frame->size[0] : 0; }
-  unsigned Height() const { return frame ? frame->size[1] : 0; }
+    bool isValid()
+    {
+        return frame;
+    }
+    unsigned char* Image()
+    {
+        return frame ? frame->image : 0;
+    }
+    unsigned Width() const
+    {
+        return frame ? frame->size[0] : 0;
+    }
+    unsigned Height() const
+    {
+        return frame ? frame->size[1] : 0;
+    }
 
 protected:
-  FirewireFrame(dc1394video_frame_t* frame) : frame(frame) {}
-  dc1394video_frame_t *frame;
+    FirewireFrame(dc1394video_frame_t* frame) : frame(frame) {}
+    dc1394video_frame_t *frame;
 };
 
 struct Guid
 {
-    Guid(uint64_t guid):guid(guid){}
+    Guid(uint64_t guid):guid(guid) {}
     uint64_t guid;
 };
 
 class FirewireVideo : public VideoInterface
 {
 public:
-  const static int MAX_FR = -1;
-  const static int EXT_TRIG = -1;
+    const static int MAX_FR = -1;
+    const static int EXT_TRIG = -1;
 
-  FirewireVideo(
-    unsigned deviceid = 0,
-    dc1394video_mode_t video_mode = DC1394_VIDEO_MODE_640x480_RGB8,
-    dc1394framerate_t framerate = DC1394_FRAMERATE_30,
-    dc1394speed_t iso_speed = DC1394_ISO_SPEED_400,
-    int dma_buffers = 10
-  );
+    FirewireVideo(
+        unsigned deviceid = 0,
+        dc1394video_mode_t video_mode = DC1394_VIDEO_MODE_640x480_RGB8,
+        dc1394framerate_t framerate = DC1394_FRAMERATE_30,
+        dc1394speed_t iso_speed = DC1394_ISO_SPEED_400,
+        int dma_buffers = 10
+    );
 
-  FirewireVideo(
-    Guid guid,
-    dc1394video_mode_t video_mode = DC1394_VIDEO_MODE_640x480_RGB8,
-    dc1394framerate_t framerate = DC1394_FRAMERATE_30,
-    dc1394speed_t iso_speed = DC1394_ISO_SPEED_400,
-    int dma_buffers = 10
-  );
+    FirewireVideo(
+        Guid guid,
+        dc1394video_mode_t video_mode = DC1394_VIDEO_MODE_640x480_RGB8,
+        dc1394framerate_t framerate = DC1394_FRAMERATE_30,
+        dc1394speed_t iso_speed = DC1394_ISO_SPEED_400,
+        int dma_buffers = 10
+    );
 
-  FirewireVideo(
-      Guid guid,
-      dc1394video_mode_t video_mode,
-      int framerate,
-      uint32_t width, uint32_t height,
-      uint32_t left, uint32_t top,
-      dc1394speed_t iso_speed,
-      int dma_buffers, bool reset_at_boot=false
-  );
+    FirewireVideo(
+        Guid guid,
+        dc1394video_mode_t video_mode,
+        int framerate,
+        uint32_t width, uint32_t height,
+        uint32_t left, uint32_t top,
+        dc1394speed_t iso_speed,
+        int dma_buffers, bool reset_at_boot=false
+    );
 
-  FirewireVideo(
-      unsigned deviceid,
-      dc1394video_mode_t video_mode,
-      int framerate,
-      uint32_t width, uint32_t height,
-      uint32_t left, uint32_t top,
-      dc1394speed_t iso_speed,
-      int dma_buffers, bool reset_at_boot=false
-  );
+    FirewireVideo(
+        unsigned deviceid,
+        dc1394video_mode_t video_mode,
+        int framerate,
+        uint32_t width, uint32_t height,
+        uint32_t left, uint32_t top,
+        dc1394speed_t iso_speed,
+        int dma_buffers, bool reset_at_boot=false
+    );
 
-  ~FirewireVideo();
+    ~FirewireVideo();
 
-  //! Implement VideoSource::Width()
-  unsigned Width() const { return width; }
+    //! Implement VideoSource::Width()
+    unsigned Width() const
+    {
+        return width;
+    }
 
-  //! Implement VideoSource::Height()
-  unsigned Height() const { return height; }
+    //! Implement VideoSource::Height()
+    unsigned Height() const
+    {
+        return height;
+    }
 
-  //! Implement VideoSource::SizeBytes()
-  size_t SizeBytes() const;
+    //! Implement VideoSource::SizeBytes()
+    size_t SizeBytes() const;
 
-  //! Implement VideoSource::PixFormat()
-  std::string PixFormat() const;
+    //! Implement VideoSource::PixFormat()
+    std::string PixFormat() const;
 
-  //! Implement VideoSource::Start()
-  void Start();
+    //! Implement VideoSource::Start()
+    void Start();
 
-  //! Implement VideoSource::Stop()
-  void Stop();
+    //! Implement VideoSource::Stop()
+    void Stop();
 
-  //! Implement VideoSource::GrabNext()
-  bool GrabNext( unsigned char* image, bool wait = true );
+    //! Implement VideoSource::GrabNext()
+    bool GrabNext( unsigned char* image, bool wait = true );
 
-  //! Implement VideoSource::GrabNewest()
-  bool GrabNewest( unsigned char* image, bool wait = true );
+    //! Implement VideoSource::GrabNewest()
+    bool GrabNewest( unsigned char* image, bool wait = true );
 
-  //! Return object containing reference to image data within
-  //! DMA buffer. The FirewireFrame must be returned to
-  //! signal that it can be reused with a corresponding PutFrame()
-  FirewireFrame GetNext(bool wait = true);
+    //! Return object containing reference to image data within
+    //! DMA buffer. The FirewireFrame must be returned to
+    //! signal that it can be reused with a corresponding PutFrame()
+    FirewireFrame GetNext(bool wait = true);
 
-  //! Return object containing reference to newest image data within
-  //! DMA buffer discarding old images. The FirewireFrame must be
-  //! returned to signal that it can be reused with a corresponding PutFrame()
-  FirewireFrame GetNewest(bool wait = true);
+    //! Return object containing reference to newest image data within
+    //! DMA buffer discarding old images. The FirewireFrame must be
+    //! returned to signal that it can be reused with a corresponding PutFrame()
+    FirewireFrame GetNewest(bool wait = true);
 
-  //! Return FirewireFrame object. Data held by FirewireFrame is
-  //! invalidated on return.
-  void PutFrame(FirewireFrame& frame);
+    //! Return FirewireFrame object. Data held by FirewireFrame is
+    //! invalidated on return.
+    void PutFrame(FirewireFrame& frame);
 
-  //! return absolute shutter value
-  float GetShutterTime() const;
+    //! return absolute shutter value
+    float GetShutterTime() const;
 
-  //! set absolute shutter value
-  void SetShutterTime(float val);
+    //! set absolute shutter value
+    void SetShutterTime(float val);
 
-  //! set auto shutter value
-  void SetAutoShutterTime();
+    //! set auto shutter value
+    void SetAutoShutterTime();
 
-  //! return absolute gain value
-  float GetGain() const;
+    //! return absolute gain value
+    float GetGain() const;
 
-  //! set absolute shutter value
-  void SetGain(float val);
+    //! set absolute shutter value
+    void SetGain(float val);
 
-  //! set auto shutter value
-  void SetAutoGain();
+    //! set auto shutter value
+    void SetAutoGain();
 
-  //! return absolute gamma value
-  float GetGamma() const;
+    //! return absolute gamma value
+    float GetGamma() const;
 
-  //! return quantised shutter value
-  void SetShutterTimeQuant(int shutter);
+    //! return quantised shutter value
+    void SetShutterTimeQuant(int shutter);
 
-  //! set the trigger to internal, i.e. determined by video mode
-  void SetInternalTrigger();
+    //! set the trigger to internal, i.e. determined by video mode
+    void SetInternalTrigger();
 
-  //! set the trigger to external
-  void SetExternalTrigger(
-      dc1394trigger_mode_t mode=DC1394_TRIGGER_MODE_0,
-      dc1394trigger_polarity_t polarity=DC1394_TRIGGER_ACTIVE_HIGH,
-      dc1394trigger_source_t source=DC1394_TRIGGER_SOURCE_0
-  );
+    //! set the trigger to external
+    void SetExternalTrigger(
+        dc1394trigger_mode_t mode=DC1394_TRIGGER_MODE_0,
+        dc1394trigger_polarity_t polarity=DC1394_TRIGGER_ACTIVE_HIGH,
+        dc1394trigger_source_t source=DC1394_TRIGGER_SOURCE_0
+    );
 
 protected:
 
-  void init_camera(
-    uint64_t guid, int dma_frames,
-    dc1394speed_t iso_speed,
-    dc1394video_mode_t video_mode,
-    dc1394framerate_t framerate
-  );
+    void init_camera(
+        uint64_t guid, int dma_frames,
+        dc1394speed_t iso_speed,
+        dc1394video_mode_t video_mode,
+        dc1394framerate_t framerate
+    );
 
-  void init_format7_camera(
-      uint64_t guid, int dma_frames,
-      dc1394speed_t iso_speed,
-      dc1394video_mode_t video_mode,
-      int framerate,
-      uint32_t width, uint32_t height,
-      uint32_t left, uint32_t top, bool reset_at_boot
-  );
+    void init_format7_camera(
+        uint64_t guid, int dma_frames,
+        dc1394speed_t iso_speed,
+        dc1394video_mode_t video_mode,
+        int framerate,
+        uint32_t width, uint32_t height,
+        uint32_t left, uint32_t top, bool reset_at_boot
+    );
 
-  static int nearest_value(int value, int step, int min, int max);
-  static double bus_period_from_iso_speed(dc1394speed_t iso_speed);
+    static int nearest_value(int value, int step, int min, int max);
+    static double bus_period_from_iso_speed(dc1394speed_t iso_speed);
 
-  bool running;
-  dc1394camera_t *camera;
-  unsigned width, height, top, left;
-  //dc1394featureset_t features;
-  dc1394_t * d;
-  dc1394camera_list_t * list;
-  mutable dc1394error_t err;
+    bool running;
+    dc1394camera_t *camera;
+    unsigned width, height, top, left;
+    //dc1394featureset_t features;
+    dc1394_t * d;
+    dc1394camera_list_t * list;
+    mutable dc1394error_t err;
 
 };
 

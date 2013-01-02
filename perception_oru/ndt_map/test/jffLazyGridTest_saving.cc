@@ -12,12 +12,12 @@
 #include <cstdio>
 #include <cstring>
 
-// #include <opencv/cv.h> 
+// #include <opencv/cv.h>
 // #include <opencv/highgui.h>
 // #include <boost/shared_ptr.hpp>
 // #include <boost/thread/mutex.hpp>
-// #include <cv_bridge/CvBridge.h> 
-// #include <cv_bridge/cv_bridge.h> 
+// #include <cv_bridge/CvBridge.h>
+// #include <cv_bridge/cv_bridge.h>
 // #include <sensor_msgs/Image.h>
 
 #include <Eigen/Eigen>
@@ -26,7 +26,8 @@ using namespace std;
 
 int main (int argc, char** argv)
 {
-    if(argc < 2){
+    if(argc < 2)
+    {
         cout << "[ USAGE ] jffSaveTest cloud\n";
         exit(1);
     }
@@ -35,7 +36,7 @@ int main (int argc, char** argv)
 
     pcl::PointCloud<pcl::PointXYZ> cloud;
     char fname[] = "test_wrl.wrl";
-    
+
     cloud = lslgeneric::readVRML<pcl::PointXYZ>(argv[1]);
 
     lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::LazyGrid<pcl::PointXYZ>(0.2));

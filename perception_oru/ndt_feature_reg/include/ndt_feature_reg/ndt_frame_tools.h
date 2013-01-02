@@ -40,34 +40,34 @@
 
 namespace ndt_feature_reg
 {
-     template<class T> std::string toString (const T& x)
-     {
-	  std::ostringstream o;
-	  
-	  if (!(o << x))
-	       throw std::runtime_error ("::toString()");
-	  
-	  return o.str ();
-     }
+template<class T> std::string toString (const T& x)
+{
+    std::ostringstream o;
+
+    if (!(o << x))
+        throw std::runtime_error ("::toString()");
+
+    return o.str ();
+}
 
 inline void scaleKeyPointSize(std::vector<cv::KeyPoint> &keypoints, const float &factor)
 {
-     for( std::vector<cv::KeyPoint>::iterator i = keypoints.begin(), ie = keypoints.end(); i != ie; ++i )
-     {
-      i->size *= factor;
-     }
+    for( std::vector<cv::KeyPoint>::iterator i = keypoints.begin(), ie = keypoints.end(); i != ie; ++i )
+    {
+        i->size *= factor;
+    }
 }
 
 inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const float &factor)
 {
-     for( std::vector<cv::KeyPoint>::iterator i = keypoints.begin(), ie = keypoints.end(); i != ie; ++i )
-     {
-	  i->pt.x *= factor;
-	  i->pt.y *= factor;
-     }
+    for( std::vector<cv::KeyPoint>::iterator i = keypoints.begin(), ie = keypoints.end(); i != ie; ++i )
+    {
+        i->pt.x *= factor;
+        i->pt.y *= factor;
+    }
 }
 
-/*          
+/*
      inline void convertMatches(const std::vector<cv::DMatch> &in, std::vector<std::pair<int,int> > &out)
      {
 	  out.resize(in.size());
@@ -97,7 +97,7 @@ inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const fl
      inline pcl::PointXYZRGB getPCLColor(size_t i)
      {
 	  pcl::PointXYZRGB ret;
-	  
+
 	  switch (i)
 	  {
 	  case 0:
@@ -125,23 +125,23 @@ inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const fl
 	  ret.at<double>(2,2) = 1.;
 	  return ret;
      }
-     
+
      inline cv::Mat getDistVector(double d0, double d1, double d2, double d3, double d4)
      {
 	  cv::Mat ret = cv::Mat(5,1, CV_64F);
-	  ret.at<double>(0) = d0; 
+	  ret.at<double>(0) = d0;
 	  ret.at<double>(1) = d1;
-	  ret.at<double>(2) = d2; 
+	  ret.at<double>(2) = d2;
 	  ret.at<double>(3) = d3;
-	  ret.at<double>(4) = d4; 
+	  ret.at<double>(4) = d4;
 	  return ret;
      }
-     
+
      inline cv::Mat getDepthPointCloudLookUpTable(const cv::Size &size, const cv::Mat &camMat, const cv::Mat &distVec, const double &dsFactor)
      {
 	  cv::Mat pixels = cv::Mat(size.height * size.width,1, CV_64FC2);
 	  // Fill the tmp values simply with the image coordinates
-	  
+
 	  {
 	       cv::Mat_<cv::Vec2d> _I = pixels;
 	       size_t iter = 0;
@@ -157,7 +157,7 @@ inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const fl
 	  }
 	  cv::Mat normpixels = cv::Mat(pixels.size(), CV_64FC2); // normalized undistorted pixels
 	  cv::undistortPoints(pixels, normpixels, camMat, distVec);
-	  
+
 	  cv::Mat ret = cv::Mat(normpixels.size(), CV_64FC3); // "normpixelsxyz"
 	  {
 	       cv::Mat_<cv::Vec2d> _J = normpixels;
@@ -184,7 +184,7 @@ inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const fl
 	       for (size_t j = 0; j < kptsIndices[i].size(); j++)
 	       {
 		    pcl::PointXYZRGB& pt = (pc)[kptsIndices[i][j]];
-		    pt.rgb = color.rgb; 
+		    pt.rgb = color.rgb;
 	       }
 	  }
      }
@@ -228,7 +228,7 @@ inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const fl
      }
 */
 
-/*     
+/*
      inline size_t convertDepthImageToPointCloud(const cv::Mat &depthImg, const cv::Mat &lookUpTable, pcl::PointCloud<pcl::PointXYZ> &pc)
      {
 	  if (depthImg.depth() != CV_16U)
@@ -245,7 +245,7 @@ inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const fl
 	  }
 
 	  cv::Mat_<cv::Vec3d> _I = lookUpTable;
-	  
+
 	  const double* plt = lookUpTable.ptr<double>(0);
 	  const unsigned short* pd = depthImg.ptr<unsigned short>(0);
 	  for (size_t i = 0; i < size; i++)
@@ -273,17 +273,17 @@ inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const fl
      {
 	  int u = static_cast<int>(keyPoint.pt.x+0.5);
 	  int v = static_cast<int>(keyPoint.pt.y+0.5);
-	  if ((u >= boarderSize) && 
-	      (u < (int)in.width-boarderSize) && 
-	       (v >= boarderSize) && v < 
-	       ((int)in.height-boarderSize)) 
+	  if ((u >= boarderSize) &&
+	      (u < (int)in.width-boarderSize) &&
+	       (v >= boarderSize) && v <
+	       ((int)in.height-boarderSize))
 	       {
 		    return true;
 	       }
 	      return false;
-	      
+
 	      }
-     
+
      inline void selectIndicesAroundKeyPoint(const cv::KeyPoint &keyPoint, const pcl::PointCloud<pcl::PointXYZ> &in, int nbPoints, std::vector<size_t> &out)
      {
 	  int u = static_cast<int>(keyPoint.pt.x+0.5);
@@ -322,7 +322,7 @@ inline void scaleKeyPointPosition(std::vector<cv::KeyPoint> &keypoints, const fl
 		    out.push_back(index-2*in.width);
 	       }
 	  }
-	  case 9: 
+	  case 9:
 	  {
 	       if (insideBoarder(keyPoint, in, 1))
 	       {

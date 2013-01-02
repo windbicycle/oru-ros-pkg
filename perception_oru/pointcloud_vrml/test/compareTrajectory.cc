@@ -5,13 +5,15 @@
 
 using namespace std;
 
-int main(int argc, char ** argv) {
-    
-    if(argc != 3) {
-	cout<<"Usage:"<<argv[0]<<" pathToGTtrajectory pathToProposedTrajectory\n";
-	return -1;
-    }	
-    
+int main(int argc, char ** argv)
+{
+
+    if(argc != 3)
+    {
+        cout<<"Usage:"<<argv[0]<<" pathToGTtrajectory pathToProposedTrajectory\n";
+        return -1;
+    }
+
     const char *fname1 = argv[1];
     const char *fname2 = argv[2];
 
@@ -28,9 +30,10 @@ int main(int argc, char ** argv) {
     //per file
     char *line = NULL;
     size_t len;
-    if(fin1 == NULL ||fin2 == NULL || fout==NULL) {
-	cout<<"Error reading file "<<fname1<<endl;
-	return -1;
+    if(fin1 == NULL ||fin2 == NULL || fout==NULL)
+    {
+        cout<<"Error reading file "<<fname1<<endl;
+        return -1;
     }
 
     bool first = true;
@@ -44,70 +47,79 @@ int main(int argc, char ** argv) {
 
     vector<double> eT, eR;
 
-    while(getline(&line,&len,fin1) > 0) {
+    while(getline(&line,&len,fin1) > 0)
+    {
 
-	int n = sscanf(line,"%lf %lf %lf %lf %lf %lf %lf %lf",
-		&ts,&x,&y,&z,&px,&py,&pz,&pw);
-	if(n != 8) {
-	    cout<<"wrong format of pose at : "<<line<<endl;
-	    break;
-	}
-	
-	refPose =Eigen::Translation<double,3>(x,y,z)*
-	    Eigen::Quaternion<double>(pw,px,py,pz);
+        int n = sscanf(line,"%lf %lf %lf %lf %lf %lf %lf %lf",
+                       &ts,&x,&y,&z,&px,&py,&pz,&pw);
+        if(n != 8)
+        {
+            cout<<"wrong format of pose at : "<<line<<endl;
+            break;
+        }
 
-	
-	if(getline(&line,&len,fin2) > 0) {
-
-	    int n2 = sscanf(line,"%lf %lf %lf %lf %lf %lf %lf %lf",
-		    &ts,&x,&y,&z,&px,&py,&pz,&pw);
-	    if(n2 != 8) {
-		cout<<"wrong format of pose at : "<<line<<endl;
-		break;
-	    }
-	    Pose =Eigen::Translation<double,3>(x,y,z)*
-		Eigen::Quaternion<double>(pw,px,py,pz);
-
-	} else {
-	    continue;
-	}
-
-	if(first) {
-	    refPosePrev = refPose;
-	    PosePrev = Pose;
-	    first = false;
-	    continue;
-	}
+        refPose =Eigen::Translation<double,3>(x,y,z)*
+                 Eigen::Quaternion<double>(pw,px,py,pz);
 
 
-	//find the two relative poses
-	refPoseRel = refPosePrev.inverse()*refPose;
-	PoseRel = PosePrev.inverse()*Pose;
+        if(getline(&line,&len,fin2) > 0)
+        {
 
-	dP = PoseRel.inverse()*refPoseRel;
-	errorQ = dP.rotation();
-	double angle = acos(id.dot(errorQ))/2;
+            int n2 = sscanf(line,"%lf %lf %lf %lf %lf %lf %lf %lf",
+                            &ts,&x,&y,&z,&px,&py,&pz,&pw);
+            if(n2 != 8)
+            {
+                cout<<"wrong format of pose at : "<<line<<endl;
+                break;
+            }
+            Pose =Eigen::Translation<double,3>(x,y,z)*
+                  Eigen::Quaternion<double>(pw,px,py,pz);
 
-	eR.push_back(angle);
-	eT.push_back(dP.translation().norm());
+        }
+        else
+        {
+            continue;
+        }
 
-	refPosePrev = refPose;
-	PosePrev = Pose;
+        if(first)
+        {
+            refPosePrev = refPose;
+            PosePrev = Pose;
+            first = false;
+            continue;
+        }
+
+
+        //find the two relative poses
+        refPoseRel = refPosePrev.inverse()*refPose;
+        PoseRel = PosePrev.inverse()*Pose;
+
+        dP = PoseRel.inverse()*refPoseRel;
+        errorQ = dP.rotation();
+        double angle = acos(id.dot(errorQ))/2;
+
+        eR.push_back(angle);
+        eT.push_back(dP.translation().norm());
+
+        refPosePrev = refPose;
+        PosePrev = Pose;
 
     }
 
     fclose(fin1);
     fclose(fin2);
-    
+
     fprintf(fout,"eT = [");
-    for(int i=0; i<eT.size(); i++) {
-	fprintf(fout,"%lf ",eT[i]);
+    for(int i=0; i<eT.size(); i++)
+    {
+        fprintf(fout,"%lf ",eT[i]);
     }
     fprintf(fout,"];\n");
-    
+
     fprintf(fout,"eR = [");
-    for(int i=0; i<eR.size(); i++) {
-	fprintf(fout,"%lf ",eR[i]);
+    for(int i=0; i<eR.size(); i++)
+    {
+        fprintf(fout,"%lf ",eR[i]);
     }
     fprintf(fout,"];\n");
 

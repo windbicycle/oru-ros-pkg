@@ -2,25 +2,11 @@
 \mainpage
 \htmlinclude manifest.html
 
-\b ndt_map is ... 
-
-<!-- 
-Provide an overview of your package.
--->
+\b ndt_map provides a data structure for creating an ndt transform, given a (set of) point cloud data of the environment. This package provides interfaces both for the basic NDT with a regular grid or oc tree indexing, as well as for the NDT-OM occupancy-aware representation. 
 
 
 \section codeapi Code API
 
-<!--
-Provide links to specific auto-generated API documentation within your
-package that is of particular interest to a reader. Doxygen will
-document pretty much every part of your code, so do your best here to
-point the reader to the actual API.
-
-If your codebase is fairly large or has different sets of APIs, you
-should use the doxygen 'group' tag to keep these APIs together. For
-example, the roscpp documentation has 'libros' group.
--->
-
+The main class of interest to the users of this library is NDTMap. 
 
 */

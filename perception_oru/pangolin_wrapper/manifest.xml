@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/pangolin_wrapper</url>
 
+  <rosdep name="libglew-dev" />
 </package>
 
 

@@ -12,12 +12,12 @@
 #include <cstdio>
 #include <cstring>
 
-// #include <opencv/cv.h> 
+// #include <opencv/cv.h>
 // #include <opencv/highgui.h>
 // #include <boost/shared_ptr.hpp>
 // #include <boost/thread/mutex.hpp>
-// #include <cv_bridge/CvBridge.h> 
-// #include <cv_bridge/cv_bridge.h> 
+// #include <cv_bridge/CvBridge.h>
+// #include <cv_bridge/cv_bridge.h>
 // #include <sensor_msgs/Image.h>
 
 #include <Eigen/Eigen>
@@ -26,7 +26,8 @@ using namespace std;
 
 int main (int argc, char** argv)
 {
-    if(argc < 1){
+    if(argc < 1)
+    {
         cout << "[ USAGE ] jffLoadTest \n";
         exit(1);
     }

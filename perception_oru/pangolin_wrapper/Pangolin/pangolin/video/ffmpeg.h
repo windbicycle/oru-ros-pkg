@@ -84,7 +84,7 @@ protected:
     AVCodec         *pVidCodec;
     AVCodec         *pAudCodec;
     AVFrame         *pFrame;
-	AVFrame         *pFrameOut;
+    AVFrame         *pFrameOut;
     AVPacket        packet;
     int             numBytesOut;
     uint8_t         *buffer;
