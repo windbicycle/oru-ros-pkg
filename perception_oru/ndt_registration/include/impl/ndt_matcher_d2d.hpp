@@ -56,12 +56,14 @@ bool NDTMatcherD2D<PointSource,PointTarget>::match( pcl::PointCloud<PointTarget>
 
     //initial guess
     pcl::PointCloud<PointSource> sourceCloud = source;
+    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> Temp, Tinit;
+    Tinit.setIdentity();
     if(useInitialGuess)
     {
         lslgeneric::transformPointCloudInPlace(T,sourceCloud);
+	Tinit = T;
     }
 
-    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> Temp;
     T.setIdentity();
     bool ret = false;
 
@@ -163,6 +165,10 @@ bool NDTMatcherD2D<PointSource,PointTarget>::match( pcl::PointCloud<PointTarget>
 
 #endif
         }
+    }
+    if(useInitialGuess)
+    {
+	T = T*Tinit;
     }
     gettimeofday(&tv_end0,NULL);
     time_combined = (tv_end0.tv_sec-tv_start0.tv_sec)*1000.+(tv_end0.tv_usec-tv_start0.tv_usec)/1000.;
