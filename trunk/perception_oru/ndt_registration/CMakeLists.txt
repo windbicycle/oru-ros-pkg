@@ -28,6 +28,9 @@ rosbuild_add_boost_directories()
 rosbuild_add_executable(ndt_registration_test test/ndt_registration_test.cc)
 rosbuild_add_openmp_flags(ndt_registration_test)
 
+rosbuild_add_executable(simple_test test/simple.cc)
+rosbuild_add_openmp_flags(simple_test)
+
 #target_link_libraries(ndt_registration_test ndt_map pointcloud_vrml)
 
 #rosbuild_add_executable(ndt_feature_test test/ndt_feature_test.cc)
