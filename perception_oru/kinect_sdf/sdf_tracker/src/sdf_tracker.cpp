@@ -1081,7 +1081,7 @@ SDFTracker::Render(void)
   const Eigen::Matrix4d expmap = Transformation_;
   const Eigen::Vector4d camera = expmap * Eigen::Vector4d(0.0,0.0,0.0,1.0);
   const Eigen::Vector4d viewAxis = expmap * Eigen::Vector4d(0.0,0.0,1.0,0.0);
-  const double max_ray_length = resolution_*(XSize_+YSize_+ZSize_); //not really, but it's an ok guess.
+  const double max_ray_length = 5; //not really, but it's an ok guess.
   
   //Rendering loop
   #pragma omp parallel for 
@@ -1135,7 +1135,7 @@ SDFTracker::Render(void)
         ++steps;        
         
         //Input values are better than nothing.
-        depthImage_out.at<float>(u,v)=depthImage_->ptr<float>(u)[v];  
+       // depthImage_out.at<float>(u,v)=depthImage_->ptr<float>(u)[v];  
    //     depthDenoised_mutex_.unlock();
 
       }//ray
@@ -1152,7 +1152,7 @@ SDFTracker::Render(void)
   depthDenoised_mutex_.unlock();    
   if(interactive_mode_)
   {
-    cv::imshow("Render", preview);//depthImage_denoised);
+    cv::imshow("Render", preview);//
     char q = cv::waitKey(3);
     if(q == 'q' || q  == 27 || q  == 71 ) { quit_ = true; }//int(key)
   }
