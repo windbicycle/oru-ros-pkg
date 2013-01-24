@@ -1073,14 +1073,14 @@ SDFTracker::EstimatePose(void)
 void 
 SDFTracker::Render(void)
 {
-  double minStep = resolution_;
+  double minStep = resolution_/4;
   cv::Mat depthImage_out(image_height_,image_width_,CV_32FC1);
   cv::Mat preview(image_height_,image_width_,CV_8UC3);
   
 
   const Eigen::Matrix4d expmap = Transformation_;
   const Eigen::Vector4d camera = expmap * Eigen::Vector4d(0.0,0.0,0.0,1.0);
-  const Eigen::Vector4d viewAxis = expmap * Eigen::Vector4d(0.0,0.0,1.0,0.0);
+  const Eigen::Vector4d viewAxis = (expmap * Eigen::Vector4d(0.0,0.0,1.0,0.0)).normalized();
   const double max_ray_length = 5; //not really, but it's an ok guess.
   
   //Rendering loop
@@ -1095,7 +1095,7 @@ SDFTracker::Render(void)
       Eigen::Vector4d p = expmap*To3D(u,v,1.0,fx_,fy_,cx_,cy_) - camera;
       p.normalize();
             
-      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.8 : Dmax_;
+      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.5 : Dmax_;
       
       double scaling_prev=0;
       int steps=0;
