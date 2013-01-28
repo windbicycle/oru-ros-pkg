@@ -35,13 +35,13 @@
 #ifndef NDTFRAME_HH
 #define NDTFRAME_HH
 
-#include <cv.h>
 #include "pcl/point_cloud.h"
 #include "pcl/point_types.h"
 #include "pcl/io/pcd_io.h"
 #include "pcl/features/feature.h"
 #include "pcl/registration/icp.h"
 #include "pcl/filters/voxel_grid.h"
+#include "opencv2/core/core.hpp"
 
 #include <cell_vector.h>
 #include <ndt_map.h>
@@ -147,19 +147,19 @@ public:
     {
         if(kpts.size() > 0)
         {
-            double t1 = getDoubleTime();
+            //double t1 = getDoubleTime();
             pc_kpts = ndt_map.loadDepthImageFeatures(depth_img,kpts,supportSize,maxVar,cameraParams,estimateDI,nonMean);
-            double t2 = getDoubleTime();
+            //double t2 = getDoubleTime();
             //std::cout<<"computing ndt took (features)"<<t2-t1<<std::endl;
         }
         else
         {
             lslgeneric::LazyGrid<PointT> idx_prototype_grid(current_res);
             ndt_map = lslgeneric::NDTMap<PointT>(&idx_prototype_grid);
-            double t1 = getDoubleTime();
+            //double t1 = getDoubleTime();
             ndt_map.loadDepthImage(depth_img,cameraParams);
             ndt_map.computeNDTCells();
-            double t2 = getDoubleTime();
+            //double t2 = getDoubleTime();
             //std::cout<<"computing ndt took (grid)"<<t2-t1<<std::endl;
 
         }

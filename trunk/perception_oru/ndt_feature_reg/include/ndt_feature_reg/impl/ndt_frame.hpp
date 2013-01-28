@@ -39,7 +39,11 @@ PoseEstimator<PointSource,PointTarget>::matchFrames(const NDTFrame<PointSource>&
     if (windowed)
         mask = cv::windowedMatchingMask(f0.kpts, f1.kpts, wx, wy);
 
-    matcher->match(f0.dtors, f1.dtors, fwd_matches, mask);
+    //require at least 3 kpts each
+    if(f0.kpts.size() > 3 && f1.kpts.size() > 3) 
+    {
+	matcher->match(f0.dtors, f1.dtors, fwd_matches, mask);
+    }
 }
 
 
@@ -256,7 +260,7 @@ size_t PoseEstimator<PointSource,PointTarget>::estimate(const NDTFrame<PointSour
     for (int i=0; i<nmatch; i++)
     {
         Eigen::Vector3d pt1 = tfm*f1.pts[matches[i].trainIdx];
-        Eigen::Vector3d pt1_unchanged = f1.pts[matches[i].trainIdx].head(3);
+        //Eigen::Vector3d pt1_unchanged = f1.pts[matches[i].trainIdx].head(3);
         //Vector3d pt1 = pt1_unchanged;
 #if 0
         Vector3d ipt = f0.cam2pix(pt);
