@@ -24,7 +24,7 @@
   <depend package="image_geometry"/>
   
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lndt_feature_reg" />
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib" />
   </export>
 
 </package>

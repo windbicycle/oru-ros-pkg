@@ -26,6 +26,7 @@
 #include <boost/shared_ptr.hpp>
 #include <cv_bridge/CvBridge.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/CameraInfo.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
@@ -70,6 +71,7 @@ protected:
 
     message_filters::Subscriber<sensor_msgs::Image> rgb_sub_;
     message_filters::Subscriber<sensor_msgs::Image> depth_sub_;
+    ros::Subscriber depth_param_sub_;
     message_filters::Subscriber<sensor_msgs::Image> intensity_sub_;
     message_filters::Subscriber<sensor_msgs::PointCloud2> points2_sub_;
 
@@ -100,6 +102,7 @@ protected:
     bool set_initial_pose_;
     bool publish_cloud_;
     int subsample_step_;
+    std::string world_str;
 
     ros::Time prev_timestamp_;
     NDTFrameProc<pcl::PointXYZ>* proc;
@@ -110,55 +113,46 @@ protected:
         t.setBasis(btMatrix3x3(k.matrix()(0,0), k.matrix()(0,1),k.matrix()(0,2),k.matrix()(1,0), k.matrix()(1,1),k.matrix()(1,2),k.matrix()(2,0), k.matrix()(2,1),k.matrix()(2,2)));
     };
 
-    void setupCamera(bool isFloat)
+    void setupCamera(const sensor_msgs::CameraInfoConstPtr & camera_info)
     {
-        double fx, fy, cx, cy, ds, scale;
-        std::vector<double> dist(5);
-        switch (camera_nb_)
-        {
-        case 1:
-            fx = 517.3;
-            fy = 516.5;
-            cx = 318.6;
-            cy = 255.3;
-            dist[0] = 0.2624;
-            dist[1] = -0.9531;
-            dist[2] = -0.0054;
-            dist[3] = 0.0026;
-            dist[4] = 1.1633;
-            ds = 1.035; // Depth scaling factor.
-            scale = 0.0002;
-            break;
-        case 2:
-            fx = 520.9;
-            fy = 521.0;
-            cx = 325.1;
-            cy = 249.7;
-            dist[0] = 0.2312;
-            dist[1] = -0.7849;
-            dist[2] = -0.0033;
-            dist[3] = -0.0001;
-            dist[4] = 0.9172;
-            ds = 1.031;
-            scale = 0.0002;
-            break;
-        default:
-            cerr << "unknown camera number : " << camera_nb_ << endl;
-        }
-        cameraparams_ = lslgeneric::DepthCamera<pcl::PointXYZ>(fx,fy,cx,cy,dist,ds/*scale*/,isFloat);
+
+        m_.lock();
+	if(!camerasetup_) {
+	    //setup params from camera info msg
+	    std::cout<<"seting up camera params\n";
+	    double fx, fy, cx, cy, ds=1;
+	    std::vector<double> dist(5);
+	    fx = camera_info->K[0]; 
+	    fy = camera_info->K[4];
+	    cx = camera_info->K[2]; 
+	    cy = camera_info->K[5];
+	    if(camera_info->D.size() == 5) {
+	       dist = camera_info->D;
+	    } else {
+	       dist = std::vector<double>(5,0);
+	    }
+	    std::cout<<"Params: "<<fx<<" "<<fy<<" "<<cx<<" "<<cy<<" "<<dist.size()<<std::endl;
+	    cameraparams_ = lslgeneric::DepthCamera<pcl::PointXYZ>(fx,fy,cx,cy,dist,ds,true);
+	    
+	    camerasetup_ = true;
+	}
+        m_.unlock();
+
     }
 
 public:
     // Constructor
-    NDTFeatureRegNode(ros::NodeHandle comm_nh, ros::NodeHandle param_nh) : sync_(2), sync2_(2)
+    NDTFeatureRegNode(ros::NodeHandle param_nh) : sync_(2), sync2_(2)
     {
         bool xyzi_data;
         param_nh.param("xyzi_data", xyzi_data, false);
 
         if (!xyzi_data)
         {
-            rgb_sub_.subscribe(nh_, "rgb", 1);
+            rgb_sub_.subscribe(nh_, "rgb", 2);
             depth_sub_.subscribe(nh_, "depth", 2);
+            depth_param_sub_ = nh_.subscribe("depth_param", 1, &NDTFeatureRegNode::setupCamera, this);
+
             sync_.connectInput(rgb_sub_, depth_sub_);
             sync_.registerCallback( boost::bind(&NDTFeatureRegNode::rgbDepthCb, this, _1, _2) );
         }
@@ -206,6 +200,8 @@ public:
         param_nh.param("max_kp_dist", proc->pe.maxDist, 10.);
         param_nh.param("min_kp_dist", proc->pe.minDist, 0.);
         param_nh.param("set_initial_pose", set_initial_pose_, false);
+	std::string default_world = "world";
+        param_nh.param("world_frame", world_str, default_world);
 
         param_nh.param("publish_cloud", publish_cloud_, false);
         param_nh.param("subsample_step", subsample_step_, 5);
@@ -222,8 +218,10 @@ public:
     void process(cv::Mat &rgb_img, cv::Mat &depth_img, const ros::Time &current_timestamp)
     {
         NDTFrame<pcl::PointXYZ> *frame = new NDTFrame<pcl::PointXYZ>();
-        frame->img = rgb_img;
-        frame->depth_img = depth_img;
+//        frame->img = rgb_img;
+//        frame->depth_img = depth_img;
+	rgb_img.copyTo(frame->img);
+	depth_img.copyTo(frame->depth_img);
         frame->supportSize = support_size_;
         frame->maxVar = max_var_;
         frame->current_res = current_res_;
@@ -243,10 +241,11 @@ public:
         TransformEigenToTF(global_transform_, global_transform);
         //	       ros::Time current_timestamp = msg_rgb->header.stamp;
 
-        tf_.sendTransform(tf::StampedTransform(transform, current_timestamp, "world", "ndt_feature_reg"));
-        tf_.sendTransform(tf::StampedTransform(global_transform, current_timestamp, "world", "global_ndt_feature_reg"));
+        //tf_.sendTransform(tf::StampedTransform(transform, current_timestamp, world_str, "ndt_feature_reg"));
+        
+	tf_.sendTransform(tf::StampedTransform(global_transform, current_timestamp, world_str, "global_ndt_feature_reg"));
 
-        std::string gt_frame = "/openni_rgb_optical_frame";
+        std::string gt_frame = "/camera1_rgb_optical_frame";
         if (publish_cloud_)
         {
             pcl::PointCloud<pcl::PointXYZ> depthcloud, sub_depthcloud;
@@ -263,22 +262,24 @@ public:
 
         try
         {
+	    /*
             tf::StampedTransform gt_transform;
 
             tf_listener_.waitForTransform(gt_frame, prev_timestamp_,
                                           gt_frame, current_timestamp,
-                                          "/world", ros::Duration(2.0));
+                                          world_str, ros::Duration(2.0));
 
             tf_listener_.lookupTransform(gt_frame, prev_timestamp_,
                                          gt_frame, current_timestamp,
-                                         "/world", gt_transform);
+                                         world_str, gt_transform);
 
-            tf_.sendTransform(tf::StampedTransform(gt_transform, current_timestamp, "world", "gt_reg"));
+            tf_.sendTransform(tf::StampedTransform(gt_transform, current_timestamp, world_str, "gt_reg"));
+	    */
 
             if (set_initial_pose_)
             {
                 tf::StampedTransform glb_gt_transform;
-                tf_listener_.lookupTransform("/world", gt_frame, current_timestamp, glb_gt_transform);
+                tf_listener_.lookupTransform(world_str, gt_frame, current_timestamp, glb_gt_transform);
                 TransformTFToEigen(glb_gt_transform, global_transform_);
                 set_initial_pose_ = false;
             }
@@ -315,17 +316,14 @@ public:
     void rgbDepthCb(const sensor_msgs::ImageConstPtr& msg_rgb, const sensor_msgs::ImageConstPtr& msg_depth)
     {
         m_.lock();
-        ROS_INFO("Got image pair...");
+        //ROS_INFO("Got image pair...");
         cv::Mat rgb_img(_imBridge.imgMsgToCv(msg_rgb, "bgr8")); // mono8
         cv::Mat depth_img(_imBridge.imgMsgToCv(msg_depth)); //, "mono16"));
 
-        if (!camerasetup_)
+        if (camerasetup_)
         {
-            setupCamera(depth_img.depth() == CV_32F);
-            camerasetup_ = true;
+	    process(rgb_img, depth_img, msg_rgb->header.stamp);
         }
-
-        process(rgb_img, depth_img, msg_rgb->header.stamp);
         m_.unlock();
     }
 
@@ -336,10 +334,10 @@ public:
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ndt_feature_reg_node");
-    ros::NodeHandle comm_nh ("camera"); // for topics, services
+//    ros::NodeHandle comm_nh ("camera"); // for topics, services
     ros::NodeHandle param_nh ("~");     // for parameters
 
-    NDTFeatureRegNode n(comm_nh, param_nh);
+    NDTFeatureRegNode n(param_nh);
     ros::spin();
 
     return 0;

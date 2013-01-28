@@ -40,8 +40,8 @@ rosbuild_add_boost_directories()
 #rosbuild_add_openmp_flags(openmp_test)
 #target_link_libraries(openmp_test)
 
-rosbuild_add_executable(ndt_feature_viewer src/ndt_feature_viewer.cc)
-rosbuild_link_boost(ndt_feature_viewer program_options thread)
+#rosbuild_add_executable(ndt_feature_viewer src/ndt_feature_viewer.cc)
+#rosbuild_link_boost(ndt_feature_viewer program_options thread)
 #target_link_libraries(ndt_feature_viewer ${PROJECT_NAME})
 
 #rosbuild_add_executable(simple_cloud_viewer test/simple_cloud_viewer.cc)
@@ -50,12 +50,15 @@ rosbuild_link_boost(ndt_feature_viewer program_options thread)
 #rosbuild_add_executable(affine_transform_test test/affine_transform_test.cc)
 #target_link_libraries(affine_transform_test)
 
-rosbuild_add_executable(ndt_feature_eval src/ndt_feature_eval.cc)
-rosbuild_link_boost(ndt_feature_eval program_options thread)
+#rosbuild_add_executable(ndt_feature_eval src/ndt_feature_eval.cc)
+#rosbuild_link_boost(ndt_feature_eval program_options thread)
 #target_link_libraries(ndt_feature_eval ${PROJECT_NAME})
 
 rosbuild_add_executable(ndt_feature_reg_node src/ndt_feature_reg_node.cc)
 rosbuild_link_boost(ndt_feature_reg_node signals program_options thread)
+
+#rosbuild_add_executable(exp_ndt_feature_reg_node src/exp_ndt_feature_reg_node.cc)
+#rosbuild_link_boost(exp_ndt_feature_reg_node signals program_options thread)
 
 
 rosbuild_get_stack_version(ROS_VERSION ros)
@@ -70,7 +73,7 @@ STRING(REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9]+)" "\\1" ros_patch
 if(ros_major MATCHES 1 AND ros_minor GREATER 7)
 MESSAGE(STATUS "ROS version: fuerte")
 	include_directories(/usr/include/vtk-5.8)
-	target_link_libraries(ndt_feature_eval ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
-	target_link_libraries(ndt_feature_reg_node ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
-	target_link_libraries(ndt_feature_viewer ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
+#target_link_libraries(ndt_feature_eval ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
+#	target_link_libraries(ndt_feature_reg_node ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
+#	target_link_libraries(ndt_feature_viewer ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so libvtkRendering.so)
 endif()

@@ -55,6 +55,19 @@ inline void viewKeypointMatches(NDTFrameProc<PointT> *proc, int delay)
     cv::imshow(window_name, display);
     cv::waitKey(delay);
 }
+template <typename PointT>
+inline void viewKeypointMatchesFirst(NDTFrameProc<PointT> *proc, int delay)
+{
+    if (proc->frames.size() < 2)
+        return;
+    cv::Mat display;
+    int i = proc->frames.size()-1;
+    cv::drawMatches(proc->frames[0]->img, proc->frames[0]->kpts, proc->frames[i]->img, proc->frames[i]->kpts, proc->pe.inliers, display);
+    const std::string window_name = "matches";
+    cv::namedWindow(window_name,0);
+    cv::imshow(window_name, display);
+    cv::waitKey(delay);
+}
 
 template <typename PointT>
 class NDTFrameViewer

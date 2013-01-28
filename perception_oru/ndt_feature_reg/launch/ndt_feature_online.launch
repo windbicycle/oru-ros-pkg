@@ -1,0 +1,18 @@
+<launch>    
+    <node pkg="tf" type="static_transform_publisher" name="static_pub" args="0 0 0 0 0 0 1 world camera_link 100" />
+    <node pkg="ndt_feature_reg" type="ndt_feature_reg_node" name="ndt_feature_reg_node" output="screen">
+      <remap from="rgb" to="/camera/rgb/image_color" />
+      <remap from="depth" to="/camera/depth_registered/image" />
+      <remap from="depth_param" to="/camera/depth_registered/camera_info" />
+      <param name="max_inldist_xy" type="double" value="0.02" />
+      <param name="max_inldist_z" type="double" value="0.05" />
+      <param name="support_size" value="15" />	
+      <param name="img_scale" value="0.25" />
+      <param name="visualize" value="true" />
+      <param name="detector_thresh" value="200" />
+      <param name="set_initial_pose" value="true" />
+      <param name="publish_cloud" value="true" />
+      <param name="subsample_step" value="2" />
+      <param name="skip_matching" value="false" />
+    </node>
+</launch>

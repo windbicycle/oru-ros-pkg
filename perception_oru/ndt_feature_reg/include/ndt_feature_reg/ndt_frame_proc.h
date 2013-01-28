@@ -37,6 +37,8 @@
 
 #include <ndt_feature_reg/ndt_frame.h>
 #include <ndt_matcher_d2d_feature.h>
+#include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/nonfree/nonfree.hpp>
 
 namespace ndt_feature_reg
 {
@@ -75,6 +77,9 @@ public:
         img_scale = 1.;
         trim_factor = 1.;
         non_mean = false;
+	cv::initModule_nonfree();
+        cv::initModule_features2d();
+
     }
 
     PoseEstimator<PointT,PointT> pe;
