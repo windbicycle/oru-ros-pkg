@@ -1,10 +1,6 @@
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <sensor_msgs/Image.h>
-#include <cv_bridge/cv_bridge.h>
-//#include <image_transport/image_transport.h>
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 #include <Eigen/Core>
 #include <Eigen/StdVector>
@@ -16,108 +12,61 @@
 #include <time.h>
 #include "sdf_tracker.h"
 
-SDFTracker::SDFTracker()
+SDF_Parameters::SDF_Parameters()
+{  
+  image_width = 640;
+  image_height = 480;
+  makeTris = false;
+  interactive_mode = true;
+  Wmax = 64.0;
+  resolution = 0.01;
+  XSize = 256;
+  YSize = 256;
+  ZSize = 256;
+  Dmax = 0.1;
+  Dmin = -0.04;
+  pose_offset = Eigen::MatrixXd::Identity(4,4);
+  robust_statistic_coefficient = 0.02;
+  regularization = 0.01;
+  min_pose_change = 0.01;
+  min_parameter_update = 0.0001;
+  raycast_steps = 12;
+  fx = 520.0;
+  fy = 520.0;
+  cx = 319.5;
+  cy = 239.5;
+}
+
+SDF_Parameters::~SDF_Parameters()
+{}
+
+SDFTracker::SDFTracker() {
+    SDF_Parameters myparams = SDF_Parameters();
+    this->init(myparams);
+}
+
+SDFTracker::SDFTracker(SDF_Parameters &parameters)
 {
-  
-  nh_ = ros::NodeHandle("~");
-  n_ = ros::NodeHandle();
-
-  nh_.param("ImageWidth",image_width_, 640);
-  nh_.param("ImageHeight",image_height_, 480);
-
-  int downsample=1;
-
-  switch(image_height_)
-  {
-  case 480: downsample = 1; break; //VGA
-  case 240: downsample = 2; break; //QVGA
-  case 120: downsample = 4; break; //QQVGA
-  }
-  
-  nh_.param("OutputTriangles",makeTris_, false);
-  nh_.param("InteractiveMode", interactive_mode_, true);
-  nh_.param("depth_registered",depth_registered_, false);
-  nh_.param("MaxWeight",Wmax_, 64.0);
-  nh_.param("CellSize",resolution_, 0.01);
-  nh_.param("GridSizeX",XSize_, 256);
-  nh_.param("GridSizeY",YSize_, 256);
-  nh_.param("GridSizeZ",ZSize_, 256);
-  nh_.param("offsetX",XOffset_, 0.0);
-  nh_.param("offsetY",YOffset_, 0.0);
-  nh_.param("offsetZ",ZOffset_, -0.40);
-  nh_.param("PositiveTruncationDistance",Dmax_, 0.1);
-  nh_.param("NegativeTruncationDistance",Dmin_, -0.04);
-  nh_.param("RobustStatisticCoefficient", robust_statistic_coefficient_ , 0.02);
-  nh_.param("Regularization", regularization_ , 0.01);
-  nh_.param("MinPoseChangeToFuseData", min_pose_change_ , 0.01);
-  nh_.param("ConvergenceCondition", min_parameter_update_ , 0.0001);
-  nh_.param("MaximumRaycastSteps", raycast_steps_ , 12);
-  nh_.param("FocalLengthX", fx_, 520.0/downsample);
-  nh_.param("FocalLengthY", fy_, 520.0/downsample);
-  nh_.param("CenterPointX", cx_, 319.5/downsample);
-  nh_.param("CenterPointY", cy_, 239.5/downsample);
-  nh_.param<std::string>("c_name",camera_name_,"camera");
-
-  depthImage_ = new cv::Mat(image_height_,image_width_,CV_32FC1); 
-  depthImage_denoised_ = new cv::Mat( image_height_,image_width_,CV_32FC1);
-
-  validityMask_ = new bool*[image_height_];
-  for (int i = 0; i < image_height_; ++i)
-  {
-    validityMask_[i] = new bool[image_width_];
-  }   
-
-  myGrid_ = new float**[XSize_];
-  weightArray_ = new float**[XSize_];
-
-  for (int i = 0; i < XSize_; ++i)
-  {
-    myGrid_[i] = new float*[YSize_];
-    weightArray_[i] = new float*[YSize_];
-    for (int j = 0; j < YSize_; ++j)
-    {
-      myGrid_[i][j] = new float[ZSize_];
-      weightArray_[i][j] = new float[ZSize_];
-    }
-  }
-    
-  for (int x = 0; x < XSize_; ++x)
-  {
-    for (int y = 0; y < YSize_; ++y)
-    {
-      for (int z = 0; z < ZSize_; ++z)
-      {
-        myGrid_[x][y][z]=Dmax_;
-        weightArray_[x][y][z]=0.0f;
-      }
-    }
-  }
-
-  quit_ = false;
-  first_frame_=true;
-  Pose_ << 0.0,0.0,0.0,0.0,0.0,0.0;
-  cumulative_pose_ << 0.0,0.0,0.0,0.0,0.0,0.0;
-  Transformation_=Eigen::MatrixXd::Identity(4,4);
-  Transformation_(0,3)+=XOffset_;
-  Transformation_(1,3)+=YOffset_;
-  Transformation_(2,3)+=ZOffset_;
-};
+  this->init(parameters);
+}
 
 SDFTracker::~SDFTracker()
 {
-  for (int i = 0; i < XSize_; ++i)
+  for (int i = 0; i < parameters_.XSize; ++i)
   {
-    for (int j = 0; j < YSize_; ++j)
+    for (int j = 0; j < parameters_.YSize; ++j)
     {
       if (myGrid_[i][j]!=NULL)
       delete[] myGrid_[i][j];
 
       if (weightArray_[i][j]!=NULL)
       delete[] weightArray_[i][j];
+
     }
      
     if (myGrid_[i]!=NULL)
     delete[] myGrid_[i];
+
     if (weightArray_[i]!=NULL)
     delete[] weightArray_[i];   
   }
@@ -125,7 +74,7 @@ SDFTracker::~SDFTracker()
   delete[] myGrid_;
   delete[] weightArray_;  
   
-  for (int i = 0; i < image_height_; ++i)
+  for (int i = 0; i < parameters_.image_height; ++i)
   {
     if ( validityMask_[i]!=NULL)
     delete[] validityMask_[i];
@@ -140,42 +89,91 @@ SDFTracker::~SDFTracker()
   
 };
 
-void
-SDFTracker::subscribeTopic(const std::string topic)
+void SDFTracker::init(SDF_Parameters &parameters)
 {
-  
-  std::string subscribe_topic = topic;
+  parameters_ = parameters;
 
-  if(depth_registered_)
+  int downsample=1;
+  switch(parameters_.image_height)
   {
-    if(topic=="default") subscribe_topic = camera_name_+"/depth_registered/image";
-    depth_subscriber_ = n_.subscribe(subscribe_topic, 1, &SDFTracker::FuseDepth, this);
+  case 480: downsample = 1; break; //VGA
+  case 240: downsample = 2; break; //QVGA
+  case 120: downsample = 4; break; //QQVGA
   }
-  else
-  {
-    if(topic=="default") subscribe_topic = camera_name_+"/depth/image";
-    depth_subscriber_ = n_.subscribe(subscribe_topic, 1, &SDFTracker::FuseDepth, this);
-  }
-}
+  parameters_.fx /= downsample;
+  parameters_.fy /= downsample;
+  parameters_.cx /= downsample;
+  parameters_.cy /= downsample;
 
-void
-SDFTracker::advertiseTopic(const std::string topic)
+  depthImage_ = new cv::Mat(parameters_.image_height,parameters_.image_width,CV_32FC1); 
+  depthImage_denoised_ = new cv::Mat( parameters_.image_height,parameters_.image_width,CV_32FC1);
+
+  validityMask_ = new bool*[parameters_.image_height];
+  for (int i = 0; i < parameters_.image_height; ++i)
+  {
+    validityMask_[i] = new bool[parameters_.image_width];
+  }   
+
+  myGrid_ = new float**[parameters_.XSize];
+  weightArray_ = new float**[parameters_.XSize];
+
+  for (int i = 0; i < parameters_.XSize; ++i)
+  {
+    myGrid_[i] = new float*[parameters_.YSize];
+    weightArray_[i] = new float*[parameters_.YSize];
+
+    for (int j = 0; j < parameters_.YSize; ++j)
+    {
+      myGrid_[i][j] = new float[parameters_.ZSize];
+      weightArray_[i][j] = new float[parameters_.ZSize];
+    }
+  }
+    
+  for (int x = 0; x < parameters_.XSize; ++x)
+  {
+    for (int y = 0; y < parameters_.YSize; ++y)
+    {
+      for (int z = 0; z < parameters_.ZSize; ++z)
+      {
+        myGrid_[x][y][z]=parameters_.Dmax;
+        weightArray_[x][y][z]=0.0f;
+      }
+    }
+  }
+  quit_ = false;
+  first_frame_ = true;
+  Pose_ << 0.0,0.0,0.0,0.0,0.0,0.0;
+  cumulative_pose_ << 0.0,0.0,0.0,0.0,0.0,0.0;
+  Transformation_=parameters_.pose_offset*Eigen::MatrixXd::Identity(4,4);
+
+  if(parameters_.interactive_mode)
+  {
+    cv::namedWindow( "Render", 0 );
+  }
+};
+
+
+void SDFTracker::saveTriangles(const std::string filename)
 {
-  std::string advertise_topic = topic;
-
-  if(depth_registered_)
+  triangle_stream_.open(filename.c_str());
+  for (int i = 1; i < parameters_.XSize-2; ++i)
   {
-    if(topic=="default") advertise_topic = "/"+camera_name_+"/depth_registered/image_denoised";
-    depth_publisher_ = n_.advertise<sensor_msgs::Image>(advertise_topic, 10); 
+    for (int j = 1; j < parameters_.YSize-2; ++j)
+    {
+      for (int k = 1; k < parameters_.ZSize-2; ++k)
+      {
+        Eigen::Vector4d CellOrigin = Eigen::Vector4d(double(i),double(j),double(k),1.0);
+        //if(!validGradient(CellOrigin*parameters_.resolution)) continue;
+        /*1*/marchingTetrahedrons(CellOrigin,1);
+        /*2*/marchingTetrahedrons(CellOrigin,2);
+        /*3*/marchingTetrahedrons(CellOrigin,3);
+        /*4*/marchingTetrahedrons(CellOrigin,4);
+        /*5*/marchingTetrahedrons(CellOrigin,5);
+        /*6*/marchingTetrahedrons(CellOrigin,6);
+      }
+    }
   }
-  else
-  {
-    if(topic == "default") advertise_topic = "/"+camera_name_+"/depth/image_denoised";
-    depth_publisher_ = n_.advertise<sensor_msgs::Image>( advertise_topic ,10); 
-  }
-
-  heartbeat_depth_ = nh_.createTimer(ros::Duration(1.0), &SDFTracker::publishDepthDenoisedImage, this);
-
+  triangle_stream_.close();
 }
 
 Eigen::Vector3d 
@@ -269,57 +267,106 @@ SDFTracker::validGradient(const Eigen::Vector4d &location)
    v              X--------X
   K                                                */
 
-  double i,j,k;
-  modf(location(0)/resolution_ + XSize_/2, &i);
-  modf(location(1)/resolution_ + YSize_/2, &j);  
-  modf(location(2)/resolution_ + ZSize_/2, &k);
+  float eps = 10e-9; 
+//   double i,j,k;
+//   modf(location(0)/parameters_.resolution + parameters_.XSize/2, &i);
+//   modf(location(1)/parameters_.resolution + parameters_.YSize/2, &j);  
+//   modf(location(2)/parameters_.resolution + parameters_.ZSize/2, &k);
+  
+//   if(std::isnan(i) || std::isnan(j) || std::isnan(k)) return false;
+
+//   int I = int(i)-1; int J = int(j)-1;   int K = int(k)-1;  
+  
+//   if(I>=parameters_.XSize-4 || J>=parameters_.YSize-3 || K>=parameters_.ZSize-3 || I<=1 || J<=1 || K<=1)return false;
+
+//   float* D10 = &myGrid_[I+1][J+0][K];
+//   float* D20 = &myGrid_[I+2][J+0][K];
+ 
+//   float* D01 = &myGrid_[I+0][J+1][K];
+//   float* D11 = &myGrid_[I+1][J+1][K];
+//   float* D21 = &myGrid_[I+2][J+1][K];
+//   float* D31 = &myGrid_[I+3][J+1][K];
+  
+//   float* D02 = &myGrid_[I+0][J+2][K];
+//   float* D12 = &myGrid_[I+1][J+2][K];
+//   float* D22 = &myGrid_[I+2][J+2][K];
+//   float* D32 = &myGrid_[I+3][J+2][K];
+
+//   float* D13 = &myGrid_[I+1][J+3][K];
+//   float* D23 = &myGrid_[I+2][J+3][K];
+
+
+//   if( fabsf(D10[1]-parameters_.Dmax) < eps || fabsf(D10[2]-parameters_.Dmax) < eps || 
+//       fabsf(D20[1]-parameters_.Dmax) < eps || fabsf(D20[2]-parameters_.Dmax) < eps || 
+      
+//       fabsf(D01[1]-parameters_.Dmax) < eps || fabsf(D01[2]-parameters_.Dmax) < eps ||
+//       fabsf(D11[0]-parameters_.Dmax) < eps || fabsf(D11[1]-parameters_.Dmax) < eps || fabsf(D11[2]-parameters_.Dmax) < eps || fabsf(D11[3]-parameters_.Dmax) < eps ||
+//       fabsf(D21[0]-parameters_.Dmax) < eps || fabsf(D21[1]-parameters_.Dmax) < eps || fabsf(D21[2]-parameters_.Dmax) < eps || fabsf(D21[3]-parameters_.Dmax) < eps ||
+//       fabsf(D31[1]-parameters_.Dmax) < eps || fabsf(D31[2]-parameters_.Dmax) < eps ||
+      
+//       fabsf(D02[1]-parameters_.Dmax) < eps || fabsf(D02[2]-parameters_.Dmax) < eps ||
+//       fabsf(D12[0]-parameters_.Dmax) < eps || fabsf(D12[1]-parameters_.Dmax) < eps || fabsf(D12[2]-parameters_.Dmax) < eps || fabsf(D12[3]-parameters_.Dmax) < eps ||
+//       fabsf(D22[0]-parameters_.Dmax) < eps || fabsf(D22[1]-parameters_.Dmax) < eps || fabsf(D22[2]-parameters_.Dmax) < eps || fabsf(D22[3]-parameters_.Dmax) < eps ||
+//       fabsf(D32[1]-parameters_.Dmax) < eps || fabsf(D32[2]-parameters_.Dmax) < eps ||
+      
+//       fabsf(D13[1]-parameters_.Dmax) < eps || fabsf(D13[2]-parameters_.Dmax) < eps ||
+//       fabsf(D23[1]-parameters_.Dmax) < eps || fabsf(D23[2]-parameters_.Dmax) < eps 
+//       ) return false;
+//   else return true;
+// };
+
+ double i,j,k;
+  modf(location(0)/parameters_.resolution + parameters_.XSize/2, &i);
+  modf(location(1)/parameters_.resolution + parameters_.YSize/2, &j);  
+  modf(location(2)/parameters_.resolution + parameters_.ZSize/2, &k);
   
   if(std::isnan(i) || std::isnan(j) || std::isnan(k)) return false;
 
   int I = int(i)-1; int J = int(j)-1;   int K = int(k)-1;  
   
-  if(I>=XSize_-4 || J>=YSize_-3 || K>=ZSize_-3 || I<=1 || J<=1 || K<=1)return false;
+  if(I>=parameters_.XSize-4 || J>=parameters_.YSize-3 || K>=parameters_.ZSize-3 || I<=1 || J<=1 || K<=1)return false;
 
-  float* D10 = &myGrid_[I+1][J+0][K];
-  float* D20 = &myGrid_[I+2][J+0][K];
+  float* W10 = &weightArray_[I+1][J+0][K];
+  float* W20 = &weightArray_[I+2][J+0][K];
  
-  float* D01 = &myGrid_[I+0][J+1][K];
-  float* D11 = &myGrid_[I+1][J+1][K];
-  float* D21 = &myGrid_[I+2][J+1][K];
-  float* D31 = &myGrid_[I+3][J+1][K];
+  float* W01 = &weightArray_[I+0][J+1][K];
+  float* W11 = &weightArray_[I+1][J+1][K];
+  float* W21 = &weightArray_[I+2][J+1][K];
+  float* W31 = &weightArray_[I+3][J+1][K];
   
-  float* D02 = &myGrid_[I+0][J+2][K];
-  float* D12 = &myGrid_[I+1][J+2][K];
-  float* D22 = &myGrid_[I+2][J+2][K];
-  float* D32 = &myGrid_[I+3][J+2][K];
+  float* W02 = &weightArray_[I+0][J+2][K];
+  float* W12 = &weightArray_[I+1][J+2][K];
+  float* W22 = &weightArray_[I+2][J+2][K];
+  float* W32 = &weightArray_[I+3][J+2][K];
 
-  float* D13 = &myGrid_[I+1][J+3][K];
-  float* D23 = &myGrid_[I+2][J+3][K];
+  float* W13 = &weightArray_[I+1][J+3][K];
+  float* W23 = &weightArray_[I+2][J+3][K];
 
-  if( !D10[1]==Dmax_ || !D10[2]==Dmax_ || 
-      !D20[1]==Dmax_ || !D20[2]==Dmax_ || 
+  if( W10[1] < eps || W10[2] < eps || 
+      W20[1] < eps || W20[2] < eps || 
       
-      !D01[1]==Dmax_ || !D01[2]==Dmax_ ||
-      !D11[0]==Dmax_ || !D11[1]==Dmax_ || !D11[2]==Dmax_ || !D11[3]==Dmax_ ||
-      !D21[0]==Dmax_ || !D21[1]==Dmax_ || !D21[2]==Dmax_ || !D21[3]==Dmax_ ||
-      !D31[1]==Dmax_ || !D31[2]==Dmax_ ||
+      W01[1] < eps || W01[2] < eps ||
+      W11[0] < eps || W11[1] < eps || W11[2] < eps || W11[3] < eps ||
+      W21[0] < eps || W21[1] < eps || W21[2] < eps || W21[3] < eps ||
+      W31[1] < eps || W31[2] < eps ||
       
-      !D02[1]==Dmax_ || !D02[2]==Dmax_ ||
-      !D12[0]==Dmax_ || !D12[1]==Dmax_ || !D12[2]==Dmax_ || !D12[3]==Dmax_ ||
-      !D22[0]==Dmax_ || !D22[1]==Dmax_ || !D22[2]==Dmax_ || !D22[3]==Dmax_ ||
-      !D32[1]==Dmax_ || !D32[2]==Dmax_ ||
+      W02[1] < eps || W02[2] < eps ||
+      W12[0] < eps || W12[1] < eps || W12[2] < eps || W12[3] < eps ||
+      W22[0] < eps || W22[1] < eps || W22[2] < eps || W22[3] < eps ||
+      W32[1] < eps || W32[2] < eps ||
       
-      !D13[1]==Dmax_ || !D13[2]==Dmax_ ||
-      !D23[1]==Dmax_ || !D23[2]==Dmax_ 
+      W13[1] < eps || W13[2] < eps ||
+      W23[1] < eps || W23[2] < eps 
       ) return false;
   else return true;
-};
+}
+
 
 double 
 SDFTracker::SDFGradient(const Eigen::Vector4d &location, int stepSize, int dim )
 {
-  double delta=resolution_*stepSize;
-  Eigen::Vector4d location_offset = Eigen::Vector4d::Zero();
+  double delta=parameters_.resolution*stepSize;
+  Eigen::Vector4d location_offset = Eigen::Vector4d(0,0,0,1);
   location_offset(dim) = delta;
 
   return ((SDF(location+location_offset)) - (SDF(location-location_offset)))/(2.0*delta);
@@ -329,6 +376,12 @@ void
 SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
 {
   /*
+  The following part is adapted from code found at:
+  http://paulbourke.net/geometry/polygonise/
+
+  (Paul Bourke / David Thoth)
+
+
   Function that outputs polygons from the SDF. The function is called
   giving a 3D location  of the (zero, zero) vertex and an index. 
   The index indicates which of the six possible tetrahedrons that can 
@@ -379,7 +432,7 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
 
 
   float val0, val1, val2, val3;
-  val0 = val1 = val2 = val3 = Dmax_;
+  val0 = val1 = val2 = val3 = parameters_.Dmax;
 
   Eigen::Vector4d V0, V1, V2, V3;
     
@@ -391,72 +444,72 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
   {
     case 1:
     val0 = myGrid_[i][j][k+1];
-    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*resolution_;
+    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
     val1 = myGrid_[i+1][j][k];
-    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*resolution_;
+    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*parameters_.resolution;
     val2 = myGrid_[i][j][k];
-    V2 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2),1.0)*resolution_;
+    V2 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2),1.0)*parameters_.resolution;
     val3 = myGrid_[i][j+1][k];
-    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*resolution_;      
+    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*parameters_.resolution;      
     break;
     
     case 2:  
     val0 = myGrid_[i][j][k+1];
-    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*resolution_;
+    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
     val1 = myGrid_[i+1][j][k];
-    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*resolution_;
+    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*parameters_.resolution;
     val2 = myGrid_[i+1][j+1][k];
-    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*resolution_;
+    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
     val3 = myGrid_[i][j+1][k];
-    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*resolution_;      
+    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*parameters_.resolution;      
     break;
     
     case 3:
     val0 = myGrid_[i][j][k+1];
-    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*resolution_;
+    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
     val1 = myGrid_[i][j+1][k+1];
-    V1 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*resolution_;
+    V1 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*parameters_.resolution;
     val2 = myGrid_[i+1][j+1][k];
-    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*resolution_;
+    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
     val3 = myGrid_[i][j+1][k];
-    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*resolution_;      
+    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*parameters_.resolution;      
     break;
     
     case 4:      
     val0 = myGrid_[i][j][k+1];
-    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*resolution_;
+    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
     val1 = myGrid_[i+1][j+1][k];
-    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*resolution_;
+    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
     val2 = myGrid_[i+1][j][k+1];
-    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*resolution_;
+    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
     val3 = myGrid_[i+1][j][k];
-    V3 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*resolution_;      
+    V3 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*parameters_.resolution;      
     break;
       
     case 5:
     val0 = myGrid_[i][j][k+1];
-    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*resolution_;
+    V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
     val1 = myGrid_[i+1][j+1][k];
-    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*resolution_;
+    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
     val2 = myGrid_[i+1][j][k+1];
-    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*resolution_;
+    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
     val3 = myGrid_[i][j+1][k+1];
-    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*resolution_;      
+    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*parameters_.resolution;      
     break;
     
     case 6:
     val0 = myGrid_[i+1][j+1][k+1];
-    V0 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2)+1,1.0)*resolution_;
+    V0 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2)+1,1.0)*parameters_.resolution;
     val1 = myGrid_[i+1][j+1][k];
-    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*resolution_;
+    V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
     val2 = myGrid_[i+1][j][k+1];
-    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*resolution_;
+    V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
     val3 = myGrid_[i][j+1][k+1];
-    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*resolution_;      
+    V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*parameters_.resolution;      
     break;
   }  
     
-  if(val0>Dmax_-resolution_ || val1>Dmax_-resolution_ || val2>Dmax_-resolution_ || val3>Dmax_-resolution_ )
+  if(val0>parameters_.Dmax-parameters_.resolution || val1>parameters_.Dmax-parameters_.resolution || val2>parameters_.Dmax-parameters_.resolution || val3>parameters_.Dmax-parameters_.resolution )
   
     return;
 
@@ -803,20 +856,12 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
 };
 
 void 
-SDFTracker::FuseDepth(const sensor_msgs::Image::ConstPtr& msg)
+SDFTracker::FuseDepth(const cv::Mat& depth)
 {
-  cv_bridge::CvImageConstPtr bridge;
-  try
-  {
-    bridge = cv_bridge::toCvCopy(msg, "32FC1");
-  }
-  catch (cv_bridge::Exception& e)
-  {
-    ROS_ERROR("Failed to transform depth image.");
-    return;
-  }
-
-  *depthImage_ = bridge->image;
+ 
+  depth_mutex_.lock();
+  depth.copyTo(*depthImage_);
+  depth_mutex_.unlock();
 
   for(int row=0; row<depthImage_->rows-0; ++row)
   { 
@@ -837,31 +882,6 @@ SDFTracker::FuseDepth(const sensor_msgs::Image::ConstPtr& msg)
   bool hasfused;
   if(!first_frame_)
   {
-    if(quit_ && makeTris_)
-    {
-      triangle_stream_.open("triangles.obj");
-      for (int i = 1; i < XSize_-2; ++i)
-      {
-        for (int j = 1; j < YSize_-2; ++j)
-        {
-          for (int k = 1; k < ZSize_-2; ++k)
-          {
-            Eigen::Vector4d CellOrigin = Eigen::Vector4d(double(i),double(j),double(k),1.0);
-            //if(!validGradient(CellOrigin*resolution_)) continue;
-            /*1*/marchingTetrahedrons(CellOrigin,1);
-            /*2*/marchingTetrahedrons(CellOrigin,2);
-            /*3*/marchingTetrahedrons(CellOrigin,3);
-            /*4*/marchingTetrahedrons(CellOrigin,4);
-            /*5*/marchingTetrahedrons(CellOrigin,5);
-            /*6*/marchingTetrahedrons(CellOrigin,6);
-          }
-        }
-      }
-    
-    triangle_stream_.close();
-    }
-    if(quit_) {ros::shutdown();}
-    
     hasfused = true;
     Pose_ = EstimatePose();
   } 
@@ -869,42 +889,40 @@ SDFTracker::FuseDepth(const sensor_msgs::Image::ConstPtr& msg)
   {
     hasfused = false;
     first_frame_ = false;
-    if(depthImage_->rows!=image_height_) 
-      ROS_WARN("Getting images of unexpected size. Expected image height of %i, instead got %i! Make sure the parameter are set correctly", 
-                image_height_, depthImage_->rows);
+    if(depthImage_->rows!=parameters_.image_height) std::cout << "depth image rows do not match given image height parameter"<<std::endl;
+
   } 
   
   Transformation_ = Twist(Pose_).exp()*Transformation_;
   
   transformations_.push_back(Transformation_);
-  timestamps_.push_back(ros::Time::now());
-  
   cumulative_pose_ += Pose_;
   Pose_ = Pose_ * 0.0;
 
-  if(cumulative_pose_.norm() < min_pose_change_ && hasfused ){Render(); return;}
+  if(cumulative_pose_.norm() < parameters_.min_pose_change && hasfused ){Render(); return;}
   cumulative_pose_ *= 0.0;
   
   Eigen::Matrix4d camToWorld = Transformation_.inverse();
   Eigen::Vector4d camera = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
   //Main 3D reconstruction loop
   
-  for(int x = 0; x<XSize_; ++x)
+  for(int x = 0; x<parameters_.XSize; ++x)
   { 
-  #pragma omp parallel for 
-    for(int y = 0; y<YSize_;++y)
+  #pragma omp parallel for \
+  shared(x)
+    for(int y = 0; y<parameters_.YSize;++y)
     { 
       float* previousD = &myGrid_[x][y][0];
       float* previousW = &weightArray_[x][y][0];      
-      for(int z = 0; z<ZSize_; ++z)
+      for(int z = 0; z<parameters_.ZSize; ++z)
       {           
         //define a ray and point it into the center of a node
-        Eigen::Vector4d ray((x-XSize_/2)*resolution_, (y- YSize_/2)*resolution_ , (z- ZSize_/2)*resolution_, 1);        
+        Eigen::Vector4d ray((x-parameters_.XSize/2)*parameters_.resolution, (y- parameters_.YSize/2)*parameters_.resolution , (z- parameters_.ZSize/2)*parameters_.resolution, 1);        
         ray = camToWorld*ray;
-        if(ray(2)-camera(2) < 0)continue;
+        if(ray(2)-camera(2) < 0) continue;
         
         cv::Point2d uv;
-        uv=To2D(ray,fx_,fy_,cx_,cy_ );
+        uv=To2D(ray,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy );
         
         int j=floor(uv.x);
         int i=floor(uv.y);      
@@ -919,15 +937,16 @@ SDFTracker::FuseDepth(const sensor_msgs::Image::ConstPtr& msg)
             
           Eta=(double(Di[j])-ray(2));       
             
-          if(Eta >= Dmin_)// && Eta<Dmax)
+          if(Eta >= parameters_.Dmin)
           {
               
-            double D = std::min(Eta,Dmax_);//*copysign(1.0,Eta);*perpendicular
+            double D = std::min(Eta,parameters_.Dmax);
                 
             previousD[z] = (previousD[z] * previousW[z] + float(D) * W) /
                       (previousW[z] + W);
 
-            previousW[z] = std::min(previousW[z] + W , float(Wmax_));
+            previousW[z] = std::min(previousW[z] + W , float(parameters_.Wmax));
+
           }//within visible region 
         }//within bounds      
       }//z   
@@ -937,18 +956,21 @@ SDFTracker::FuseDepth(const sensor_msgs::Image::ConstPtr& msg)
   return;
 };
 
+
+
 double 
 SDFTracker::SDF(const Eigen::Vector4d &location)
 {
   double i,j,k;
   double x,y,z;
-  if(std::isnan(location(0)+location(1)+location(2))) return Dmax_;
   
-  x = modf(location(0)/resolution_ + XSize_/2, &i);
-  y = modf(location(1)/resolution_ + YSize_/2, &j);  
-  z = modf(location(2)/resolution_ + ZSize_/2, &k);
+  if(std::isnan(location(0)+location(1)+location(2))) return parameters_.Dmax;
+  
+  x = modf(location(0)/parameters_.resolution + parameters_.XSize/2, &i);
+  y = modf(location(1)/parameters_.resolution + parameters_.YSize/2, &j);  
+  z = modf(location(2)/parameters_.resolution + parameters_.ZSize/2, &k);
     
-  if(i>=XSize_-1 || j>=YSize_-1 || k>=ZSize_-1 || i<0 || j<0 || k<0)return Dmax_;
+  if(i>=parameters_.XSize-1 || j>=parameters_.YSize-1 || k>=parameters_.ZSize-1 || i<0 || j<0 || k<0)return parameters_.Dmax;
 
   int I = int(i); int J = int(j);   int K = int(k);
   
@@ -972,8 +994,8 @@ SDFTracker::EstimatePose(void)
   Vector6d xi;
   xi<<0.0,0.0,0.0,0.0,0.0,0.0; // + (Pose-previousPose)*0.1;
   Vector6d xi_prev = xi;
-
-  const double c = robust_statistic_coefficient_*Dmax_;
+  const double eps = 10e-9;
+  const double c = parameters_.robust_statistic_coefficient*parameters_.Dmax;
   
   const int iterations[3]={12, 8, 2};
   const int stepSize[3] = {4, 2, 1};
@@ -1003,12 +1025,12 @@ SDFTracker::EstimatePose(void)
         {
           if(!validityMask_[row][col]) continue;
           double depth = double(depthImage_->ptr<float>(row)[col]); 
-          Eigen::Vector4d currentPoint = camToWorld*To3D(row,col,depth,fx_,fy_,cx_,cy_);
+          Eigen::Vector4d currentPoint = camToWorld*To3D(row,col,depth,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy);
           
           if(!validGradient(currentPoint)) continue;
           double D = (SDF(currentPoint));
           double Dabs = fabs(D);
-          if(D == Dmax_ || D == Dmin_) continue;
+          if(D > parameters_.Dmax - eps || D < parameters_.Dmin + eps) continue;
           
           //partial derivative of SDF wrt position  
           Eigen::Matrix<double,1,3> dSDF_dx(SDFGradient(currentPoint,1,0),
@@ -1035,15 +1057,17 @@ SDFTracker::EstimatePose(void)
           g3 = g3 + T2(3); g4 = g4 + T2(4); g5 = g5 + T2(5);
           
           A00+=T1(0,0);A01+=T1(0,1);A02+=T1(0,2);A03+=T1(0,3);A04+=T1(0,4);A05+=T1(0,5);
-          A10+=T1(1,0);A11+=T1(1,1);A12+=T1(1,2);A13+=T1(1,3);A14+=T1(1,4);A15+=T1(1,5);
+	        A10+=T1(1,0);A11+=T1(1,1);A12+=T1(1,2);A13+=T1(1,3);A14+=T1(1,4);A15+=T1(1,5);
           A20+=T1(2,0);A21+=T1(2,1);A22+=T1(2,2);A23+=T1(2,3);A24+=T1(2,4);A25+=T1(2,5);
           A30+=T1(3,0);A31+=T1(3,1);A32+=T1(3,2);A33+=T1(3,3);A34+=T1(3,4);A35+=T1(3,5);
           A40+=T1(4,0);A41+=T1(4,1);A42+=T1(4,2);A43+=T1(4,3);A44+=T1(4,4);A45+=T1(4,5);
           A50+=T1(5,0);A51+=T1(5,1);A52+=T1(5,2);A53+=T1(5,3);A54+=T1(5,4);A55+=T1(5,5);
+
         }//col
       }//row
-      
+  
       Eigen::Matrix<double,6,6> A;
+
       A<< A00,A01,A02,A03,A04,A05,
           A10,A11,A12,A13,A14,A15,
           A20,A21,A22,A23,A24,A25,
@@ -1055,15 +1079,15 @@ SDFTracker::EstimatePose(void)
       Vector6d g;
       g<< g0, g1, g2, g3, g4, g5;
       
-      g = g * scaling;
-      A = A * scaling;
+      g *= scaling;
+      A *= scaling;
       
-      A = A + (regularization_)*Eigen::MatrixXd::Identity(6,6);
+      A = A + (parameters_.regularization)*Eigen::MatrixXd::Identity(6,6);
       xi = xi - A.ldlt().solve(g);
       Vector6d Change = xi-xi_prev;  
       double Cnorm = Change.norm();
       xi_prev = xi;
-      if(Cnorm < min_parameter_update_) break;
+      if(Cnorm < parameters_.min_parameter_update) break;
     }//k
   }//level
   if(std::isnan(xi.sum())) xi << 0.0,0.0,0.0,0.0,0.0,0.0;
@@ -1073,35 +1097,34 @@ SDFTracker::EstimatePose(void)
 void 
 SDFTracker::Render(void)
 {
-  double minStep = resolution_/4;
-  cv::Mat depthImage_out(image_height_,image_width_,CV_32FC1);
-  cv::Mat preview(image_height_,image_width_,CV_8UC3);
+  double minStep = parameters_.resolution/4;
+  cv::Mat depthImage_out(parameters_.image_height,parameters_.image_width,CV_32FC1);
+  cv::Mat preview(parameters_.image_height,parameters_.image_width,CV_8UC3);
   
-
   const Eigen::Matrix4d expmap = Transformation_;
   const Eigen::Vector4d camera = expmap * Eigen::Vector4d(0.0,0.0,0.0,1.0);
   const Eigen::Vector4d viewAxis = (expmap * Eigen::Vector4d(0.0,0.0,1.0,0.0)).normalized();
-  const double max_ray_length = 5; //not really, but it's an ok guess.
+  const double max_ray_length = 5.0;
   
   //Rendering loop
-  #pragma omp parallel for 
-  for(int u = 0; u < image_height_; ++u)
+ #pragma omp parallel for 
+  for(int u = 0; u < parameters_.image_height; ++u)
   {
-    for(int v = 0; v < image_width_; ++v)
+    for(int v = 0; v < parameters_.image_width; ++v)
     {
-      
       bool hit = false;
 
-      Eigen::Vector4d p = expmap*To3D(u,v,1.0,fx_,fy_,cx_,cy_) - camera;
+      Eigen::Vector4d p = expmap*To3D(u,v,1.0,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy) - camera;
       p.normalize();
             
-      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.5 : Dmax_;
+      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.8 : parameters_.Dmax;
       
       double scaling_prev=0;
       int steps=0;
-      double D = resolution_;
-      while(steps<raycast_steps_ && D>=minStep && scaling < max_ray_length)
+      double D = parameters_.resolution;
+      while(steps<parameters_.raycast_steps && scaling < max_ray_length)
       { 
+
         double D_prev = D;
         D = SDF(camera + p*scaling);
      
@@ -1110,11 +1133,10 @@ SDFTracker::Render(void)
           scaling = scaling_prev - (scaling-scaling_prev) * D_prev /
                                    ( D - D_prev);
           hit = true;
-
-          if(interactive_mode_)
-          {
-            Eigen::Vector4d normal_vector = Eigen::Vector4d::Zero();
-            
+          Eigen::Vector4d normal_vector = Eigen::Vector4d::Zero();
+ 
+          if(parameters_.interactive_mode)
+          {  
             for(int ii=0; ii<3; ++ii)
             {
               normal_vector(ii) = fabs(SDFGradient(camera + p*scaling,1,ii));            
@@ -1123,54 +1145,48 @@ SDFTracker::Render(void)
 
             preview.at<cv::Vec3b>(u,v)[0]=normal_vector(0)*255;
             preview.at<cv::Vec3b>(u,v)[1]=normal_vector(1)*255;
-            preview.at<cv::Vec3b>(u,v)[2]=normal_vector(2)*255;  
+            preview.at<cv::Vec3b>(u,v)[2]=normal_vector(2)*255;
           }
           
           depthImage_out.at<float>(u,v)=scaling*(viewAxis.dot(p));
-        
-        break;
+          break;
         }
         scaling_prev = scaling;
-        scaling = scaling + D;  
+        scaling += D;  
         ++steps;        
-        
-        //Input values are better than nothing.
-       // depthImage_out.at<float>(u,v)=depthImage_->ptr<float>(u)[v];  
-   //     depthDenoised_mutex_.unlock();
-
       }//ray
-      if(interactive_mode_ && !hit)
+      if(!hit)     
       {
-        preview.at<cv::Vec3b>(u,v)[0]=uchar(30);
-        preview.at<cv::Vec3b>(u,v)[1]=uchar(30);
-        preview.at<cv::Vec3b>(u,v)[2]=uchar(30);
-      }
+        //Input values are better than nothing.
+        depthImage_out.at<float>(u,v)=depthImage_->ptr<float>(u)[v];  
+  
+        if(parameters_.interactive_mode)
+        {
+          preview.at<cv::Vec3b>(u,v)[0]=uchar(30);
+          preview.at<cv::Vec3b>(u,v)[1]=uchar(30);
+          preview.at<cv::Vec3b>(u,v)[2]=uchar(30);
+        }
+      }//no hit
     }//col
   }//row
+
   depthDenoised_mutex_.lock();
   depthImage_out.copyTo(*depthImage_denoised_);
   depthDenoised_mutex_.unlock();    
-  if(interactive_mode_)
+ 
+  if(parameters_.interactive_mode)
   {
-    cv::imshow("Render", preview);//
+ 
+    cv::imshow("Render", preview);//depthImage_denoised);
     char q = cv::waitKey(3);
     if(q == 'q' || q  == 27 || q  == 71 ) { quit_ = true; }//int(key)
   }
   return;
 };
 
-void SDFTracker::publishDepthDenoisedImage(const ros::TimerEvent& event) 
-{    
-  if(depth_publisher_.getNumSubscribers()>0)
-  {
-    cv_bridge::CvImagePtr image_out (new cv_bridge::CvImage());
-    image_out->header.stamp = ros::Time::now(); 
-    image_out->encoding = "32FC1";      
+void SDFTracker::getDenoisedImage(cv::Mat &img) 
+{
     depthDenoised_mutex_.lock();
-    depthImage_denoised_->copyTo(image_out->image);
+    depthImage_denoised_->copyTo(img);
     depthDenoised_mutex_.unlock();          
-    depth_publisher_.publish(image_out->toImageMsg());     
-  } 
-
-  return;
-};
+}
