@@ -1,26 +1,19 @@
 <package>
-  <description brief="ndt_visualisation">
+  <description brief="ndt_visualization">
 
-     Contains the implementation of and the methods necesary
-     to use the .jff format for 3D NDT maps.
+    Contains classes for creating an ndt visualization window. Initial implementation on top of mrpt.
 
   </description>
-  <author>Jan Brenstein</author>
+  <author>Todor Stoyanov, Jari Saarinen, Henrik Andreasson</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/ndt_visualisation</url>
-  <depend package="ndt_map"/>
+  <url>http://ros.org/wiki/ndt_visualization</url>
   <depend package="common_rosdeps" />
   <rosdep name="eigen" />
-  <depend package="pcl"/>
-  <depend package="pointcloud_vrml"/>
-  <depend package="tf"/>
-  <depend package="tf_conversions"/>
-  <depend package="pangolin_wrapper"/>
-
+  <depend package="pcl" />
+  <depend package="ndt_map" />
   <export>
-      <cpp cflags="-I${prefix}/include"/>
-      
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -lndt_visualisation " />
   </export>
 
 </package>

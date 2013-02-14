@@ -50,15 +50,14 @@ rosbuild_add_boost_directories()
 #rosbuild_add_executable(affine_transform_test test/affine_transform_test.cc)
 #target_link_libraries(affine_transform_test)
 
-#rosbuild_add_executable(ndt_feature_eval src/ndt_feature_eval.cc)
-#rosbuild_link_boost(ndt_feature_eval program_options thread)
-#target_link_libraries(ndt_feature_eval ${PROJECT_NAME})
+rosbuild_add_executable(ndt_feature_eval src/ndt_feature_eval.cc)
+rosbuild_link_boost(ndt_feature_eval program_options thread)
 
 rosbuild_add_executable(ndt_feature_reg_node src/ndt_feature_reg_node.cc)
 rosbuild_link_boost(ndt_feature_reg_node signals program_options thread)
 
-#rosbuild_add_executable(exp_ndt_feature_reg_node src/exp_ndt_feature_reg_node.cc)
-#rosbuild_link_boost(exp_ndt_feature_reg_node signals program_options thread)
+rosbuild_add_executable(exp_ndt_feature_reg_node src/exp_ndt_feature_reg_node.cc)
+rosbuild_link_boost(exp_ndt_feature_reg_node signals program_options thread)
 
 
 rosbuild_get_stack_version(ROS_VERSION ros)
