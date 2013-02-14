@@ -1190,3 +1190,18 @@ void SDFTracker::getDenoisedImage(cv::Mat &img)
     depthImage_denoised_->copyTo(img);
     depthDenoised_mutex_.unlock();          
 }
+
+bool SDFTracker::quit(void)
+{
+  return quit_;
+}
+
+
+Eigen::Matrix4d SDFTracker::getCurrentTransformation(void)
+{
+  Eigen::Matrix4d T;
+  transformation_mutex_.lock();
+  T = Transformation_;
+  transformation_mutex_.unlock();
+  return T;
+}

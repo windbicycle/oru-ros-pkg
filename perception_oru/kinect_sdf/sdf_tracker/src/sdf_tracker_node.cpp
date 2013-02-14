@@ -177,7 +177,7 @@ void SDFTrackerNode::depthCallback(const sensor_msgs::Image::ConstPtr& msg)
   
   if(skip_frames_ < 3){++skip_frames_; return;}
 
-  if(!myTracker_->quit_)
+  if(!myTracker_->quit())
   {
     myTracker_->FuseDepth(bridge->image);
     timestamps_.push_back(ros::Time::now());

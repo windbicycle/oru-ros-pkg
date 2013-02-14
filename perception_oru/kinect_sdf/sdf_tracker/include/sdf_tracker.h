@@ -60,6 +60,7 @@ class SDFTracker
   cv::Mat *depthImage_;
   cv::Mat *depthImage_denoised_;
 
+  boost::mutex transformation_mutex_;
   boost::mutex depth_mutex_;
   boost::mutex depthDenoised_mutex_;
   std::string camera_name_;
@@ -68,6 +69,7 @@ class SDFTracker
   float*** myGrid_; 
   float*** weightArray_;    
   bool first_frame_;
+  bool quit_;
 
   SDF_Parameters parameters_;
 
@@ -78,7 +80,6 @@ class SDFTracker
   void init(SDF_Parameters &parameters);
 
   public:
-  bool quit_;
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   //virtual void subscribeTopic(const std::string topic = std::string("default"));    
   //virtual void advertiseTopic(const std::string topic = std::string("default"));    
@@ -86,14 +87,18 @@ class SDFTracker
   virtual double SDFGradient(const Eigen::Vector4d &location, int dim, int stepSize);
   bool validGradient(const Eigen::Vector4d &location);
   virtual Vector6d EstimatePose(void); 
+  virtual void FuseDepth(const cv::Mat &depth);
+  virtual void Render(void);
+
   cv::Point2d To2D(const Eigen::Vector4d &location, double fx, double fy, double cx, double cy);
   Eigen::Matrix4d Twist(const Vector6d &xi);
   Eigen::Vector4d To3D(int row, int column, double depth, double fx, double fy, double cx, double cy);
-  virtual void FuseDepth(const cv::Mat &depth);
-  virtual void Render(void);
   void saveTriangles(const std::string filename = std::string("triangles.obj"));
-  void getDenoisedImage(cv::Mat &img); 
   
+  void getDenoisedImage(cv::Mat &img); 
+  Eigen::Matrix4d getCurrentTransformation(void);
+  bool quit(void);
+
   SDFTracker();
   SDFTracker(SDF_Parameters &parameters);
   virtual ~SDFTracker();    
