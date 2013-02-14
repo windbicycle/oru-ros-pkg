@@ -10,6 +10,18 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #set(ROS_BUILD_TYPE RelWithDebInfo)
 
 rosbuild_init()
+find_package(LibXml2 REQUIRED)
+include_directories(${LIBXML2_INCLUDE_DIR})
+ADD_DEFINITIONS(-DLINUX_OS)
+find_package(OpenGL REQUIRED)
+find_package(GLU REQUIRED)
+find_package(GLUT REQUIRED)
+find_package(JPEG REQUIRED)
+include_directories(${JPEG_INCLUDE_DIR})
+include_directories(${GLUT_INCLUDE_DIR})
+include_directories(${OPENGL_INCLUDE_DIR})
+
+FIND_PACKAGE(MRPT REQUIRED graphslam;gui)
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -20,32 +32,13 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_genmsg()
 #uncomment if you have defined services
 #rosbuild_gensrv()
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules/")
-
-#To use pangolin
-FIND_PACKAGE(Pangolin REQUIRED)
-FIND_PACKAGE(FREEGLUT REQUIRED)
-INCLUDE_DIRECTORIES(${Pangolin_INCLUDE_DIR})
-## Find required dependencies
-FIND_PACKAGE(OpenGL REQUIRED QUIET)
-FIND_PACKAGE(GLEW REQUIRED)
-## Apply required dependencies settings
-LIST(APPEND LINK_LIBS "${OPENGL_LIBRARIES};${GLEW_LIBRARY};${Pangolin_LIBRARY};${FREEGLUT_LIBRARY};${OPENGL_LIBRARIES}" )
-LIST(APPEND LIB_DIRS  "${OPENGL_LIBRARY_DIR};${GLEW_LIBRARY_DIR};${Pangolin_LIBRARY_DIRS}" )
-LINK_DIRECTORIES(${LIB_DIRS})
-MESSAGE(STATUS "Found Pangolin: ${Pangolin_LIBRARY}")
-MESSAGE(STATUS "link dirs: ${LIB_DIRS}")
-MESSAGE(STATUS "link libs: ${LINK_LIBS}")
-
-######################################################################
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_executable(example examples/example.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
-
-#LINK_LIBRARIES(${LINK_LIBS})
-rosbuild_add_executable(ndt_visualiser src/fromFile.cpp)
 rosbuild_add_boost_directories()
-rosbuild_link_boost(ndt_visualiser filesystem system thread)
-target_link_libraries(ndt_visualiser ${LINK_LIBS})
+
+#common commands for building c++ executables and libraries
+rosbuild_add_library(${PROJECT_NAME} src/CMyEllipsoid.cpp)
+target_link_libraries(${PROJECT_NAME} ${LIBXML2_LIBRARIES} ${GLUT_LIBRARIES} ${JPEG_LIBRARIES} ${OPENGL_LIBRARIES} ${MRPT_LIBS})
+
+#target_link_libraries(${PROJECT_NAME} another_library)
+#rosbuild_add_boost_directories()
+#rosbuild_link_boost(${PROJECT_NAME} thread)
+#target_link_libraries(example ${PROJECT_NAME})

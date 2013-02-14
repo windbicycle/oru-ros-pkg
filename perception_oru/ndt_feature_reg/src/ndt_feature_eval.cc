@@ -321,7 +321,7 @@ int main(int argc, char** argv)
 
             if (visualize)
                 viewKeypointMatches(&proc, delay_vis);
-            proc.trimNbFrames(max_nb_frames);
+            //proc.trimNbFrames(max_nb_frames);
 
             file_times << t2-t1 <<", ";
         }
@@ -330,6 +330,7 @@ int main(int argc, char** argv)
     file_times<<"];\n";
 //#endif
     // Write out the transformations
+    cerr<<"sizes: "<<associations.size()<<" "<<transformVector.size()<<std::endl;
     assert(associations.size() == transformVector.size());
     Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> global_transform;
     global_transform.setIdentity();

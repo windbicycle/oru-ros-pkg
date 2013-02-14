@@ -1,26 +1,26 @@
 # # This is called from generate_all_results.sh from each data directory, place all calls to generate results files here
 
 # evaluation of different support sizes.
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=2 --output s4eval1_s2.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=4 --output s4eval1_s4.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=6 --output s4eval1_s6.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=8 --output s4eval1_s8.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=10 --output s4eval1_s10.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=12 --output s4eval1_s12.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=14 --output s4eval1_s14.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=2 --output s4eval1_s2.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=4 --output s4eval1_s4.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=6 --output s4eval1_s6.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=8 --output s4eval1_s8.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=10 --output s4eval1_s10.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=12 --output s4eval1_s12.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=14 --output s4eval1_s14.txt
 rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=16 --output s4eval1_s16.txt
 rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=18 --output s4eval1_s18.txt
 rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=20 --output s4eval1_s20.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=22 --output s4eval1_s22.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=24 --output s4eval1_s24.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=26 --output s4eval1_s26.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=28 --output s4eval1_s28.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=30 --output s4eval1_s30.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=32 --output s4eval1_s32.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=34 --output s4eval1_s34.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=36 --output s4eval1_s36.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=38 --output s4eval1_s38.txt
-rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=40 --output s4eval1_s40.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=22 --output s4eval1_s22.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=24 --output s4eval1_s24.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=26 --output s4eval1_s26.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=28 --output s4eval1_s28.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=30 --output s4eval1_s30.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=32 --output s4eval1_s32.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=34 --output s4eval1_s34.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=36 --output s4eval1_s36.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=38 --output s4eval1_s38.txt
+#rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=40 --output s4eval1_s40.txt
 
 
 # rosrun ndt_feature_reg ndt_feature_eval --association association.txt --img_scale 0.25 --detector_thresh=200 --support_size=20 --output s4ransac_s20.txt --skip_matching
