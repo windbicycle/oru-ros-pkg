@@ -1097,7 +1097,7 @@ SDFTracker::EstimatePose(void)
 void 
 SDFTracker::Render(void)
 {
-  double minStep = parameters_.resolution/4;
+  //double minStep = parameters_.resolution/4;
   cv::Mat depthImage_out(parameters_.image_height,parameters_.image_width,CV_32FC1);
   cv::Mat preview(parameters_.image_height,parameters_.image_width,CV_8UC3);
   
@@ -1117,21 +1117,21 @@ SDFTracker::Render(void)
       Eigen::Vector4d p = expmap*To3D(u,v,1.0,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy) - camera;
       p.normalize();
             
-      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.8 : parameters_.Dmax;
+      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.7 : parameters_.Dmax;
       
       double scaling_prev=0;
       int steps=0;
       double D = parameters_.resolution;
-      while(steps<parameters_.raycast_steps && scaling < max_ray_length)
+      while(steps<parameters_.raycast_steps && scaling < max_ray_length && !hit)
       { 
 
         double D_prev = D;
         D = SDF(camera + p*scaling);
      
-        if(D < minStep && D_prev > 0)
+        if(D < 0.0)
         {
-          scaling = scaling_prev - (scaling-scaling_prev) * D_prev /
-                                   ( D - D_prev);
+          scaling = scaling_prev + (scaling-scaling_prev)*D_prev/(D_prev - D);
+
           hit = true;
           Eigen::Vector4d normal_vector = Eigen::Vector4d::Zero();
  
@@ -1152,7 +1152,7 @@ SDFTracker::Render(void)
           break;
         }
         scaling_prev = scaling;
-        scaling += D;  
+        scaling += std::max(parameters_.resolution,D);  
         ++steps;        
       }//ray
       if(!hit)     
