@@ -70,21 +70,20 @@ class SDFTracker
   float*** weightArray_;    
   bool first_frame_;
   bool quit_;
-
   SDF_Parameters parameters_;
-
   std::ofstream triangle_stream_;
   // functions 
   Eigen::Vector3d VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,double valp1, double valp2);
   void marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron);
-  void init(SDF_Parameters &parameters);
+  virtual void init(SDF_Parameters &parameters);
+  virtual void deleteGrids(void);
 
   public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  //virtual void subscribeTopic(const std::string topic = std::string("default"));    
-  //virtual void advertiseTopic(const std::string topic = std::string("default"));    
   virtual double SDF(const Eigen::Vector4d &location);
   virtual double SDFGradient(const Eigen::Vector4d &location, int dim, int stepSize);
+  virtual void saveSDF(const std::string &filename = std::string("sdf_volume.vti"));
+  virtual void loadSDF(const std::string &filename);   
   bool validGradient(const Eigen::Vector4d &location);
   virtual Vector6d EstimatePose(void); 
   virtual void FuseDepth(const cv::Mat &depth);

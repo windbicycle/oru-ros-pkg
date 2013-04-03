@@ -6,23 +6,17 @@
 
 #define EIGEN_NO_DEBUG
 
-//#include <sdf_tracker.h>
 #include <sdf_tracker.h>
 
 class SDFTrackerNode
 {
 public:
   SDFTrackerNode(SDF_Parameters &parameters);
-  virtual ~SDFTrackerNode() {
-      if(myTracker_ != NULL) 
-      {
-	  delete myTracker_;
-      }
-  }
-  void subscribeTopic(const std::string topic = std::string("default"));    
-  void advertiseTopic(const std::string topic = std::string("default"));    
-  void rgbCallback(const sensor_msgs::Image::ConstPtr& msg);
-  void depthCallback(const sensor_msgs::Image::ConstPtr& msg);
+  virtual ~SDFTrackerNode();
+ void subscribeTopic(const std::string topic = std::string("default"));    
+ void advertiseTopic(const std::string topic = std::string("default"));    
+ void rgbCallback(const sensor_msgs::Image::ConstPtr& msg);
+ void depthCallback(const sensor_msgs::Image::ConstPtr& msg);
 
 private:
   int skip_frames_;
@@ -39,12 +33,15 @@ private:
   
   ros::Timer heartbeat_depth_;
   std::string camera_name_;
+  std::string loadVolume_;
 
   bool depth_registered_;
   bool use_texture_;
   bool makeTris_;
+  bool makeVolume_;
   void publishDepthDenoisedImage(const ros::TimerEvent& event); 
 };
+
 
 SDFTrackerNode::SDFTrackerNode(SDF_Parameters &parameters)
 {
@@ -55,7 +52,9 @@ SDFTrackerNode::SDFTrackerNode(SDF_Parameters &parameters)
   //node specific parameters
   nh_.param("depth_registered", depth_registered_, false);
   nh_.param<std::string>("c_name", camera_name_,"camera");
+  nh_.param<std::string>("LoadVolume", loadVolume_,"none");
   nh_.param("OutputTriangles",makeTris_, false);
+  nh_.param("OutputVolume",makeVolume_, false);
   nh_.param("UseTexture",use_texture_, false);
 
   //parameters used for the SDF tracker
@@ -81,8 +80,50 @@ SDFTrackerNode::SDFTrackerNode(SDF_Parameters &parameters)
 
   myTracker_ = new SDFTracker(myParameters_);
 
+  //if this is how you named your file, consider a career as a lottery-winner or password-cracker.
+  if(loadVolume_.compare(std::string("none"))!=0) 
+  {
+    myTracker_->loadSDF(loadVolume_); 
+  }  
+  
   skip_frames_ = 0;
 }
+
+SDFTrackerNode::~SDFTrackerNode()
+{
+  if(myTracker_ != NULL) 
+  {
+    delete myTracker_;
+    //parameters used for the SDF tracker Node 
+    nh_.deleteParam("depth_registered");
+    nh_.deleteParam("c_name");
+    nh_.deleteParam("LoadVolume");
+    nh_.deleteParam("OutputTriangles");
+    nh_.deleteParam("OutputVolume");
+    nh_.deleteParam("UseTexture");
+    //parameters used for the SDF tracker
+    nh_.deleteParam("ImageWidth");
+    nh_.deleteParam("ImageHeight"); 
+    nh_.deleteParam("InteractiveMode");
+    nh_.deleteParam("MaxWeight");
+    nh_.deleteParam("CellSize");
+    nh_.deleteParam("GridSizeX");
+    nh_.deleteParam("GridSizeY");
+    nh_.deleteParam("GridSizeZ");
+    nh_.deleteParam("PositiveTruncationDistance");
+    nh_.deleteParam("NegativeTruncationDistance");
+    nh_.deleteParam("RobustStatisticCoefficient");
+    nh_.deleteParam("Regularization");
+    nh_.deleteParam("MinPoseChangeToFuseData");
+    nh_.deleteParam("ConvergenceCondition");
+    nh_.deleteParam("MaximumRaycastSteps");
+    nh_.deleteParam("FocalLengthX");
+    nh_.deleteParam("FocalLengthY");
+    nh_.deleteParam("CenterPointX");
+    nh_.deleteParam("CenterPointY");
+  }
+}
+
 
 void
 SDFTrackerNode::subscribeTopic(const std::string topic)
@@ -93,7 +134,7 @@ SDFTrackerNode::subscribeTopic(const std::string topic)
 
   if(depth_registered_)
   {
-    if(topic=="default")
+    if(topic.compare(std::string("default")) == 0)
     {
       subscribe_topic_depth = camera_name_+"/depth_registered/image";
       subscribe_topic_color = camera_name_+"/rgb/image_color";
@@ -104,7 +145,7 @@ SDFTrackerNode::subscribeTopic(const std::string topic)
   }
   else
   {
-    if(topic=="default")
+    if(topic.compare(std::string("default")) == 0)
     { 
       subscribe_topic_depth = camera_name_+"/depth/image";
       subscribe_topic_color = camera_name_+"/rgb/image_color";
@@ -121,12 +162,13 @@ SDFTrackerNode::advertiseTopic(const std::string topic)
 
   if(depth_registered_)
   {
-    if(topic=="default") advertise_topic = "/"+camera_name_+"/depth_registered/image_denoised";
+    if(topic.compare(std::string("default")) == 0) advertise_topic = "/"+camera_name_+"/depth_registered/image_denoised";
+    
     depth_publisher_ = n_.advertise<sensor_msgs::Image>(advertise_topic, 10); 
   }
   else
   {
-    if(topic == "default") advertise_topic = "/"+camera_name_+"/depth/image_denoised";
+    if(topic.compare(std::string("default")) == 0) advertise_topic = "/"+camera_name_+"/depth/image_denoised";
     depth_publisher_ = n_.advertise<sensor_msgs::Image>( advertise_topic ,10); 
   }
 
@@ -184,7 +226,12 @@ void SDFTrackerNode::depthCallback(const sensor_msgs::Image::ConstPtr& msg)
   }
   else 
   {
-    if(makeTris_) myTracker_->saveTriangles();
+    if(makeTris_)
+      myTracker_->saveTriangles();
+  
+    if(makeVolume_)
+      myTracker_->saveSDF();
+  
     ros::shutdown();
   }
 }
@@ -196,14 +243,11 @@ int main( int argc, char* argv[] )
     ros::init(argc, argv, "sdf_tracker_node");
     
     SDF_Parameters param;
-    //SDFTracker MyTracker;
     SDFTrackerNode MyTrackerNode(param);
     MyTrackerNode.subscribeTopic();
     MyTrackerNode.advertiseTopic();
 
     ros::spin();
     
-
-
     return 0;
 }
