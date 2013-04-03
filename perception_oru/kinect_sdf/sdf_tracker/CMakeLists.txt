@@ -7,7 +7,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-set(ROS_BUILD_TYPE RelWithDebInfo)
+set(ROS_BUILD_TYPE Release)
 
 rosbuild_init()
 
@@ -19,6 +19,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 find_package(OpenCV REQUIRED)
 find_package(Eigen REQUIRED)
 include_directories(${Eigen_INCLUDE_DIRS})
+include_directories(/usr/include/vtk-5.8)
 
 include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 
@@ -29,7 +30,7 @@ add_definitions(${OPENCV_DEFINITIONS})
 rosbuild_add_library(${PROJECT_NAME} src/sdf_tracker.cpp)
 rosbuild_add_executable(sdf_tracker_node src/sdf_tracker_node.cpp)
 
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} vtkIO)
 rosbuild_add_openmp_flags(${PROJECT_NAME})
 
 target_link_libraries(sdf_tracker_node ${PROJECT_NAME} ${OpenCV_LIBS})

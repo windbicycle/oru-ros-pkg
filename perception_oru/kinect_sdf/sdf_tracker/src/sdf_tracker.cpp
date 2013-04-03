@@ -7,6 +7,13 @@
 #include <Eigen/Geometry>
 #include <unsupported/Eigen/MatrixFunctions>
 
+#include <vtkImageData.h>
+#include <vtkFloatArray.h>
+#include <vtkXMLImageDataWriter.h>
+#include <vtkXMLImageDataReader.h>
+#include <vtkPointData.h>
+#include <vtkSmartPointer.h>
+
 #include <opencv2/core/core.hpp>
 
 #include <time.h>
@@ -52,28 +59,9 @@ SDFTracker::SDFTracker(SDF_Parameters &parameters)
 
 SDFTracker::~SDFTracker()
 {
-  for (int i = 0; i < parameters_.XSize; ++i)
-  {
-    for (int j = 0; j < parameters_.YSize; ++j)
-    {
-      if (myGrid_[i][j]!=NULL)
-      delete[] myGrid_[i][j];
-
-      if (weightArray_[i][j]!=NULL)
-      delete[] weightArray_[i][j];
-
-    }
-     
-    if (myGrid_[i]!=NULL)
-    delete[] myGrid_[i];
-
-    if (weightArray_[i]!=NULL)
-    delete[] weightArray_[i];   
-  }
-
-  delete[] myGrid_;
-  delete[] weightArray_;  
   
+  this->deleteGrids();
+
   for (int i = 0; i < parameters_.image_height; ++i)
   {
     if ( validityMask_[i]!=NULL)
@@ -152,6 +140,31 @@ void SDFTracker::init(SDF_Parameters &parameters)
   }
 };
 
+void SDFTracker::deleteGrids(void)
+{
+  for (int i = 0; i < parameters_.XSize; ++i)
+  {
+    for (int j = 0; j < parameters_.YSize; ++j)
+    {
+      if (myGrid_[i][j]!=NULL)
+      delete[] myGrid_[i][j];
+
+      if (weightArray_[i][j]!=NULL)
+      delete[] weightArray_[i][j];
+
+    }
+     
+    if (myGrid_[i]!=NULL)
+    delete[] myGrid_[i];
+
+    if (weightArray_[i]!=NULL)
+    delete[] weightArray_[i];   
+  }
+
+  delete[] myGrid_;
+  delete[] weightArray_;  
+
+}
 
 void SDFTracker::saveTriangles(const std::string filename)
 {
@@ -268,54 +281,8 @@ SDFTracker::validGradient(const Eigen::Vector4d &location)
   K                                                */
 
   float eps = 10e-9; 
-//   double i,j,k;
-//   modf(location(0)/parameters_.resolution + parameters_.XSize/2, &i);
-//   modf(location(1)/parameters_.resolution + parameters_.YSize/2, &j);  
-//   modf(location(2)/parameters_.resolution + parameters_.ZSize/2, &k);
-  
-//   if(std::isnan(i) || std::isnan(j) || std::isnan(k)) return false;
 
-//   int I = int(i)-1; int J = int(j)-1;   int K = int(k)-1;  
-  
-//   if(I>=parameters_.XSize-4 || J>=parameters_.YSize-3 || K>=parameters_.ZSize-3 || I<=1 || J<=1 || K<=1)return false;
-
-//   float* D10 = &myGrid_[I+1][J+0][K];
-//   float* D20 = &myGrid_[I+2][J+0][K];
- 
-//   float* D01 = &myGrid_[I+0][J+1][K];
-//   float* D11 = &myGrid_[I+1][J+1][K];
-//   float* D21 = &myGrid_[I+2][J+1][K];
-//   float* D31 = &myGrid_[I+3][J+1][K];
-  
-//   float* D02 = &myGrid_[I+0][J+2][K];
-//   float* D12 = &myGrid_[I+1][J+2][K];
-//   float* D22 = &myGrid_[I+2][J+2][K];
-//   float* D32 = &myGrid_[I+3][J+2][K];
-
-//   float* D13 = &myGrid_[I+1][J+3][K];
-//   float* D23 = &myGrid_[I+2][J+3][K];
-
-
-//   if( fabsf(D10[1]-parameters_.Dmax) < eps || fabsf(D10[2]-parameters_.Dmax) < eps || 
-//       fabsf(D20[1]-parameters_.Dmax) < eps || fabsf(D20[2]-parameters_.Dmax) < eps || 
-      
-//       fabsf(D01[1]-parameters_.Dmax) < eps || fabsf(D01[2]-parameters_.Dmax) < eps ||
-//       fabsf(D11[0]-parameters_.Dmax) < eps || fabsf(D11[1]-parameters_.Dmax) < eps || fabsf(D11[2]-parameters_.Dmax) < eps || fabsf(D11[3]-parameters_.Dmax) < eps ||
-//       fabsf(D21[0]-parameters_.Dmax) < eps || fabsf(D21[1]-parameters_.Dmax) < eps || fabsf(D21[2]-parameters_.Dmax) < eps || fabsf(D21[3]-parameters_.Dmax) < eps ||
-//       fabsf(D31[1]-parameters_.Dmax) < eps || fabsf(D31[2]-parameters_.Dmax) < eps ||
-      
-//       fabsf(D02[1]-parameters_.Dmax) < eps || fabsf(D02[2]-parameters_.Dmax) < eps ||
-//       fabsf(D12[0]-parameters_.Dmax) < eps || fabsf(D12[1]-parameters_.Dmax) < eps || fabsf(D12[2]-parameters_.Dmax) < eps || fabsf(D12[3]-parameters_.Dmax) < eps ||
-//       fabsf(D22[0]-parameters_.Dmax) < eps || fabsf(D22[1]-parameters_.Dmax) < eps || fabsf(D22[2]-parameters_.Dmax) < eps || fabsf(D22[3]-parameters_.Dmax) < eps ||
-//       fabsf(D32[1]-parameters_.Dmax) < eps || fabsf(D32[2]-parameters_.Dmax) < eps ||
-      
-//       fabsf(D13[1]-parameters_.Dmax) < eps || fabsf(D13[2]-parameters_.Dmax) < eps ||
-//       fabsf(D23[1]-parameters_.Dmax) < eps || fabsf(D23[2]-parameters_.Dmax) < eps 
-//       ) return false;
-//   else return true;
-// };
-
- double i,j,k;
+  double i,j,k;
   modf(location(0)/parameters_.resolution + parameters_.XSize/2, &i);
   modf(location(1)/parameters_.resolution + parameters_.YSize/2, &j);  
   modf(location(2)/parameters_.resolution + parameters_.ZSize/2, &k);
@@ -411,7 +378,7 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
           /   |   \
          /    |    \
         /     |     \
-       +-------------+ 1
+       +------|------+ 1
       3 \     |     /
          \    |    /
           \   |   /
@@ -957,7 +924,6 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
 };
 
 
-
 double 
 SDFTracker::SDF(const Eigen::Vector4d &location)
 {
@@ -1204,4 +1170,109 @@ Eigen::Matrix4d SDFTracker::getCurrentTransformation(void)
   T = Transformation_;
   transformation_mutex_.unlock();
   return T;
+}
+
+void SDFTracker::saveSDF(const std::string &filename)
+{
+
+// http://www.vtk.org/Wiki/VTK/Examples/Cxx/IO/WriteVTI
+
+  //vtkImageData *sdf_volume = vtkImageData::New();
+  
+  vtkSmartPointer<vtkImageData> sdf_volume = vtkSmartPointer<vtkImageData>::New();
+
+  sdf_volume->SetDimensions(parameters_.XSize,parameters_.YSize,parameters_.ZSize);
+  sdf_volume->SetOrigin(  parameters_.resolution*parameters_.XSize/2,
+                          parameters_.resolution*parameters_.YSize/2,
+                          parameters_.resolution*parameters_.ZSize/2);
+   
+  float spc = parameters_.resolution;
+  sdf_volume->SetSpacing(spc,spc,spc);
+  
+  vtkSmartPointer<vtkFloatArray> distance = vtkSmartPointer<vtkFloatArray>::New();
+  vtkSmartPointer<vtkFloatArray> weight = vtkSmartPointer<vtkFloatArray>::New();
+  
+  int numCells = parameters_.ZSize * parameters_.YSize * parameters_.XSize;
+
+  distance->SetNumberOfTuples(numCells);
+  weight->SetNumberOfTuples(numCells);
+
+  int i, j, k, offset_k, offset_j;
+  for(k=0;k < parameters_.ZSize; ++k)
+  {
+    offset_k = k*parameters_.XSize*parameters_.YSize;
+    for(j=0; j<parameters_.YSize; ++j)
+    {
+      offset_j = j*parameters_.XSize;
+      for(i=0; i<parameters_.XSize; ++i)
+      {
+        
+        int offset = i + offset_j + offset_k;
+        distance->SetValue(offset, myGrid_[i][j][k]);
+        weight->SetValue(offset, weightArray_[i][j][k]);
+
+     }
+   }
+ }
+
+  sdf_volume->GetPointData()->AddArray(distance);
+  distance->SetName("Distance");
+
+  sdf_volume->GetPointData()->AddArray(weight);
+  weight->SetName("Weight");
+
+  vtkSmartPointer<vtkXMLImageDataWriter> writer =
+  vtkSmartPointer<vtkXMLImageDataWriter>::New();
+  writer->SetFileName(filename.c_str());
+
+  writer->SetInput(sdf_volume);
+  writer->Write();
+}
+
+void SDFTracker::loadSDF(const std::string &filename)
+{
+ 
+  // //double valuerange[2];
+  vtkXMLImageDataReader *reader  = vtkXMLImageDataReader::New();
+  reader->SetFileName(filename.c_str());
+  // //reader->GetOutput()->GetScalarRange(valuerange);
+  reader->Update();
+  reader->UpdateWholeExtent();
+  reader->UpdateInformation();
+
+  vtkSmartPointer<vtkImageData> sdf_volume = vtkSmartPointer<vtkImageData>::New();
+  sdf_volume = reader->GetOutput();
+
+  //will segfault if not specified
+  int* sizes = sdf_volume->GetDimensions();
+  parameters_.XSize = sizes[0];
+  parameters_.YSize = sizes[1];
+  parameters_.ZSize = sizes[2];
+
+  double* cell_sizes = sdf_volume->GetSpacing();
+  parameters_.resolution = float(cell_sizes[0]);  //TODO add support for different scalings along x,y,z. 
+
+  this->deleteGrids();
+  this->init(parameters_);
+
+  vtkFloatArray *distance =vtkFloatArray::New();
+  vtkFloatArray *weight =vtkFloatArray::New();
+  distance = (vtkFloatArray *)reader->GetOutput()->GetPointData()->GetScalars("Distance");
+  weight = (vtkFloatArray *)reader->GetOutput()->GetPointData()->GetScalars("Weight");
+
+  int i, j, k, offset_k, offset_j;
+  for(k=0;k < parameters_.ZSize; ++k)
+  {
+    offset_k = k*parameters_.XSize*parameters_.YSize;
+    for(j=0; j<parameters_.YSize; ++j)
+    {
+      offset_j = j*parameters_.XSize;
+      for(i=0; i<parameters_.XSize; ++i)
+      {
+        int offset = i + offset_j + offset_k;
+        myGrid_[i][j][k] = distance->GetValue(offset);
+        weightArray_[i][j][k] = weight->GetValue(offset);        
+      }
+    }
+  }
 }
