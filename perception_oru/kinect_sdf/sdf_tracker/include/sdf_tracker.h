@@ -80,25 +80,62 @@ class SDFTracker
 
   public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  
+  /// Returns the signed distance at the given location 
   virtual double SDF(const Eigen::Vector4d &location);
+
+  /// Computes the gradient of the SDF at the location, along dimension dim, with central differences. stepSize chooses how far away from the central cell the samples should be taken before computing the difference
   virtual double SDFGradient(const Eigen::Vector4d &location, int dim, int stepSize);
+
+  /// Saves the current volume as a VTK image.
   virtual void saveSDF(const std::string &filename = std::string("sdf_volume.vti"));
-  virtual void loadSDF(const std::string &filename);   
+  
+  /// Loads a volume from a VTK image. The grid is resized to fit the loaded volume
+  virtual void loadSDF(const std::string &filename);
+
+  /// Checks the validity of the gradient of the SDF at the current point   
   bool validGradient(const Eigen::Vector4d &location);
+
+  /// Sets the current depth map
+  virtual void setDepth(const cv::Mat &depth);
+  
+  /// Estimates the incremental pose change vector from the current pose, relative to the current depth map
   virtual Vector6d EstimatePose(void); 
+
+  /// Fuses the current depth map into the TSDF volume, the current depth map is set using setDepth 
+  virtual void FuseDepth(void);
+
+  /// Estimates the pose, fuses the given depth map and renders a virtual depth map (all in one) 
   virtual void FuseDepth(const cv::Mat &depth);
+
+  /// Render a virtual depth map. If interactive mode is true (see class SDF_Parameters) it will also display a preview window with estimated normal vectors
   virtual void Render(void);
 
+  /// Finds the inverse projection of a 3D point to the image plane, given camera parameters
   cv::Point2d To2D(const Eigen::Vector4d &location, double fx, double fy, double cx, double cy);
-  Eigen::Matrix4d Twist(const Vector6d &xi);
+
+  /// Projects a depth map pixel into a 3D point, given camera parameters.
   Eigen::Vector4d To3D(int row, int column, double depth, double fx, double fy, double cx, double cy);
+  
+  /// Computes an antisymmetric matrix based on the pose change vector. To get a transformation matrix from this, you have to call Twist(xi).exp().
+  Eigen::Matrix4d Twist(const Vector6d &xi);
+
+  /// Dumps the zero level set as triangles to an OBJ file.
   void saveTriangles(const std::string filename = std::string("triangles.obj"));
   
+  /// gets the denoised image produced by Render.
   void getDenoisedImage(cv::Mat &img); 
+
+  /// gets the current transformation matrix
   Eigen::Matrix4d getCurrentTransformation(void);
+  
+  /// In interactive sessions, this function returns true at any point after a user has pressed "q" or <ESC> in the render window. 
   bool quit(void);
 
+  /// Constructor with default parameters
   SDFTracker();
+
+  /// Constructor with custom parameters
   SDFTracker(SDF_Parameters &parameters);
   virtual ~SDFTracker();    
 };

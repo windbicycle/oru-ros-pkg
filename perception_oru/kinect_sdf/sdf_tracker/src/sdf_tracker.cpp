@@ -822,6 +822,88 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
   }
 };
 
+void
+SDFTracker::setDepth(const cv::Mat &depth)
+{
+  depth_mutex_.lock();
+  depth.copyTo(*depthImage_);
+  depth_mutex_.unlock();
+
+  for(int row=0; row<depthImage_->rows-0; ++row)
+  { 
+    const float* Drow = depthImage_->ptr<float>(row);
+    #pragma omp parallel for 
+    for(int col=0; col<depthImage_->cols-0; ++col)
+    { 
+      if(!std::isnan(Drow[col]) && Drow[col]>0.4)
+      {
+      validityMask_[row][col]=true;
+      }else
+      {
+        validityMask_[row][col]=false;
+      }
+    }
+  }
+}
+
+void 
+SDFTracker::FuseDepth(void)
+{
+   
+  Eigen::Matrix4d camToWorld = Transformation_.inverse();
+  Eigen::Vector4d camera = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
+  
+  //Main 3D reconstruction loop
+  for(int x = 0; x<parameters_.XSize; ++x)
+  { 
+  #pragma omp parallel for \
+  shared(x)
+    for(int y = 0; y<parameters_.YSize;++y)
+    { 
+      float* previousD = &myGrid_[x][y][0];
+      float* previousW = &weightArray_[x][y][0];      
+      for(int z = 0; z<parameters_.ZSize; ++z)
+      {           
+        //define a ray and point it into the center of a node
+        Eigen::Vector4d ray((x-parameters_.XSize/2)*parameters_.resolution, (y- parameters_.YSize/2)*parameters_.resolution , (z- parameters_.ZSize/2)*parameters_.resolution, 1);        
+        ray = camToWorld*ray;
+        if(ray(2)-camera(2) < 0) continue;
+        
+        cv::Point2d uv;
+        uv=To2D(ray,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy );
+        
+        int j=floor(uv.x);
+        int i=floor(uv.y);      
+        
+        //if the projected coordinate is within image bounds
+        if(i>0 && i<depthImage_->rows-1 && j>0 && j <depthImage_->cols-1 && validityMask_[i][j] &&    
+            validityMask_[i-1][j] && validityMask_[i][j-1])
+        {
+          const float* Di = depthImage_->ptr<float>(i);
+          double Eta; 
+          const float W=1/((1+Di[j])*(1+Di[j]));
+            
+          Eta=(double(Di[j])-ray(2));       
+            
+          if(Eta >= parameters_.Dmin)
+          {
+              
+            double D = std::min(Eta,parameters_.Dmax);
+                
+            previousD[z] = (previousD[z] * previousW[z] + float(D) * W) /
+                      (previousW[z] + W);
+
+            previousW[z] = std::min(previousW[z] + W , float(parameters_.Wmax));
+
+          }//within visible region 
+        }//within bounds      
+      }//z   
+    }//y
+  }//x
+  return;
+};
+
+
 void 
 SDFTracker::FuseDepth(const cv::Mat& depth)
 {
