@@ -102,6 +102,7 @@ class SDFTracker
   /// Estimates the incremental pose change vector from the current pose, relative to the current depth map
   virtual Vector6d EstimatePose(void); 
 
+
   /// Fuses the current depth map into the TSDF volume, the current depth map is set using setDepth 
   virtual void FuseDepth(void);
 
@@ -128,6 +129,9 @@ class SDFTracker
 
   /// gets the current transformation matrix
   Eigen::Matrix4d getCurrentTransformation(void);
+
+  /// sets the current transformation to the given matrix
+  void setCurrentTransformation(const Eigen::Matrix4d &T); 
   
   /// In interactive sessions, this function returns true at any point after a user has pressed "q" or <ESC> in the render window. 
   bool quit(void);

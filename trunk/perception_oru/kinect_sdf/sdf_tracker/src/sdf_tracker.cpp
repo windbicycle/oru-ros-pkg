@@ -1245,13 +1245,22 @@ bool SDFTracker::quit(void)
 }
 
 
-Eigen::Matrix4d SDFTracker::getCurrentTransformation(void)
+Eigen::Matrix4d 
+SDFTracker::getCurrentTransformation(void)
 {
   Eigen::Matrix4d T;
   transformation_mutex_.lock();
   T = Transformation_;
   transformation_mutex_.unlock();
   return T;
+}
+
+void
+SDFTracker::setCurrentTransformation(const Eigen::Matrix4d &T)
+{
+  transformation_mutex_.lock();
+  Transformation_= T;
+  transformation_mutex_.unlock();
 }
 
 void SDFTracker::saveSDF(const std::string &filename)
