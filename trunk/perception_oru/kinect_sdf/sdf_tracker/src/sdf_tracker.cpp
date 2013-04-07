@@ -23,7 +23,6 @@ SDF_Parameters::SDF_Parameters()
 {  
   image_width = 640;
   image_height = 480;
-  makeTris = false;
   interactive_mode = true;
   Wmax = 64.0;
   resolution = 0.01;
@@ -166,9 +165,8 @@ void SDFTracker::deleteGrids(void)
 
 }
 
-void SDFTracker::saveTriangles(const std::string filename)
+void SDFTracker::makeTriangles(void)
 {
-  triangle_stream_.open(filename.c_str());
   for (int i = 1; i < parameters_.XSize-2; ++i)
   {
     for (int j = 1; j < parameters_.YSize-2; ++j)
@@ -186,28 +184,59 @@ void SDFTracker::saveTriangles(const std::string filename)
       }
     }
   }
-  triangle_stream_.close();
 }
 
-Eigen::Vector3d 
+void SDFTracker::saveTriangles(const std::string filename)
+{
+  std::ofstream triangle_stream;
+  triangle_stream.open(filename.c_str());
+  
+  for (int i = 0; i < triangles_.size()-3; i+=3)
+  {
+    triangle_stream << "v " << triangles_[i](0) << " " << triangles_[i](1) << " " << triangles_[i](2) <<std::endl;
+    triangle_stream << "v " << triangles_[i+1](0) << " " << triangles_[i+1](1) << " " << triangles_[i+1](2) <<std::endl;
+    triangle_stream << "v " << triangles_[i+2](0) << " " << triangles_[i+2](1) << " " << triangles_[i+2](2) <<std::endl; 
+    triangle_stream << "f -1 -2 -3" << std::endl; 
+  }
+  triangle_stream.close();
+}
+
+Eigen::Vector4d 
 SDFTracker::VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,double valp1, double valp2)
 {
   double mu;
-  Eigen::Vector3d p;
-  Eigen::Vector3d p1 = Eigen::Vector3d(p1d(0) , p1d(1), p1d(2) );
-  Eigen::Vector3d p2 = Eigen::Vector3d(p2d(0) , p2d(1), p2d(2) );
+  Eigen::Vector4d p;
 
   if (fabs(iso-valp1) < 0.000001)
-    return(p1);
+    {
+      p <<  p1d(0) - parameters_.XSize/2*parameters_.resolution,
+            p1d(1) - parameters_.YSize/2*parameters_.resolution,
+            p1d(2) - parameters_.ZSize/2*parameters_.resolution; 
+            p1d(3); 
+      return(p);
+    }
   if (fabs(iso-valp2) < 0.000001)
-    return(p2);
+    {
+      p <<  p2d(0) - parameters_.XSize/2*parameters_.resolution,
+            p2d(1) - parameters_.YSize/2*parameters_.resolution,
+            p2d(2) - parameters_.ZSize/2*parameters_.resolution; 
+            p2d(3); 
+      return(p);
+    }
   if (fabs(valp1-valp2) < 0.000001)
-    return(p1);
-  mu = (iso - valp1) / (valp2 - valp1);
-  p(0) = p1d(0) + mu * (p2d(0) - p1d(0));
-  p(1) = p1d(1) + mu * (p2d(1) - p1d(1));
-  p(2) = p1d(2) + mu * (p2d(2) - p1d(2));
+    {
+      p <<  p1d(0) - parameters_.XSize/2*parameters_.resolution,
+            p1d(1) - parameters_.YSize/2*parameters_.resolution,
+            p1d(2) - parameters_.ZSize/2*parameters_.resolution; 
+            p1d(3); 
+      return(p);
+    }
 
+  mu = (iso - valp1) / (valp2 - valp1);
+  p(0) = p1d(0) + mu * (p2d(0) - p1d(0)) - parameters_.XSize/2*parameters_.resolution;
+  p(1) = p1d(1) + mu * (p2d(1) - p1d(1)) - parameters_.YSize/2*parameters_.resolution;
+  p(2) = p1d(2) + mu * (p2d(2) - p1d(2)) - parameters_.ZSize/2*parameters_.resolution;
+  p(3) = 1.0;
   return(p);  
 };
 
@@ -501,17 +530,15 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 1,3,4,6*/
           /*wrong tetrahedrons for this winding: 2,5*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));/**/
         }
         if(tetrahedron == 2 || tetrahedron == 5)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));/**/
         }
       }
       else if(val1 < 0) /*01,13,12*/
@@ -520,17 +547,15 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 2,5*/
           /*wrong tetrahedrons for this winding: 1,3,4,6*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));/**/
         }
         else if(tetrahedron == 1 ||tetrahedron == 3||tetrahedron == 4|| tetrahedron == 6)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));/**/
         }
       }
       else if(val2 < 0) /*02,12,23*/
@@ -539,17 +564,15 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 2,5*/
           /*wrong tetrahedrons for this winding: 1,3,4,6*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));/**/
         }
         else if(tetrahedron == 3||tetrahedron == 1 ||tetrahedron == 4 ||tetrahedron == 6)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));/**/
         }
       }
       else if(val3 < 0) /*03,32,31*/
@@ -558,17 +581,15 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 2,5*/
           /*wrong tetrahedrons for this winding: 1,3,4,6*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V2,val3,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V1,val3,val1).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V3,V2,val3,val2));
+          triangles_.push_back(VertexInterp(0,V3,V1,val3,val1));/**/
         }
         else if(tetrahedron == 1 ||tetrahedron == 3 ||tetrahedron == 4 ||tetrahedron == 6)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V1,val3,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V2,val3,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V3,V1,val3,val1));
+          triangles_.push_back(VertexInterp(0,V3,V2,val3,val2));
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));/**/
         }
       }
       break;
@@ -581,25 +602,21 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 2,5*/
           /*wrong tetrahedrons for this winding: 1,3,4,6*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V1,val3,val1).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V0,val2,val0).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V2,val3,val2).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V3,V1,val3,val1));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V2,V0,val2,val0));
+          triangles_.push_back(VertexInterp(0,V3,V2,val3,val2));/**/
         }
         else if(tetrahedron == 4||tetrahedron == 1 ||tetrahedron == 3 ||tetrahedron == 6)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V1,val3,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V2,val3,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V0,val2,val0).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V3,V1,val3,val1));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V3,V2,val3,val2));
+          triangles_.push_back(VertexInterp(0,V2,V0,val2,val0));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));/**/
         }
       }
       else if(val1 < 0 && val2 < 0) /*13,32,02;02,01,13*/
@@ -608,25 +625,21 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 1,3,4,6*/
           /*wrong tetrahedrons for this winding: 2,5*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V2,val3,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V3,V2,val3,val2));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));/**/
         }
         else if(tetrahedron == 2||tetrahedron == 5)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V2,val3,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V3,V2,val3,val2));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));/**/
         }
       }
       else if(val2 < 0 && val3 < 0)/*03,02,13;13,02,12*/
@@ -635,25 +648,21 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 2,5*/
           /*wrong tetrahedrons for this winding: 1,3,4,6*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));/**/
         }
         else if(tetrahedron == 1 ||tetrahedron == 3 ||tetrahedron == 4 ||tetrahedron == 6)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));/**/
         }
       }
       else if(val0 < 0 && val1 < 0)/*03,02,13;13,02,12*/
@@ -662,25 +671,21 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 1,3,4,6*/
           /*wrong tetrahedrons for this winding: 2,5*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));/**/
         }
         else if(tetrahedron == 2 || tetrahedron == 5 )
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));/**/
         }
       }
       else if(val1 < 0 && val3 < 0)/*01,12,32;32,30,01*/
@@ -689,25 +694,21 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 1,3,4,6*/
           /*wrong tetrahedrons for this winding: 2,5*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V0,val3,val0).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V3,V0,val3,val0));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));/**/
         }
         else if(tetrahedron == 2 ||tetrahedron == 5)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V3,V0,val3,val0).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V3,V0,val3,val0));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));/**/
         }
       }
       else if(val0 < 0 && val2 < 0)/*01,03,32;32,12,01*/
@@ -716,25 +717,21 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 1,3,4,6*/
           /*wrong tetrahedrons for this winding: 2,5*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));/**/
         }
         else if(tetrahedron == 5||tetrahedron == 2)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));/**/
         }
       }
       break;
@@ -747,17 +744,15 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 1,3,4,6*/
           /*wrong tetrahedrons for this winding: 2,5*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));/**/
         }
         else if(tetrahedron == 2 || tetrahedron == 5)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));/**/
         }
       }
       else if(val1 > 0)/*10,12,13*/
@@ -766,17 +761,15 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 2,5*/
           /*wrong tetrahedrons for this winding: 1,3,4,6*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));/**/
         }
         else if(tetrahedron == 1 ||tetrahedron == 3 ||tetrahedron == 4 ||tetrahedron == 6 )
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V2,val1,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V1,val0,val1).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V1,V2,val1,val2));
+          triangles_.push_back(VertexInterp(0,V0,V1,val0,val1));/**/
         }
       }
       else if(val2 > 0) /*20,23,21*/
@@ -785,17 +778,15 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 2,5*/
           /*wrong tetrahedrons for this winding: 1,3,4,6*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V1,val2,val1).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V2,V1,val2,val1));/**/
         } 
         else if(tetrahedron == 1 ||tetrahedron == 3 ||tetrahedron == 4 ||tetrahedron == 6)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V1,val2,val1).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V2,val0,val2).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V2,V1,val2,val1));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V0,V2,val0,val2));/**/
         }
       }
       else if(val3 > 0)/*30,31,32*/
@@ -804,17 +795,15 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
         {
           /*correct tetrahedrons for this winding: 2,5*/
           /*wrong tetrahedrons for this winding: 1,3,4,6*/
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));/**/
         }
         else if(tetrahedron == 3 ||tetrahedron == 1 ||tetrahedron == 4 ||tetrahedron == 6)
         {
-          triangle_stream_<<"v "<< VertexInterp(0,V2,V3,val2,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V1,V3,val1,val3).transpose()<<std::endl;
-          triangle_stream_<<"v "<< VertexInterp(0,V0,V3,val0,val3).transpose()<<std::endl;/**/
-          triangle_stream_<<"f -1 -2 -3" << std::endl;
+          triangles_.push_back(VertexInterp(0,V2,V3,val2,val3));
+          triangles_.push_back(VertexInterp(0,V1,V3,val1,val3));
+          triangles_.push_back(VertexInterp(0,V0,V3,val0,val3));/**/
         }
       }
       break;

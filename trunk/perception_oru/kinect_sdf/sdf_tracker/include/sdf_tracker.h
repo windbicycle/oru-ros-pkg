@@ -20,7 +20,6 @@
 class SDF_Parameters
 {
 public:
-  bool makeTris;
   bool interactive_mode;
   int XSize;
   int YSize;
@@ -71,15 +70,16 @@ class SDFTracker
   bool first_frame_;
   bool quit_;
   SDF_Parameters parameters_;
-  std::ofstream triangle_stream_;
   // functions 
-  Eigen::Vector3d VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,double valp1, double valp2);
+  Eigen::Vector4d VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,double valp1, double valp2);
   void marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron);
   virtual void init(SDF_Parameters &parameters);
   virtual void deleteGrids(void);
 
   public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  std::vector<Eigen::Vector4d> triangles_;
   
   /// Returns the signed distance at the given location 
   virtual double SDF(const Eigen::Vector4d &location);
@@ -121,9 +121,14 @@ class SDFTracker
   /// Computes an antisymmetric matrix based on the pose change vector. To get a transformation matrix from this, you have to call Twist(xi).exp().
   Eigen::Matrix4d Twist(const Vector6d &xi);
 
-  /// Dumps the zero level set as triangles to an OBJ file.
+  /// Runs the Marching Tetrahedrons algorithm. The result is then available in triangles_. Each three consecutive entries in triangles_ represents one triangle.
+  void makeTriangles(void);
+
+  /// Dumps the zero level set as triangles to an OBJ file. saveTriangles must be preceded by a call to makeTriangles.
   void saveTriangles(const std::string filename = std::string("triangles.obj"));
-  
+
+  /// Dumps the zero level set as triangles to an STL file. This method also computes the triangles so there is no need to call makeTriangles.
+  void saveTrianglesSTL(const std::string filename = std::string("triangles.stl"));
   /// gets the denoised image produced by Render.
   void getDenoisedImage(cv::Mat &img); 
 
