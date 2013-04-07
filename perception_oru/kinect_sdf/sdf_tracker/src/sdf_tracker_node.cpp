@@ -227,7 +227,10 @@ void SDFTrackerNode::depthCallback(const sensor_msgs::Image::ConstPtr& msg)
   else 
   {
     if(makeTris_)
+    {
+      myTracker_->makeTriangles();
       myTracker_->saveTriangles();
+    }
   
     if(makeVolume_)
       myTracker_->saveSDF();
