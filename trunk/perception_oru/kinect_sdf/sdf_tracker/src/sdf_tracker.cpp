@@ -48,18 +48,18 @@ SDF_Parameters::~SDF_Parameters()
 
 SDFTracker::SDFTracker() {
     SDF_Parameters myparams = SDF_Parameters();
-    this->init(myparams);
+    this->Init(myparams);
 }
 
 SDFTracker::SDFTracker(SDF_Parameters &parameters)
 {
-  this->init(parameters);
+  this->Init(parameters);
 }
 
 SDFTracker::~SDFTracker()
 {
   
-  this->deleteGrids();
+  this->DeleteGrids();
 
   for (int i = 0; i < parameters_.image_height; ++i)
   {
@@ -76,7 +76,7 @@ SDFTracker::~SDFTracker()
   
 };
 
-void SDFTracker::init(SDF_Parameters &parameters)
+void SDFTracker::Init(SDF_Parameters &parameters)
 {
   parameters_ = parameters;
 
@@ -139,7 +139,7 @@ void SDFTracker::init(SDF_Parameters &parameters)
   }
 };
 
-void SDFTracker::deleteGrids(void)
+void SDFTracker::DeleteGrids(void)
 {
   for (int i = 0; i < parameters_.XSize; ++i)
   {
@@ -165,7 +165,7 @@ void SDFTracker::deleteGrids(void)
 
 }
 
-void SDFTracker::makeTriangles(void)
+void SDFTracker::MakeTriangles(void)
 {
   for (int i = 1; i < parameters_.XSize-2; ++i)
   {
@@ -175,18 +175,18 @@ void SDFTracker::makeTriangles(void)
       {
         Eigen::Vector4d CellOrigin = Eigen::Vector4d(double(i),double(j),double(k),1.0);
         //if(!validGradient(CellOrigin*parameters_.resolution)) continue;
-        /*1*/marchingTetrahedrons(CellOrigin,1);
-        /*2*/marchingTetrahedrons(CellOrigin,2);
-        /*3*/marchingTetrahedrons(CellOrigin,3);
-        /*4*/marchingTetrahedrons(CellOrigin,4);
-        /*5*/marchingTetrahedrons(CellOrigin,5);
-        /*6*/marchingTetrahedrons(CellOrigin,6);
+        /*1*/MarchingTetrahedrons(CellOrigin,1);
+        /*2*/MarchingTetrahedrons(CellOrigin,2);
+        /*3*/MarchingTetrahedrons(CellOrigin,3);
+        /*4*/MarchingTetrahedrons(CellOrigin,4);
+        /*5*/MarchingTetrahedrons(CellOrigin,5);
+        /*6*/MarchingTetrahedrons(CellOrigin,6);
       }
     }
   }
 }
 
-void SDFTracker::saveTriangles(const std::string filename)
+void SDFTracker::SaveTriangles(const std::string filename)
 {
   std::ofstream triangle_stream;
   triangle_stream.open(filename.c_str());
@@ -278,7 +278,7 @@ SDFTracker::To2D(const Eigen::Vector4d &location, double fx, double fy, double c
 };
 
 bool 
-SDFTracker::validGradient(const Eigen::Vector4d &location)
+SDFTracker::ValidGradient(const Eigen::Vector4d &location)
 {
  /* 
  The function tests the current location and its adjacent
@@ -369,7 +369,7 @@ SDFTracker::SDFGradient(const Eigen::Vector4d &location, int stepSize, int dim )
 };
 
 void 
-SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
+SDFTracker::MarchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
 {
   /*
   The following part is adapted from code found at:
@@ -812,7 +812,7 @@ SDFTracker::marchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
 };
 
 void
-SDFTracker::setDepth(const cv::Mat &depth)
+SDFTracker::UpdateDepth(const cv::Mat &depth)
 {
   depth_mutex_.lock();
   depth.copyTo(*depthImage_);
@@ -835,12 +835,22 @@ SDFTracker::setDepth(const cv::Mat &depth)
   }
 }
 
+void
+SDFTracker::UpdatePoints(const std::vector<Eigen::Vector4d,Eigen::aligned_allocator<Eigen::Vector4d> > &Points)
+{
+  points_mutex_.lock();
+  this->Points_ = Points;
+  points_mutex_.unlock();
+}
+
+
 void 
 SDFTracker::FuseDepth(void)
 {
-   
-  Eigen::Matrix4d camToWorld = Transformation_.inverse();
-  Eigen::Vector4d camera = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
+  
+  const float Wslope = 1/(parameters_.Dmax - parameters_.Dmin);
+  Eigen::Matrix4d worldToCam = Transformation_.inverse();
+  Eigen::Vector4d camera = worldToCam * Eigen::Vector4d(0.0,0.0,0.0,1.0);
   
   //Main 3D reconstruction loop
   for(int x = 0; x<parameters_.XSize; ++x)
@@ -855,7 +865,7 @@ SDFTracker::FuseDepth(void)
       {           
         //define a ray and point it into the center of a node
         Eigen::Vector4d ray((x-parameters_.XSize/2)*parameters_.resolution, (y- parameters_.YSize/2)*parameters_.resolution , (z- parameters_.ZSize/2)*parameters_.resolution, 1);        
-        ray = camToWorld*ray;
+        ray = worldToCam*ray;
         if(ray(2)-camera(2) < 0) continue;
         
         cv::Point2d uv;
@@ -870,7 +880,7 @@ SDFTracker::FuseDepth(void)
         {
           const float* Di = depthImage_->ptr<float>(i);
           double Eta; 
-          const float W=1/((1+Di[j])*(1+Di[j]));
+          // const float W=1/((1+Di[j])*(1+Di[j]));
             
           Eta=(double(Di[j])-ray(2));       
             
@@ -878,6 +888,8 @@ SDFTracker::FuseDepth(void)
           {
               
             double D = std::min(Eta,parameters_.Dmax);
+
+            float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
                 
             previousD[z] = (previousD[z] * previousW[z] + float(D) * W) /
                       (previousW[z] + W);
@@ -894,34 +906,135 @@ SDFTracker::FuseDepth(void)
 
 
 void 
+SDFTracker::FusePoints()
+{
+  
+  const float Wslope = 1/(parameters_.Dmax - parameters_.Dmin);
+  const Eigen::Matrix4d camToWorld = Transformation_;
+  const Eigen::Vector4d origin = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
+  const double max_ray_length = 50.0;
+
+  //3D reconstruction loop
+  #pragma omp parallel for 
+  for(int i = 0; i < Points_.size(); ++i)
+  {
+    bool hit = false;    
+
+    Eigen::Vector4d p = camToWorld*Points_.at(i) - origin;
+    
+    if(std::isnan(p(0))) continue;
+    
+    // l is the length of the ray that hits the measured point along p.
+    double l = p.norm();
+    
+    // normalize p to get a unit vector
+    Eigen::Vector4d q = p/l;
+
+    //set initial scaling
+    double scaling = 0.0;
+    double scaling_prev = 0.0;
+    int steps=0;
+    
+    bool belowX, aboveX, belowY, aboveY, belowZ, aboveZ;
+    belowX = aboveX = belowY = aboveY = belowZ = aboveZ = false;
+
+    bool increasingX, increasingY, increasingZ;
+    increasingX = increasingY = increasingZ  = false;
+
+    while(steps<parameters_.raycast_steps && scaling < max_ray_length && !hit)
+    { 
+      //define current and previous raycast locations
+      Eigen::Vector4d location = origin + scaling*q;
+      Eigen::Vector4d location_prev = origin + scaling_prev*q;
+
+      //get the floored grid location
+      double i, j, k;
+      modf(location(0)/parameters_.resolution + parameters_.XSize/2, &i);
+      modf(location(1)/parameters_.resolution + parameters_.YSize/2, &j);  
+      modf(location(2)/parameters_.resolution + parameters_.ZSize/2, &k);
+      int I = int(i); 
+      int J = int(j);
+      int K = int(k);
+
+      //is this grid location less than the first index in any dimension?
+      belowX = (int(i) < 0) ? true : false;
+      belowY = (int(j) < 0) ? true : false;
+      belowZ = (int(k) < 0) ? true : false;
+
+      //is this grid location greater than the laast index in any dimension?
+      aboveX = (int(i) >= parameters_.XSize) ? true : false;
+      aboveY = (int(j) >= parameters_.YSize) ? true : false;
+      aboveZ = (int(k) >= parameters_.ZSize) ? true : false;
+
+      //is the position increasing in any dimension?
+      increasingX = (location(0) > location_prev(0)) ? true : false;
+      increasingY = (location(1) > location_prev(1)) ? true : false;
+      increasingZ = (location(2) > location_prev(2)) ? true : false;
+
+      //Based on the previous queries, has the ray already missed the volume?
+      //current and previous locations are identical when scaling is zero, so "increasing" will likely be false in all Dim.
+      if( ((aboveX && increasingX) || (belowX && !increasingX) ||
+           (aboveY && increasingY) || (belowY && !increasingY) ||
+           (aboveZ && increasingZ) || (belowZ && !increasingZ) ) && (scaling-1e-6 > 0.0)) 
+      {
+        hit = true;
+      }
+
+      //the ray may not have missed, but no update can be made at this location.
+      if( aboveX || aboveY || aboveZ || belowX || belowY || belowZ )
+      {
+        //update scaling factors and skip forward
+        scaling_prev = scaling;
+        scaling += parameters_.resolution;  
+        ++steps;  
+        continue;
+      }
+        Eigen::Vector4d cellVector = Eigen::Vector4d( (i-parameters_.XSize/2)*parameters_.resolution, 
+                                                      (j-parameters_.YSize/2)*parameters_.resolution, 
+                                                      (k-parameters_.ZSize/2)*parameters_.resolution, 1.0) - origin;
+        // cell update: 
+        // a = point - origin        
+        // b = cell - origin        
+        // D = a.norm - b.norm
+
+      double Eta = l - cellVector.norm();
+
+      //maximum "penetration" depth not yet achieved - keep updating    
+      if(Eta > parameters_.Dmin)
+      {
+        
+        double D = std::min(Eta,parameters_.Dmax);
+
+        float* previousD = &myGrid_[I][J][K];
+        float* previousW = &weightArray_[I][J][K];   
+
+        
+        float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
+
+        previousD[0] = (previousD[0] * previousW[0] + float(D) * W) / (previousW[0] + W);
+        previousW[0] = std::min(previousW[0] + W , float(parameters_.Wmax));
+
+      } 
+      else hit = true;
+      scaling_prev = scaling;
+      scaling += parameters_.resolution;  
+      ++steps;        
+    }//ray
+  }//points
+  return;
+};
+
+
+void 
 SDFTracker::FuseDepth(const cv::Mat& depth)
 {
- 
-  depth_mutex_.lock();
-  depth.copyTo(*depthImage_);
-  depth_mutex_.unlock();
-
-  for(int row=0; row<depthImage_->rows-0; ++row)
-  { 
-    const float* Drow = depthImage_->ptr<float>(row);
-    #pragma omp parallel for 
-    for(int col=0; col<depthImage_->cols-0; ++col)
-    { 
-      if(!std::isnan(Drow[col]) && Drow[col]>0.4)
-      {
-      validityMask_[row][col]=true;
-      }else
-      {
-        validityMask_[row][col]=false;
-      }
-    }
-  }
-  
+  const float Wslope = 1/(parameters_.Dmax - parameters_.Dmin);
+  this->UpdateDepth(depth);
   bool hasfused;
   if(!first_frame_)
   {
     hasfused = true;
-    Pose_ = EstimatePose();
+    Pose_ = EstimatePoseFromDepth();
   } 
   else
   {
@@ -940,8 +1053,8 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
   if(cumulative_pose_.norm() < parameters_.min_pose_change && hasfused ){Render(); return;}
   cumulative_pose_ *= 0.0;
   
-  Eigen::Matrix4d camToWorld = Transformation_.inverse();
-  Eigen::Vector4d camera = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
+  Eigen::Matrix4d worldToCam = Transformation_.inverse();
+  Eigen::Vector4d camera = worldToCam * Eigen::Vector4d(0.0,0.0,0.0,1.0);
   //Main 3D reconstruction loop
   
   for(int x = 0; x<parameters_.XSize; ++x)
@@ -956,7 +1069,7 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
       {           
         //define a ray and point it into the center of a node
         Eigen::Vector4d ray((x-parameters_.XSize/2)*parameters_.resolution, (y- parameters_.YSize/2)*parameters_.resolution , (z- parameters_.ZSize/2)*parameters_.resolution, 1);        
-        ray = camToWorld*ray;
+        ray = worldToCam*ray;
         if(ray(2)-camera(2) < 0) continue;
         
         cv::Point2d uv;
@@ -971,7 +1084,7 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
         {
           const float* Di = depthImage_->ptr<float>(i);
           double Eta; 
-          const float W=1/((1+Di[j])*(1+Di[j]));
+       //   const float W=1/((1+Di[j])*(1+Di[j]));
             
           Eta=(double(Di[j])-ray(2));       
             
@@ -979,7 +1092,10 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
           {
               
             double D = std::min(Eta,parameters_.Dmax);
-                
+         
+            float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
+
+
             previousD[z] = (previousD[z] * previousW[z] + float(D) * W) /
                       (previousW[z] + W);
 
@@ -1026,7 +1142,7 @@ SDFTracker::SDF(const Eigen::Vector4d &location)
 };
 
 Vector6d 
-SDFTracker::EstimatePose(void) 
+SDFTracker::EstimatePoseFromDepth(void) 
 {
   Vector6d xi;
   xi<<0.0,0.0,0.0,0.0,0.0,0.0; // + (Pose-previousPose)*0.1;
@@ -1064,7 +1180,7 @@ SDFTracker::EstimatePose(void)
           double depth = double(depthImage_->ptr<float>(row)[col]); 
           Eigen::Vector4d currentPoint = camToWorld*To3D(row,col,depth,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy);
           
-          if(!validGradient(currentPoint)) continue;
+          if(!ValidGradient(currentPoint)) continue;
           double D = (SDF(currentPoint));
           double Dabs = fabs(D);
           if(D > parameters_.Dmax - eps || D < parameters_.Dmin + eps) continue;
@@ -1131,6 +1247,109 @@ SDFTracker::EstimatePose(void)
   return xi;
 };//function
 
+
+Vector6d 
+SDFTracker::EstimatePoseFromPoints(void) 
+{
+  Vector6d xi;
+  xi<<0.0,0.0,0.0,0.0,0.0,0.0; // + (Pose-previousPose)*0.1;
+  Vector6d xi_prev = xi;
+  const double eps = 10e-9;
+  const double c = parameters_.robust_statistic_coefficient*parameters_.Dmax;
+  
+  const int iterations[3]={12, 8, 2};
+  const int stepSize[3] = {4, 2, 1};
+
+  for(int lvl=0; lvl < 3; ++lvl)
+  {
+    for(int k=0; k<iterations[lvl]; ++k)
+    {
+      const Eigen::Matrix4d camToWorld = Twist(xi).exp()*Transformation_;
+      
+      double A00=0.0,A01=0.0,A02=0.0,A03=0.0,A04=0.0,A05=0.0;
+      double A10=0.0,A11=0.0,A12=0.0,A13=0.0,A14=0.0,A15=0.0;
+      double A20=0.0,A21=0.0,A22=0.0,A23=0.0,A24=0.0,A25=0.0;
+      double A30=0.0,A31=0.0,A32=0.0,A33=0.0,A34=0.0,A35=0.0;
+      double A40=0.0,A41=0.0,A42=0.0,A43=0.0,A44=0.0,A45=0.0;
+      double A50=0.0,A51=0.0,A52=0.0,A53=0.0,A54=0.0,A55=0.0;
+      
+      double g0=0.0, g1=0.0, g2=0.0, g3=0.0, g4=0.0, g5=0.0;
+      
+      #pragma omp parallel for \
+      default(shared) \
+      reduction(+:g0,g1,g2,g3,g4,g5,A00,A01,A02,A03,A04,A05,A10,A11,A12,A13,A14,A15,A20,A21,A22,A23,A24,A25,A30,A31,A32,A33,A34,A35,A40,A41,A42,A43,A44,A45,A50,A51,A52,A53,A54,A55)
+      for(int idx=0; idx<Points_.size(); idx+=stepSize[lvl])
+      {          
+          if(std::isnan(Points_.at(idx)(0))) continue;
+          Eigen::Vector4d currentPoint = camToWorld*Points_.at(idx);
+          
+          if(!ValidGradient(currentPoint)) continue;
+          double D = (SDF(currentPoint));
+          double Dabs = fabs(D);
+          if(D > parameters_.Dmax - eps || D < parameters_.Dmin + eps) continue;
+          
+          //partial derivative of SDF wrt position  
+          Eigen::Matrix<double,1,3> dSDF_dx(SDFGradient(currentPoint,1,0),
+                                            SDFGradient(currentPoint,1,1),
+                                            SDFGradient(currentPoint,1,2) 
+                                            );
+          //partial derivative of position wrt optimizaiton parameters
+          Eigen::Matrix<double,3,6> dx_dxi; 
+          dx_dxi << 0, currentPoint(2), -currentPoint(1), 1, 0, 0,
+                    -currentPoint(2), 0, currentPoint(0), 0, 1, 0,
+                    currentPoint(1), -currentPoint(0), 0, 0, 0, 1;
+
+          //jacobian = derivative of SDF wrt xi (chain rule)
+          Eigen::Matrix<double,1,6> J = dSDF_dx*dx_dxi;
+          
+          //double tukey = (1-(Dabs/c)*(Dabs/c))*(1-(Dabs/c)*(Dabs/c));
+          double huber = Dabs < c ? 1.0 : c/Dabs;
+          
+          //Gauss - Newton approximation to hessian
+          Eigen::Matrix<double,6,6> T1 = huber * J.transpose() * J;
+          Eigen::Matrix<double,1,6> T2 = huber * J.transpose() * D;
+          
+          g0 = g0 + T2(0); g1 = g1 + T2(1); g2 = g2 + T2(2);
+          g3 = g3 + T2(3); g4 = g4 + T2(4); g5 = g5 + T2(5);
+          
+          A00+=T1(0,0);A01+=T1(0,1);A02+=T1(0,2);A03+=T1(0,3);A04+=T1(0,4);A05+=T1(0,5);
+          A10+=T1(1,0);A11+=T1(1,1);A12+=T1(1,2);A13+=T1(1,3);A14+=T1(1,4);A15+=T1(1,5);
+          A20+=T1(2,0);A21+=T1(2,1);A22+=T1(2,2);A23+=T1(2,3);A24+=T1(2,4);A25+=T1(2,5);
+          A30+=T1(3,0);A31+=T1(3,1);A32+=T1(3,2);A33+=T1(3,3);A34+=T1(3,4);A35+=T1(3,5);
+          A40+=T1(4,0);A41+=T1(4,1);A42+=T1(4,2);A43+=T1(4,3);A44+=T1(4,4);A45+=T1(4,5);
+          A50+=T1(5,0);A51+=T1(5,1);A52+=T1(5,2);A53+=T1(5,3);A54+=T1(5,4);A55+=T1(5,5);
+
+      }//idx
+  
+      Eigen::Matrix<double,6,6> A;
+
+      A<< A00,A01,A02,A03,A04,A05,
+          A10,A11,A12,A13,A14,A15,
+          A20,A21,A22,A23,A24,A25,
+          A30,A31,A32,A33,A34,A35,
+          A40,A41,A42,A43,A44,A45,
+          A50,A51,A52,A53,A54,A55;
+     double scaling = 1/A.maxCoeff();
+      
+      Vector6d g;
+      g<< g0, g1, g2, g3, g4, g5;
+      
+      g *= scaling;
+      A *= scaling;
+      
+      A = A + (parameters_.regularization)*Eigen::MatrixXd::Identity(6,6);
+      xi = xi - A.ldlt().solve(g);
+      Vector6d Change = xi-xi_prev;  
+      double Cnorm = Change.norm();
+      xi_prev = xi;
+      if(Cnorm < parameters_.min_parameter_update) break;
+    }//k
+  }//level
+  if(std::isnan(xi.sum())) xi << 0.0,0.0,0.0,0.0,0.0,0.0;
+  return xi;
+};//function
+
+
 void 
 SDFTracker::Render(void)
 {
@@ -1138,9 +1357,9 @@ SDFTracker::Render(void)
   cv::Mat depthImage_out(parameters_.image_height,parameters_.image_width,CV_32FC1);
   cv::Mat preview(parameters_.image_height,parameters_.image_width,CV_8UC3);
   
-  const Eigen::Matrix4d expmap = Transformation_;
-  const Eigen::Vector4d camera = expmap * Eigen::Vector4d(0.0,0.0,0.0,1.0);
-  const Eigen::Vector4d viewAxis = (expmap * Eigen::Vector4d(0.0,0.0,1.0,0.0)).normalized();
+  const Eigen::Matrix4d camToWorld = Transformation_;
+  const Eigen::Vector4d camera = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
+  const Eigen::Vector4d viewAxis = (camToWorld * Eigen::Vector4d(0.0,0.0,1.0,0.0)).normalized();
   const double max_ray_length = 5.0;
   
   //Rendering loop
@@ -1151,7 +1370,7 @@ SDFTracker::Render(void)
     {
       bool hit = false;
 
-      Eigen::Vector4d p = expmap*To3D(u,v,1.0,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy) - camera;
+      Eigen::Vector4d p = camToWorld*To3D(u,v,1.0,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy) - camera;
       p.normalize();
             
       double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.7 : parameters_.Dmax;
@@ -1221,21 +1440,21 @@ SDFTracker::Render(void)
   return;
 };
 
-void SDFTracker::getDenoisedImage(cv::Mat &img) 
+void SDFTracker::GetDenoisedImage(cv::Mat &img) 
 {
     depthDenoised_mutex_.lock();
     depthImage_denoised_->copyTo(img);
     depthDenoised_mutex_.unlock();          
 }
 
-bool SDFTracker::quit(void)
+bool SDFTracker::Quit(void)
 {
   return quit_;
 }
 
 
 Eigen::Matrix4d 
-SDFTracker::getCurrentTransformation(void)
+SDFTracker::GetCurrentTransformation(void)
 {
   Eigen::Matrix4d T;
   transformation_mutex_.lock();
@@ -1245,14 +1464,14 @@ SDFTracker::getCurrentTransformation(void)
 }
 
 void
-SDFTracker::setCurrentTransformation(const Eigen::Matrix4d &T)
+SDFTracker::SetCurrentTransformation(const Eigen::Matrix4d &T)
 {
   transformation_mutex_.lock();
   Transformation_= T;
   transformation_mutex_.unlock();
 }
 
-void SDFTracker::saveSDF(const std::string &filename)
+void SDFTracker::SaveSDF(const std::string &filename)
 {
 
 // http://www.vtk.org/Wiki/VTK/Examples/Cxx/IO/WriteVTI
@@ -1309,7 +1528,7 @@ void SDFTracker::saveSDF(const std::string &filename)
   writer->Write();
 }
 
-void SDFTracker::loadSDF(const std::string &filename)
+void SDFTracker::LoadSDF(const std::string &filename)
 {
  
   // //double valuerange[2];
@@ -1332,8 +1551,8 @@ void SDFTracker::loadSDF(const std::string &filename)
   double* cell_sizes = sdf_volume->GetSpacing();
   parameters_.resolution = float(cell_sizes[0]);  //TODO add support for different scalings along x,y,z. 
 
-  this->deleteGrids();
-  this->init(parameters_);
+  this->DeleteGrids();
+  this->Init(parameters_);
 
   vtkFloatArray *distance =vtkFloatArray::New();
   vtkFloatArray *weight =vtkFloatArray::New();
