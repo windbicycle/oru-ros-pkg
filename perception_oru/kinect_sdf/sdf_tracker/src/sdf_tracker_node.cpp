@@ -4,6 +4,9 @@
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
 
+// uncomment this part to enable an example for how to work with LIDAR data.
+//#define LIDAR
+
 #define EIGEN_NO_DEBUG
 
 #include <sdf_tracker.h>
@@ -22,6 +25,7 @@ private:
   int skip_frames_;
   SDFTracker* myTracker_;
   SDF_Parameters myParameters_;
+
 
   std::vector<ros::Time> timestamps_;
   ros::NodeHandle nh_;
@@ -83,7 +87,7 @@ SDFTrackerNode::SDFTrackerNode(SDF_Parameters &parameters)
   //if this is how you named your file, consider a career as a lottery-winner or password-cracker.
   if(loadVolume_.compare(std::string("none"))!=0) 
   {
-    myTracker_->loadSDF(loadVolume_); 
+    myTracker_->LoadSDF(loadVolume_); 
   }  
   
   skip_frames_ = 0;
@@ -182,7 +186,7 @@ void SDFTrackerNode::publishDepthDenoisedImage(const ros::TimerEvent& event)
     cv_bridge::CvImagePtr image_out (new cv_bridge::CvImage());
     image_out->header.stamp = ros::Time::now(); 
     image_out->encoding = "32FC1";      
-    myTracker_->getDenoisedImage(image_out->image);
+    myTracker_->GetDenoisedImage(image_out->image);
     depth_publisher_.publish(image_out->toImageMsg());     
   } 
   return;
@@ -219,21 +223,51 @@ void SDFTrackerNode::depthCallback(const sensor_msgs::Image::ConstPtr& msg)
   
   if(skip_frames_ < 3){++skip_frames_; return;}
 
-  if(!myTracker_->quit())
+  if(!myTracker_->Quit())
   {
-    myTracker_->FuseDepth(bridge->image);
-    timestamps_.push_back(ros::Time::now());
+
+    #ifdef LIDAR
+      
+      //LIDAR-like alternative for updating with points (suggestion: set the MaxWeight parameter to a number around 300000 (648x480) )
+      //MaximumRaycastSteps should also be set to a higher value than usual.
+
+      std::vector<Eigen::Vector4d,Eigen::aligned_allocator<Eigen::Vector4d> > points;
+      for (int u = 0; u < bridge->image.rows; ++u)
+      {
+        for (int v = 0; v < bridge->image.cols; ++v)
+        {
+          points.push_back( myTracker_->To3D(u,v,bridge->image.at<float>(u,v),myParameters_.fx,myParameters_.fy,myParameters_.cx,myParameters_.cy) );
+        }
+      }
+
+      if(skip_frames_ == 3)
+      {  
+        myTracker_->UpdatePoints(points);
+        myTracker_->FusePoints();
+        ++skip_frames_;
+      } 
+      else myTracker_->UpdatePoints(points);
+      
+      Vector6d xi = myTracker_->EstimatePoseFromPoints();
+      myTracker_->SetCurrentTransformation(myTracker_->Twist(xi).exp()*myTracker_->GetCurrentTransformation());    
+      myTracker_->FusePoints();
+      myTracker_->Render();
+    #else
+      myTracker_->FuseDepth(bridge->image);
+      timestamps_.push_back(ros::Time::now());      
+    #endif
+
   }
   else 
   {
     if(makeTris_)
     {
-      myTracker_->makeTriangles();
-      myTracker_->saveTriangles();
+      myTracker_->MakeTriangles();
+      myTracker_->SaveTriangles();
     }
   
     if(makeVolume_)
-      myTracker_->saveSDF();
+      myTracker_->SaveSDF();
   
     ros::shutdown();
   }
