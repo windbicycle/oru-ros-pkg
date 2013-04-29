@@ -1,6 +1,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <cstddef>
 
 #include <Eigen/Core>
 #include <Eigen/StdVector>
@@ -1095,6 +1096,7 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
          
             float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
 
+            W *= 1/((1+Di[j])*(1+Di[j]));
 
             previousD[z] = (previousD[z] * previousW[z] + float(D) * W) /
                       (previousW[z] + W);
