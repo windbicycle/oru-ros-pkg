@@ -68,7 +68,6 @@ class SDFTracker
   
   bool** validityMask_;
   float*** myGrid_; 
-  float*** weightArray_;    
   bool first_frame_;
   bool quit_;
   SDF_Parameters parameters_;

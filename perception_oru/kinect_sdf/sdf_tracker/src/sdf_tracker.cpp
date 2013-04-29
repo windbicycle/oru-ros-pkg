@@ -103,17 +103,14 @@ void SDFTracker::Init(SDF_Parameters &parameters)
   }   
 
   myGrid_ = new float**[parameters_.XSize];
-  weightArray_ = new float**[parameters_.XSize];
 
   for (int i = 0; i < parameters_.XSize; ++i)
   {
     myGrid_[i] = new float*[parameters_.YSize];
-    weightArray_[i] = new float*[parameters_.YSize];
 
     for (int j = 0; j < parameters_.YSize; ++j)
     {
-      myGrid_[i][j] = new float[parameters_.ZSize];
-      weightArray_[i][j] = new float[parameters_.ZSize];
+      myGrid_[i][j] = new float[parameters_.ZSize*2];
     }
   }
     
@@ -123,8 +120,8 @@ void SDFTracker::Init(SDF_Parameters &parameters)
     {
       for (int z = 0; z < parameters_.ZSize; ++z)
       {
-        myGrid_[x][y][z]=parameters_.Dmax;
-        weightArray_[x][y][z]=0.0f;
+        myGrid_[x][y][z*2]=parameters_.Dmax;
+        myGrid_[x][y][z*2+1]=0.0f;
       }
     }
   }
@@ -148,22 +145,12 @@ void SDFTracker::DeleteGrids(void)
     {
       if (myGrid_[i][j]!=NULL)
       delete[] myGrid_[i][j];
-
-      if (weightArray_[i][j]!=NULL)
-      delete[] weightArray_[i][j];
-
     }
      
     if (myGrid_[i]!=NULL)
-    delete[] myGrid_[i];
-
-    if (weightArray_[i]!=NULL)
-    delete[] weightArray_[i];   
+    delete[] myGrid_[i];   
   }
-
   delete[] myGrid_;
-  delete[] weightArray_;  
-
 }
 
 void SDFTracker::MakeTriangles(void)
@@ -323,37 +310,37 @@ SDFTracker::ValidGradient(const Eigen::Vector4d &location)
   
   if(I>=parameters_.XSize-4 || J>=parameters_.YSize-3 || K>=parameters_.ZSize-3 || I<=1 || J<=1 || K<=1)return false;
 
-  float* W10 = &weightArray_[I+1][J+0][K];
-  float* W20 = &weightArray_[I+2][J+0][K];
+  float* W10 = &myGrid_[I+1][J+0][K*2+1];
+  float* W20 = &myGrid_[I+2][J+0][K*2+1];
  
-  float* W01 = &weightArray_[I+0][J+1][K];
-  float* W11 = &weightArray_[I+1][J+1][K];
-  float* W21 = &weightArray_[I+2][J+1][K];
-  float* W31 = &weightArray_[I+3][J+1][K];
+  float* W01 = &myGrid_[I+0][J+1][K*2+1];
+  float* W11 = &myGrid_[I+1][J+1][K*2+1];
+  float* W21 = &myGrid_[I+2][J+1][K*2+1];
+  float* W31 = &myGrid_[I+3][J+1][K*2+1];
   
-  float* W02 = &weightArray_[I+0][J+2][K];
-  float* W12 = &weightArray_[I+1][J+2][K];
-  float* W22 = &weightArray_[I+2][J+2][K];
-  float* W32 = &weightArray_[I+3][J+2][K];
+  float* W02 = &myGrid_[I+0][J+2][K*2+1];
+  float* W12 = &myGrid_[I+1][J+2][K*2+1];
+  float* W22 = &myGrid_[I+2][J+2][K*2+1];
+  float* W32 = &myGrid_[I+3][J+2][K*2+1];
 
-  float* W13 = &weightArray_[I+1][J+3][K];
-  float* W23 = &weightArray_[I+2][J+3][K];
+  float* W13 = &myGrid_[I+1][J+3][K*2+1];
+  float* W23 = &myGrid_[I+2][J+3][K*2+1];
 
-  if( W10[1] < eps || W10[2] < eps || 
-      W20[1] < eps || W20[2] < eps || 
+  if( W10[1*2] < eps || W10[2*2] < eps || 
+      W20[1*2] < eps || W20[2*2] < eps || 
       
-      W01[1] < eps || W01[2] < eps ||
-      W11[0] < eps || W11[1] < eps || W11[2] < eps || W11[3] < eps ||
-      W21[0] < eps || W21[1] < eps || W21[2] < eps || W21[3] < eps ||
-      W31[1] < eps || W31[2] < eps ||
+      W01[1*2] < eps || W01[2*2] < eps ||
+      W11[0] < eps || W11[1*2] < eps || W11[2*2] < eps || W11[3*2] < eps ||
+      W21[0] < eps || W21[1*2] < eps || W21[2*2] < eps || W21[3*2] < eps ||
+      W31[1*2] < eps || W31[2*2] < eps ||
       
-      W02[1] < eps || W02[2] < eps ||
-      W12[0] < eps || W12[1] < eps || W12[2] < eps || W12[3] < eps ||
-      W22[0] < eps || W22[1] < eps || W22[2] < eps || W22[3] < eps ||
-      W32[1] < eps || W32[2] < eps ||
+      W02[1*2] < eps || W02[2*2] < eps ||
+      W12[0] < eps || W12[1*2] < eps || W12[2*2] < eps || W12[3*2] < eps ||
+      W22[0] < eps || W22[1*2] < eps || W22[2*2] < eps || W22[3*2] < eps ||
+      W32[1*2] < eps || W32[2*2] < eps ||
       
-      W13[1] < eps || W13[2] < eps ||
-      W23[1] < eps || W23[2] < eps 
+      W13[1*2] < eps || W13[2*2] < eps ||
+      W23[1*2] < eps || W23[2*2] < eps 
       ) return false;
   else return true;
 }
@@ -440,68 +427,68 @@ SDFTracker::MarchingTetrahedrons(Eigen::Vector4d &Origin, int tetrahedron)
   switch(tetrahedron)
   {
     case 1:
-    val0 = myGrid_[i][j][k+1];
+    val0 = myGrid_[i][j][k*2+2];
     V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
-    val1 = myGrid_[i+1][j][k];
+    val1 = myGrid_[i+1][j][k*2];
     V1 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*parameters_.resolution;
-    val2 = myGrid_[i][j][k];
+    val2 = myGrid_[i][j][k*2];
     V2 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2),1.0)*parameters_.resolution;
-    val3 = myGrid_[i][j+1][k];
+    val3 = myGrid_[i][j+1][k*2];
     V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*parameters_.resolution;      
     break;
     
     case 2:  
-    val0 = myGrid_[i][j][k+1];
+    val0 = myGrid_[i][j][k*2+2];
     V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
-    val1 = myGrid_[i+1][j][k];
+    val1 = myGrid_[i+1][j][k*2];
     V1 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*parameters_.resolution;
-    val2 = myGrid_[i+1][j+1][k];
+    val2 = myGrid_[i+1][j+1][k*2];
     V2 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
-    val3 = myGrid_[i][j+1][k];
+    val3 = myGrid_[i][j+1][k*2];
     V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*parameters_.resolution;      
     break;
     
     case 3:
-    val0 = myGrid_[i][j][k+1];
+    val0 = myGrid_[i][j][k*2+2];
     V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
-    val1 = myGrid_[i][j+1][k+1];
+    val1 = myGrid_[i][j+1][k*2+2];
     V1 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*parameters_.resolution;
-    val2 = myGrid_[i+1][j+1][k];
+    val2 = myGrid_[i+1][j+1][k*2];
     V2 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
-    val3 = myGrid_[i][j+1][k];
+    val3 = myGrid_[i][j+1][k*2];
     V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2),1.0)*parameters_.resolution;      
     break;
     
     case 4:      
-    val0 = myGrid_[i][j][k+1];
+    val0 = myGrid_[i][j][k*2+2];
     V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
-    val1 = myGrid_[i+1][j+1][k];
+    val1 = myGrid_[i+1][j+1][k*2];
     V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
-    val2 = myGrid_[i+1][j][k+1];
+    val2 = myGrid_[i+1][j][k*2+2];
     V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
-    val3 = myGrid_[i+1][j][k];
+    val3 = myGrid_[i+1][j][k*2];
     V3 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2),1.0)*parameters_.resolution;      
     break;
       
     case 5:
-    val0 = myGrid_[i][j][k+1];
+    val0 = myGrid_[i][j][k*2+2];
     V0 = Eigen::Vector4d(Origin(0),Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
-    val1 = myGrid_[i+1][j+1][k];
+    val1 = myGrid_[i+1][j+1][k*2];
     V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
-    val2 = myGrid_[i+1][j][k+1];
+    val2 = myGrid_[i+1][j][k*2+2];
     V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
-    val3 = myGrid_[i][j+1][k+1];
+    val3 = myGrid_[i][j+1][k*2+2];
     V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*parameters_.resolution;      
     break;
     
     case 6:
-    val0 = myGrid_[i+1][j+1][k+1];
+    val0 = myGrid_[i+1][j+1][k*2+2];
     V0 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2)+1,1.0)*parameters_.resolution;
-    val1 = myGrid_[i+1][j+1][k];
+    val1 = myGrid_[i+1][j+1][k*2];
     V1 = Eigen::Vector4d(Origin(0)+1,Origin(1)+1,Origin(2),1.0)*parameters_.resolution;
-    val2 = myGrid_[i+1][j][k+1];
+    val2 = myGrid_[i+1][j][k*2+2];
     V2 = Eigen::Vector4d(Origin(0)+1,Origin(1),Origin(2)+1,1.0)*parameters_.resolution;
-    val3 = myGrid_[i][j+1][k+1];
+    val3 = myGrid_[i][j+1][k*2+2];
     V3 = Eigen::Vector4d(Origin(0),Origin(1)+1,Origin(2)+1,1.0)*parameters_.resolution;      
     break;
   }  
@@ -861,7 +848,7 @@ SDFTracker::FuseDepth(void)
     for(int y = 0; y<parameters_.YSize;++y)
     { 
       float* previousD = &myGrid_[x][y][0];
-      float* previousW = &weightArray_[x][y][0];      
+      float* previousW = &myGrid_[x][y][1];      
       for(int z = 0; z<parameters_.ZSize; ++z)
       {           
         //define a ray and point it into the center of a node
@@ -892,10 +879,10 @@ SDFTracker::FuseDepth(void)
 
             float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
                 
-            previousD[z] = (previousD[z] * previousW[z] + float(D) * W) /
-                      (previousW[z] + W);
+            previousD[z*2] = (previousD[z*2] * previousW[z*2] + float(D) * W) /
+                      (previousW[z*2] + W);
 
-            previousW[z] = std::min(previousW[z] + W , float(parameters_.Wmax));
+            previousW[z*2] = std::min(previousW[z*2] + W , float(parameters_.Wmax));
 
           }//within visible region 
         }//within bounds      
@@ -1006,8 +993,8 @@ SDFTracker::FusePoints()
         
         double D = std::min(Eta,parameters_.Dmax);
 
-        float* previousD = &myGrid_[I][J][K];
-        float* previousW = &weightArray_[I][J][K];   
+        float* previousD = &myGrid_[I][J][K*2];
+        float* previousW = &myGrid_[I][J][K*2+1];   
 
         
         float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
@@ -1065,7 +1052,7 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
     for(int y = 0; y<parameters_.YSize;++y)
     { 
       float* previousD = &myGrid_[x][y][0];
-      float* previousW = &weightArray_[x][y][0];      
+      float* previousW = &myGrid_[x][y][1];      
       for(int z = 0; z<parameters_.ZSize; ++z)
       {           
         //define a ray and point it into the center of a node
@@ -1098,10 +1085,10 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
 
             W *= 1/((1+Di[j])*(1+Di[j]));
 
-            previousD[z] = (previousD[z] * previousW[z] + float(D) * W) /
-                      (previousW[z] + W);
+            previousD[z*2] = (previousD[z*2] * previousW[z*2] + float(D) * W) /
+                      (previousW[z*2] + W);
 
-            previousW[z] = std::min(previousW[z] + W , float(parameters_.Wmax));
+            previousW[z*2] = std::min(previousW[z*2] + W , float(parameters_.Wmax));
 
           }//within visible region 
         }//within bounds      
@@ -1129,16 +1116,16 @@ SDFTracker::SDF(const Eigen::Vector4d &location)
 
   int I = int(i); int J = int(j);   int K = int(k);
   
-  float* N1 = &myGrid_[I][J][K];
-  float* N2 = &myGrid_[I][J+1][K];
-  float* N3 = &myGrid_[I+1][J][K];
-  float* N4 = &myGrid_[I+1][J+1][K];
+  float* N1 = &myGrid_[I][J][K*2];
+  float* N2 = &myGrid_[I][J+1][K*2];
+  float* N3 = &myGrid_[I+1][J][K*2];
+  float* N4 = &myGrid_[I+1][J+1][K*2];
 
   double a1,a2,b1,b2;
-  a1 = double(N1[0]*(1-z)+N1[1]*z);
-  a2 = double(N2[0]*(1-z)+N2[1]*z);
-  b1 = double(N3[0]*(1-z)+N3[1]*z);
-  b2 = double(N4[0]*(1-z)+N4[1]*z);
+  a1 = double(N1[0]*(1-z)+N1[2]*z);
+  a2 = double(N2[0]*(1-z)+N2[2]*z);
+  b1 = double(N3[0]*(1-z)+N3[2]*z);
+  b2 = double(N4[0]*(1-z)+N4[2]*z);
     
   return double((a1*(1-y)+a2*y)*(1-x) + (b1*(1-y)+b2*y)*x);
 };
@@ -1509,8 +1496,8 @@ void SDFTracker::SaveSDF(const std::string &filename)
       {
         
         int offset = i + offset_j + offset_k;
-        distance->SetValue(offset, myGrid_[i][j][k]);
-        weight->SetValue(offset, weightArray_[i][j][k]);
+        distance->SetValue(offset, myGrid_[i][j][k*2]);
+        weight->SetValue(offset, myGrid_[i][j][k*2+1]);
 
      }
    }
@@ -1571,8 +1558,8 @@ void SDFTracker::LoadSDF(const std::string &filename)
       for(i=0; i<parameters_.XSize; ++i)
       {
         int offset = i + offset_j + offset_k;
-        myGrid_[i][j][k] = distance->GetValue(offset);
-        weightArray_[i][j][k] = weight->GetValue(offset);        
+        myGrid_[i][j][k*2] = distance->GetValue(offset);
+        myGrid_[i][j][k*2+1] = weight->GetValue(offset);        
       }
     }
   }
