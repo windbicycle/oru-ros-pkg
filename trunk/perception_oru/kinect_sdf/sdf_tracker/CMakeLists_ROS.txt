@@ -34,4 +34,4 @@ add_definitions(${OPENCV_DEFINITIONS})
 
 add_library(${PROJECT_NAME} src/sdf_tracker.cpp)
 
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} vtkIO vtkFiltering vtkCommon)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} vtkIO)
