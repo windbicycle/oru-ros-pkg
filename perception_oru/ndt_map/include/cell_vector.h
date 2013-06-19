@@ -59,7 +59,7 @@ public:
     virtual ~CellVector();
 
     virtual Cell<PointT>* getCellForPoint(const PointT &point);
-    virtual void addPoint(const PointT &point);
+    virtual Cell<PointT>* addPoint(const PointT &point);
     void addCellPoints(pcl::PointCloud<PointT> pc, const std::vector<size_t> &indices);
     void addCell(Cell<PointT>* cell);
     void addNDTCell(NDTCell<PointT>* cell);
@@ -84,7 +84,7 @@ public:
 
     NDTCell<PointT>* getClosestNDTCell(const PointT &pt);
     std::vector<NDTCell<PointT>*> getClosestNDTCells(const PointT &point, double &radius);
-    NDTCell<PointT>* getCellIdx(unsigned int idx);
+    NDTCell<PointT>* getCellIdx(unsigned int idx) const;
 
     void cleanCellsAboveSize(double size);
     int loadFromJFF(FILE * jffin);

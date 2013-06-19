@@ -42,6 +42,7 @@ SDF_Parameters::SDF_Parameters()
   fy = 520.0;
   cx = 319.5;
   cy = 239.5;
+  render_window = "Render";
 }
 
 SDF_Parameters::~SDF_Parameters()
@@ -133,7 +134,7 @@ void SDFTracker::Init(SDF_Parameters &parameters)
 
   if(parameters_.interactive_mode)
   {
-    cv::namedWindow( "Render", 0 );
+    cv::namedWindow( parameters_.render_window, 0 );
   }
 };
 
@@ -1422,7 +1423,7 @@ SDFTracker::Render(void)
   if(parameters_.interactive_mode)
   {
  
-    cv::imshow("Render", preview);//depthImage_denoised);
+    cv::imshow(parameters_.render_window, preview);//depthImage_denoised);
     char q = cv::waitKey(3);
     if(q == 'q' || q  == 27 || q  == 71 ) { quit_ = true; }//int(key)
   }

@@ -39,6 +39,7 @@ public:
   double regularization;
   double min_parameter_update;
   double min_pose_change;
+  std::string render_window;
 
   SDF_Parameters();
   virtual ~SDF_Parameters();

@@ -75,6 +75,7 @@ Cell<PointT>* NDTCell<PointT>::copy() const
     ret->isEmpty = this->isEmpty;
     ret->hasGaussian_ = this->hasGaussian_;
     ret->consistency_score = this->consistency_score;
+    ret->cost = this->cost;
     return ret;
 }
 /**
@@ -84,47 +85,190 @@ Cell<PointT>* NDTCell<PointT>::copy() const
 */
 template<typename PointT>
 inline
-void NDTCell<PointT>::updateSampleVariance(Eigen::Matrix3d &cov2, Eigen::Vector3d &m2, unsigned int numpointsindistribution)
+void NDTCell<PointT>::updateSampleVariance(const Eigen::Matrix3d &cov2,const Eigen::Vector3d &m2, unsigned int numpointsindistribution, 
+																					bool updateOccupancyFlag, float max_occu, unsigned int maxnumpoints)
 {
-    bool doit = true;
-    if(hasGaussian_ && doit)
+
+
+    if(numpointsindistribution<=2){
+	fprintf(stderr,"updateSampleVariance:: INVALID NUMBER OF POINTS\n");
+	return;
+    }
+    if(this->hasGaussian_)
     {
+	Eigen::Vector3d msum1 = mean_ * (double) N;
+	Eigen::Vector3d msum2 = m2 * (double) numpointsindistribution;
 
-        Eigen::Vector3d msum1 = mean_ * (double) N;
-        Eigen::Vector3d msum2 = m2 * (double) numpointsindistribution;
+	Eigen::Matrix3d csum1 = cov_ * (double) (N-1);
+	Eigen::Matrix3d csum2 = cov2 * (double) (numpointsindistribution-1);
 
-        Eigen::Matrix3d csum1 = cov_ * (double) N;
-        Eigen::Matrix3d csum2 = cov2 * (double)numpointsindistribution;
+	if( fabsf(N) < 1e-5) {
+	    fprintf(stderr,"Divider error (%u %u)!\n",N,numpointsindistribution);
+	    hasGaussian_ = false;
+	    return;
+	}
+	double divider = (double)numpointsindistribution+(double)N;
+	if(fabs(divider) < 1e-5)
+	{
+	    fprintf(stderr,"Divider error (%u %u)!\n",N,numpointsindistribution);
+	    return;
+	}
+	mean_ = (msum1 + msum2) / (divider);
 
-        double divider = (double)numpointsindistribution+(double)N;
-        if(divider == 0)
-        {
-            fprintf(stderr,"Divider error (%u %u)!\n",N,numpointsindistribution);
-        }
-
-        mean_ = (msum1 + msum2) / (divider);
-
-
-        double w1 =  ((double) N / (double)(numpointsindistribution*(N+numpointsindistribution)));
-        double w2 = (double) (numpointsindistribution)/(double) N;
-
-        Eigen::Matrix3d	csum3 = csum1 + csum2 + w1 * (w2 * msum1 - msum2) * ( w2 * msum1 - msum2).transpose();
-        N = N + numpointsindistribution;
-        cov_ = 1.0/((double)N-1.0)  * csum3;
-        occ++;
+	double w1 =  ((double) N / (double)(numpointsindistribution*(N+numpointsindistribution)));
+	double w2 = (double) (numpointsindistribution)/(double) N;
+	Eigen::Matrix3d	csum3 = csum1 + csum2 + w1 * (w2 * msum1 - msum2) * ( w2 * msum1 - msum2).transpose();
+	N = N + numpointsindistribution;
+	cov_ = 1.0/((double)N-1.0)  * csum3;
+	if(updateOccupancyFlag){
+	    double likoccval = 0.6;
+	    double logoddlikoccu = numpointsindistribution * log((likoccval)/(1.0-likoccval));
+	    updateOccupancy(logoddlikoccu, max_occu); 
+	}
     }
     else
     {
-        mean_ = m2;
-        cov_ = cov2;
-        N = numpointsindistribution;
-        hasGaussian_ = true;
-        occ++;
+	mean_ = m2;
+	cov_ = cov2;
+	N = numpointsindistribution;
+	hasGaussian_ = true;
+	if(updateOccupancyFlag){
+	    double likoccval = 0.6;
+	    double logoddlikoccu = numpointsindistribution * log((likoccval)/(1.0-likoccval));
+	    updateOccupancy(logoddlikoccu,max_occu); 
+	}
+    }
+    if(N>maxnumpoints) N=maxnumpoints;
+    if(this->occ<0){
+	this->hasGaussian_ = false;
+	return;
     }
     rescaleCovariance();
 }
 
+///Just computes the normal distribution parameters from the points and leaves the points into the map 
+template<typename PointT>
+inline
+void NDTCell<PointT>::computeGaussianSimple(){
+        Eigen::Vector3d meanSum_;
+        Eigen::Matrix3d covSum_;
+			
+				if(points_.size()<6){
+					points_.clear();
+					return;
+				}
+				
+        mean_<<0,0,0;
+        for(unsigned int i=0; i< points_.size(); i++)
+        {
+            Eigen::Vector3d tmp;
+            tmp<<points_[i].x,points_[i].y,points_[i].z;
+            mean_ += tmp;
+        }
+        meanSum_ = mean_;
+        mean_ /= (points_.size());
+        Eigen::MatrixXd mp;
+        mp.resize(points_.size(),3);
+        for(unsigned int i=0; i< points_.size(); i++)
+        {
+            mp(i,0) = points_[i].x - mean_(0);
+            mp(i,1) = points_[i].y - mean_(1);
+            mp(i,2) = points_[i].z - mean_(2);
+        }
+        covSum_ = mp.transpose()*mp;
+        cov_ = covSum_/(points_.size()-1);
+        this->rescaleCovariance();
+        N = points_.size();	
+				R = 0; G = 0; B = 0;
+				updateColorInformation();
+}
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+/// Robust estimation using Student-T 
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+template<typename PointT>
+inline void NDTCell<PointT>::studentT(){
+	Eigen::Vector3d meanSum_, meantmp_;
+	Eigen::Matrix3d covSum_, covTmp_;
 
+	double nu = 5; // degrees of freedom of the t-distribution
+	unsigned int maxIter = 10; // maximum number of iterations
+	//mean_<<0,0,0;
+	// weights for each sample point. Initialize each weight to 1
+	std::vector<double> lambda;
+	unsigned int pnts = points_.size();
+	lambda.reserve(pnts);
+	for(unsigned int i=0;i<pnts;i++) lambda[i] = 1.0; 
+	
+		
+	for (unsigned int j=0; j<maxIter; j++)
+	{
+			// update mean
+			double lambdaSum=0;
+			meantmp_<<0,0,0;
+			for(unsigned int i=0; i< pnts; i++)
+			{
+					Eigen::Vector3d tmp;
+					tmp<<points_[i].x,points_[i].y,points_[i].z;
+					meantmp_ += lambda[i]*tmp;
+					lambdaSum += lambda[i];
+			
+			}
+			
+			meanSum_ = meantmp_;
+			meantmp_ /= lambdaSum;
+			
+			// update scalematrix
+			Eigen::MatrixXd mp;
+			mp.resize(points_.size(),3);
+			for(unsigned int i=0; i< pnts; i++)
+			{
+					double sqrtLambda = sqrt(lambda[i]);
+					mp(i,0) = sqrtLambda*(points_[i].x - meantmp_(0));
+					mp(i,1) = sqrtLambda*(points_[i].y - meantmp_(1));
+					mp(i,2) = sqrtLambda*(points_[i].z - meantmp_(2));
+			}
+			covSum_ = mp.transpose()*mp;
+			
+			covTmp_ = covSum_/(points_.size());
+			
+			// compute inverse scalematrix
+			Eigen::Matrix3d invCov;
+			double det=0;
+			bool exists=false;
+			covTmp_.computeInverseAndDetWithCheck(invCov,det,exists);
+			if(!exists){
+				///The inverse does not exist -- exit
+				return;
+			}
+			
+			Eigen::Vector3d tempVec;
+			// update the weights
+			for (unsigned int i=0; i< points_.size(); i++){
+					tempVec(0) = points_[i].x - meantmp_(0);
+					tempVec(1) = points_[i].y - meantmp_(1);
+					tempVec(2) = points_[i].z - meantmp_(2);
+					double temp = nu;
+					temp += squareSum(invCov, tempVec);
+					lambda[i] = (nu+3)/(temp);
+			}
+	}
+	double temp;
+	temp = nu/(nu-2.0);
+	covTmp_ = temp*covTmp_;
+	
+	if(!hasGaussian_){
+		mean_ = meantmp_;
+		cov_ = covTmp_;
+		N = pnts;
+		this->rescaleCovariance();
+	}else{
+		updateSampleVariance(covTmp_, meantmp_, pnts, false);
+	}
+	
+	points_.clear();
+}
 
 /**
 		Attempts to fit a gaussian in the cell.
@@ -134,26 +278,44 @@ template<typename PointT>
 inline
 void NDTCell<PointT>::computeGaussian(int mode, unsigned int maxnumpoints, float occupancy_limit, Eigen::Vector3d origin, double sensor_noise)
 {
-
     ///Occupancy update part
     ///This part infers the given "inconsistency" check done on update phase and
     ///updates the values accordingly
-
+	
     ///Continous occupancy update
     double likoccval = 0.6;
-    //if(this->occ<10.0) likoccval = 0.55;
-
+    
+    
     double logoddlikoccu = points_.size() * log((likoccval)/(1.0-likoccval));
-
-    if(logoddlikoccu > 0.4)  ///We have to trust that it is occupied if we have measurements from the cell!
-    {
-        updateOccupancy(logoddlikoccu, occupancy_limit);
-    }
-    else
-    {
-        updateOccupancy(logoddlikoccu+emptylik, occupancy_limit);
-    }
-
+//		if(mode != CELL_UPDATE_MODE_ERROR_REFINEMENT){
+			if(logoddlikoccu > 0.4)  ///We have to trust that it is occupied if we have measurements from the cell!
+			{
+					updateOccupancy(logoddlikoccu, occupancy_limit);
+			}
+			else
+			{
+	#ifdef ICRA_2013_NDT_OM_SIMPLE_MODE
+				double logoddlikempty = emptyval * log((0.49)/(1.0-0.49));
+				updateOccupancy(logoddlikempty, occupancy_limit);	
+	#else
+				//updateOccupancy(logoddlikoccu+emptylik, occupancy_limit); << MUST BE ENABLED FOR OMG-NR
+				updateOccupancy(logoddlikoccu, occupancy_limit);
+				
+	#endif
+			}
+//		}
+    //occ++;
+		isEmpty = -1;
+		emptyval = 0;
+		emptylik = 0;
+		emptydist = 0;
+		
+		if(occ<=0){
+      hasGaussian_ = false;
+      return;
+		}
+		
+/**
     if(points_.size()>=3)
     {
         //updateOccupancy(1.0, occupancy_limit);
@@ -165,6 +327,7 @@ void NDTCell<PointT>::computeGaussian(int mode, unsigned int maxnumpoints, float
     }
     else
     {
+				points_.clear();
         if(emptyval>=6)
         {
             //updateOccupancy(-1.0, occupancy_limit);
@@ -192,6 +355,17 @@ void NDTCell<PointT>::computeGaussian(int mode, unsigned int maxnumpoints, float
             return; //end
         }
     }
+    ***/
+    
+		if((hasGaussian_==false && points_.size()< 3) || points_.size()==0){
+			points_.clear();
+			return; ///< not enough to compute the gaussian
+		}
+		
+		if(mode==CELL_UPDATE_MODE_STUDENT_T){
+			studentT();
+			return;
+		}
 
 
     if(!hasGaussian_)
@@ -220,6 +394,7 @@ void NDTCell<PointT>::computeGaussian(int mode, unsigned int maxnumpoints, float
         cov_ = covSum_/(points_.size()-1);
         this->rescaleCovariance();
         N = points_.size();
+        
 
         /////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////
@@ -345,11 +520,12 @@ void NDTCell<PointT>::computeGaussian(int mode, unsigned int maxnumpoints, float
     {
         /////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////
+        
         double e_min = 5.0e-4;
         double e_max = 5.0e-2;
         double o_max = 10.0;
-        if(occ>10.0) occ=10.0;
-        if(occ<-10.0) occ = -10.0;
+        if(occ>o_max) occ=o_max;
+        if(occ<-o_max) occ = -o_max;
 
         double epsilon = ((e_min - e_max) / (2.0*o_max)) * (occ+o_max)+e_max;
 
@@ -360,7 +536,11 @@ void NDTCell<PointT>::computeGaussian(int mode, unsigned int maxnumpoints, float
             mean_ = mean_ + epsilon * (tmp - mean_);
 
             cov_ = cov_+epsilon * ((tmp-mean_) * (tmp-mean_).transpose() - cov_);
+            //occ += 1.0;
+            //if(occ>o_max) occ=o_max;
+						//if(occ<-o_max) occ = -o_max;
         }
+        hasGaussian_ = true;
         this->rescaleCovariance();
 
         /////////////////////////////////////////////////////////////////////////////
@@ -452,10 +632,13 @@ void NDTCell<PointT>::computeGaussian(int mode, unsigned int maxnumpoints, float
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     updateColorInformation();
+		
+		points_.clear();
+		/*
     if( !(hasGaussian_ && occ < 0))
     {
         points_.clear();
-    }
+    }*/
 
 
 }
@@ -493,9 +676,9 @@ inline void NDTCell<pcl::PointXYZRGB>::updateColorInformation()
         b /=  points_.size();
 
 
-        R = 0.5*R + 0.5*r;
-        G = 0.5*G + 0.5*g;
-        B = 0.5*B + 0.5*b;
+        R = 0.9*R + 0.1*r;
+        G = 0.9*G + 0.1*g;
+        B = 0.9*B + 0.1*b;
     }
 
 }
@@ -594,6 +777,7 @@ void NDTCell<PointT>::rescaleCovariance()
     else
     {
         hasGaussian_ = true;
+        
         bool recalc = false;
         //guard against near singular matrices::
         int idMax;
@@ -1057,7 +1241,8 @@ void NDTCell<PointT>::setCov(const Eigen::Matrix3d &_cov)
 * @param p2 second point along the ray (it must hold that p1 != p2);
 */
 template<typename PointT>
-double NDTCell<PointT>::computeMaximumLikelihoodAlongLine(PointT p1, PointT p2, Eigen::Vector3d &out)
+inline
+double NDTCell<PointT>::computeMaximumLikelihoodAlongLine(const PointT &p1, const PointT &p2, Eigen::Vector3d &out)
 {
     Eigen::Vector3d v1,v2;
     v1 << p1.x,p1.y,p1.z;
@@ -1068,7 +1253,7 @@ double NDTCell<PointT>::computeMaximumLikelihoodAlongLine(PointT p1, PointT p2, 
     Eigen::Vector3d B = (v2 - mean_);
 
     double sigma = A(0)*L(0)+A(1)*L(1)+A(2)*L(2);
-    if(sigma == 0) return -1;
+    if(sigma == 0) return 1.0;
 
     double t = -(A(0)*B(0)+A(1)*B(1)+A(2)*B(2))/sigma;
 

@@ -1,4 +1,5 @@
 #include <ndt_matcher_p2d.h>
+#include <ndt_matcher_d2d_2d.h>
 #include <ndt_matcher_d2d.h>
 #include <ndt_map.h>
 #include <pointcloud_utils.h>
@@ -9,14 +10,28 @@
 #include <Eigen/Geometry>
 
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
 int
 main (int argc, char** argv)
 {
-    double roll=0,pitch=0,yaw=0,xoffset=0,yoffset=0,zoffset=0;
+    if(argc!=9) {
+	std::cout<<"usage "<<argv[0]<<" x y z r p t cloud1.wrl cloud2.wrl\n";
+	return -1;
+    }
 
+    istringstream roll_c(argv[4]),pitch_c(argv[5]),yaw_c(argv[6]),xoffset_c(argv[1]),yoffset_c(argv[2]),zoffset_c(argv[3]);
+    double roll,pitch,yaw,xoffset,yoffset,zoffset;
+    roll_c >> roll;
+    pitch_c >> pitch;
+    yaw_c >> yaw;
+    xoffset_c >> xoffset;
+    yoffset_c >> yoffset;
+    zoffset_c >> zoffset;
+
+    printf("X %f Y %f Z %f Roll %f Pitch %f Yaw %f \n",xoffset,yoffset,zoffset,roll,pitch,yaw);	
     pcl::PointCloud<pcl::PointXYZ> cloud, cloud_offset;
     char fname[50];
     FILE *fout;
@@ -27,23 +42,36 @@ main (int argc, char** argv)
 
     Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> Tout;
     Tout.setIdentity();
-    if(argc == 3)
+    //printf("Working");	
+    if(argc == 9)
     {
 
         gettimeofday(&tv_start,NULL);
         //we do a single scan to scan registration
-        cloud = lslgeneric::readVRML<pcl::PointXYZ>(argv[1]);
-        cloud_offset = lslgeneric::readVRML<pcl::PointXYZ>(argv[2]);
+        cloud = lslgeneric::readVRML<pcl::PointXYZ>(argv[7]);
+        cloud_offset = lslgeneric::readVRML<pcl::PointXYZ>(argv[8]);
         
         Tout =  Eigen::Translation<double,3>(xoffset,yoffset,zoffset)*
             Eigen::AngleAxis<double>(roll,Eigen::Vector3d::UnitX()) *
             Eigen::AngleAxis<double>(pitch,Eigen::Vector3d::UnitY()) *
             Eigen::AngleAxis<double>(yaw,Eigen::Vector3d::UnitZ()) ;
         
+	//lslgeneric::NDTMatcherD2D_2D<pcl::PointXYZ,pcl::PointXYZ> matcherD2D(false, false, resolutions);
 	lslgeneric::NDTMatcherD2D<pcl::PointXYZ,pcl::PointXYZ> matcherD2D(false, false, resolutions);
         bool ret = matcherD2D.match(cloud,cloud_offset,Tout,true);
-        
+
 	std::cout<<"Transform: \n"<<Tout.matrix()<<std::endl;
+
+	//Tout.setIdentity();
+
+        //Tout =  Eigen::Translation<double,3>(xoffset,yoffset,zoffset)*
+        //    Eigen::AngleAxis<double>(roll,Eigen::Vector3d::UnitX()) *
+        //    Eigen::AngleAxis<double>(pitch,Eigen::Vector3d::UnitY()) *
+        //    Eigen::AngleAxis<double>(yaw,Eigen::Vector3d::UnitZ()) ;
+
+	//lslgeneric::NDTMatcherP2D<pcl::PointXYZ,pcl::PointXYZ> matcherP2F(resolutions);
+	//bool ret = matcherP2F.match(cloud,cloud_offset,Tout);
+        //std::cout<<"Transform: \n"<<Tout.matrix()<<std::endl;
 
         snprintf(fname,49,"c_offset.wrl");
         fout = fopen(fname,"w");

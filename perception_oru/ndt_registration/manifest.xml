@@ -18,7 +18,7 @@
   <depend package="tf_conversions"/>
 
   <export>
-  <cpp cflags="-I${prefix}/include -fopenmp"/>
+  <cpp cflags="-I${prefix}/include -fopenmp" lflags="-lgsl -lgslcblas -L${prefix}/lib"/>
   </export>
 
 

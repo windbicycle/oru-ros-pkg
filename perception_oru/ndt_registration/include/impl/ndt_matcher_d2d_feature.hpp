@@ -18,20 +18,13 @@ NDTMatcherFeatureD2D<PointSource,PointTarget>::match( NDTMap<PointTarget>& targe
 
     lfd1 = 1;//lfd1/(double)sourceNDT.getMyIndex()->size(); //current_resolution*2.5;
     lfd2 = 0.05; //0.1/current_resolution;
-//    cout<<lfd1<<" "<<lfd2<<endl;
-    ///////////
 
-    //locals
-//    int ITR_MAX = 100000; // Henrik, check if it helsp on really bad initial estimates...
     int ITR_MAX = 1000;
     bool convergence = false;
     double score=0;
     double scoreP=0;
-//    double DELTA_SCORE = 10e-4*current_resolution;
     double DELTA_SCORE = 10e-5*this->current_resolution; //Henrik
-      //double DELTA_SCORE = 0.0005;
     double NORM_MAX = 4*this->current_resolution, ROT_MAX = M_PI/4; //
-//    double alfa = 0.9;
     int itr_ctr = 0;
     double step_size = 1;
     Eigen::Matrix<double,6,1> pose_increment_v, pose_increment_reg_v, score_gradient; //column vectors
@@ -42,10 +35,8 @@ NDTMatcherFeatureD2D<PointSource,PointTarget>::match( NDTMap<PointTarget>& targe
     //T.setIdentity();
     TR.setIdentity();
 
-    //std::vector<NDTCell*> nextNDT = sourceNDT.pseudoTransformNDT(TR);
     std::vector<NDTCell<PointSource>*> nextNDT = sourceNDT.pseudoTransformNDT(T);
 
-  //  double scoreInit = scoreNDT(nextNDT,targetNDT);
     while(!convergence) {
 
 	TR.setIdentity();
@@ -131,6 +122,136 @@ NDTMatcherFeatureD2D<PointSource,PointTarget>::match( NDTMap<PointTarget>& targe
     return ret;
 }
 */
+#if 0
+template <typename PointSource, typename PointTarget>
+bool NDTMatcherFeatureD2D<PointSource,PointTarget>::match( NDTMap<PointTarget>& targetNDT,
+        NDTMap<PointSource>& sourceNDT,
+        Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T )
+{
+
+    //locals
+    bool convergence = false;
+    double DELTA_SCORE = 10e-4;
+    int ITR_MAX = 1000;
+    int itr_ctr = 0;
+    double step_size = 1;
+    Eigen::Matrix<double,6,1>  pose_increment_v, scg;
+    Eigen::MatrixXd Hessian(6,6), score_gradient(6,1); //column vectors, pose_increment_v(6,1)
+
+    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> TR;
+    Eigen::Vector3d transformed_vec, mean;
+    bool ret = true;
+
+
+    Eigen::Array<double,6,1> weights;
+    while(!convergence)
+    {
+        std::vector<NDTCell<PointSource>*> nextNDT = sourceNDT.pseudoTransformNDT(T);
+        TR.setIdentity();
+        Hessian.setZero();
+        score_gradient.setZero();
+
+        double score_here = derivativesNDT(nextNDT,targetNDT,score_gradient,Hessian,true);
+        scg = score_gradient;
+
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double,6,6> > Sol (Hessian);
+        Eigen::Matrix<double,6,1> evals = Sol.eigenvalues().real();
+        double minCoeff = evals.minCoeff();
+        double maxCoeff = evals.maxCoeff();
+        if(minCoeff < 0 )   //evals.minCoeff() < 0.01*evals.maxCoeff()) {
+        {
+            Eigen::Matrix<double,6,6> evecs = Sol.eigenvectors().real();
+            double regularizer = 0.01*maxCoeff - minCoeff;
+            Eigen::Matrix<double,6,1> reg;
+            //ugly
+            reg<<regularizer,regularizer,regularizer,regularizer,regularizer,regularizer;
+            evals += reg;
+            Eigen::Matrix<double,6,6> Lam;
+            Lam = evals.asDiagonal();
+            Hessian = evecs*Lam*(evecs.transpose());
+            std::cerr<<"regularizing\n";
+        }
+//	std::cout<<"s("<<itr_ctr+1<<") = "<<score_here<<";\n";
+//	std::cout<<"H(:,:,"<<itr_ctr+1<<")  =  ["<< Hessian<<"];\n"<<std::endl;				  //
+//	std::cout<<"grad (:,"<<itr_ctr+1<<")= ["<<score_gradient.transpose()<<"];"<<std::endl;         //
+        if (score_gradient.norm()<= DELTA_SCORE)
+        {
+//	    std::cout<<"incr(:,"<<itr_ctr+1<<") = [0 0 0 0 0 0]';\n";
+            std::cout<<"\%gradient vanished\n";
+            //de-alloc nextNDT
+            for(unsigned int i=0; i<nextNDT.size(); i++)
+            {
+                if(nextNDT[i]!=NULL)
+                    delete nextNDT[i];
+            }
+
+            return true;
+        }
+        pose_increment_v = -Hessian.ldlt().solve(score_gradient);
+        double dginit = pose_increment_v.dot(scg);
+        if(dginit > 0)
+        {
+//	    std::cout<<"incr(:,"<<itr_ctr+1<<") = ["<<pose_increment_v.transpose()<<"]';\n";
+//	    std::cout<<"\%dg  =  "<<dginit<<std::endl;     //
+            std::cout<<"\%can't decrease in this direction any more, done \n";
+            //de-alloc nextNDT
+            for(unsigned int i=0; i<nextNDT.size(); i++)
+            {
+                if(nextNDT[i]!=NULL)
+                    delete nextNDT[i];
+            }
+            return true;
+        }
+        step_size = lineSearchMT(pose_increment_v,nextNDT,targetNDT);
+        pose_increment_v = step_size*pose_increment_v;
+
+        TR.setIdentity();
+        TR =  Eigen::Translation<double,3>(pose_increment_v(0),pose_increment_v(1),pose_increment_v(2))*
+              Eigen::AngleAxis<double>(pose_increment_v(3),Eigen::Vector3d::UnitX()) *
+              Eigen::AngleAxis<double>(pose_increment_v(4),Eigen::Vector3d::UnitY()) *
+              Eigen::AngleAxis<double>(pose_increment_v(5),Eigen::Vector3d::UnitZ()) ;
+
+        T = TR*T;
+//	std::cout<<"incr(:,"<<itr_ctr+1<<") = ["<<pose_increment_v.transpose()<<"]';\n";
+//	std::cout<<"pose(:,"<<itr_ctr+2<<") = ["<<T.translation().transpose()<<" "<<T.rotation().eulerAngles(0,1,2).transpose()<<"]';\n";
+
+        for(unsigned int i=0; i<nextNDT.size(); i++)
+        {
+            if(nextNDT[i]!=NULL)
+                delete nextNDT[i];
+        }
+
+        if(itr_ctr>0)
+        {
+            convergence = ((pose_increment_v.norm()) < DELTA_SCORE);
+        }
+        if(itr_ctr>ITR_MAX)
+        {
+            convergence = true;
+            ret = false;
+        }
+        itr_ctr++;
+    }
+//    std::cout<<"incr(:,"<<itr_ctr+1<<") = [0 0 0 0 0 0]';\n";
+//    std::cout<<"grad(:,"<<itr_ctr+1<<") = [0 0 0 0 0 0]';\n";
+    /*
+        snprintf(fname,49,"final.wrl");
+        fout = fopen(fname,"w");
+        fprintf(fout,"#VRML V2.0 utf8\n");
+        targetNDT.writeToVRML(fout,Eigen::Vector3d(1,0,0));
+        for(unsigned int i=0; i<nextNDT.size(); i++)
+        {
+    	if(nextNDT[i]!=NULL)
+    	{
+    	    nextNDT[i]->writeToVRML(fout,Eigen::Vector3d(0,1,0));
+    	}
+        }
+        fclose(fout);
+    */
+    //std::cout<<"res "<<current_resolution<<" itr "<<itr_ctr<<std::endl;
+    return ret;
+}
+#endif
 
 template <typename PointSource, typename PointTarget>
 bool
@@ -139,140 +260,10 @@ NDTMatcherFeatureD2D<PointSource,PointTarget>::covariance( NDTMap<PointTarget>& 
         Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor>& T,
         Eigen::Matrix<double,6,6> &cov)
 {
-    //...
     assert(false);
-
-    double sigmaS = (0.03)*(0.03);
-    Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> TR;
-    TR.setIdentity();
-    std::vector<NDTCell<PointSource>*> sourceNDTN = sourceNDT.pseudoTransformNDT(T);
-    std::vector<NDTCell<PointTarget>*> targetNDTN = targetNDT.pseudoTransformNDT(T);
-    Eigen::Matrix<double,6,1> scg; //column vectors
-    int NM = sourceNDTN.size() + targetNDTN.size();
-
-    Eigen::MatrixXd Jdpdz(NM,6);
-
-    NDTCell<PointTarget> *cell;
-    Eigen::Vector3d transformed;
-    Eigen::Vector3d meanMoving, meanFixed;
-    Eigen::Matrix3d CMoving, CFixed, Cinv;
-    bool exists = false;
-    double det = 0;
-    Eigen::Matrix<double,6,1> ones;
-    ones<<1,1,1,1,1,1;
-    derivativesNDT(sourceNDTN,targetNDT,T,scg,cov,true);
-
-    Eigen::Matrix3d Q;
-    Jdpdz.setZero();
-    Q.setZero();
-
-    pcl::PointXYZ point;
-    //now compute Jdpdz
-    for(unsigned int j=0; j<_corr.size(); j++)
-    {
-        unsigned int i = _corr[j].second;
-        meanMoving = sourceNDTN[i]->getMean();
-        point.x = meanMoving(0);
-        point.y = meanMoving(1);
-        point.z = meanMoving(2);
-        std::cout << "sourceNDTN.size() : " << sourceNDTN.size() << std::endl;
-        std::cout << "targetNDTN.size() : " << targetNDTN.size() << std::endl;
-        assert(sourceNDTN.size () <= _corr.size());
-        cell = targetNDT.getCellIdx(_corr[j].first);
-
-        if(cell == NULL)
-        {
-            continue;
-        }
-        if(cell->hasGaussian_)
-        {
-
-            meanFixed = cell->getMean();
-            transformed = meanMoving-meanFixed;
-            CFixed = cell->getCov();
-            CMoving= sourceNDTN[i]->getCov();
-
-            (CFixed+CMoving).computeInverseAndDetWithCheck(Cinv,det,exists);
-            if(!exists) continue;
-
-            //compute Jdpdz.col(i)
-            double factor = (-transformed.dot(Cinv*transformed)/2);
-            //these conditions were copied from martin's code
-            if(factor < -120)
-            {
-                //	continue; //Henrik
-            }
-            factor = exp(lfd2*factor)/2;
-            if(factor > 1 || factor < 0 || factor*0 !=0)
-            {
-                continue;
-            }
-
-            Q = -sigmaS*Cinv*Cinv;
-
-            Eigen::Matrix<double,6,1> G, xtQJ;
-
-            G.setZero();
-            for(int q=0; q<6; q++)
-            {
-                G(q) =  -transformed.transpose()*Q*(Zest.template block<3,3>(0,3*q))*Cinv*transformed;
-                G(q) = G(q) -transformed.transpose()*Cinv*(Zest.template block<3,3>(0,3*q))*Q*transformed;
-            }
-
-            xtQJ = transformed.transpose()*Q*Jest;
-
-            double f1 = (transformed.transpose()*Q*transformed);
-            G = G + xtQJ + (-lfd2/2)*f1*ones;
-            G = G*factor*lfd1*lfd2/2;
-
-            Jdpdz.row(i) = G.transpose();
-
-            // Check if this is correct...
-            for (size_t k = 0; k < _corr.size(); k++)
-            {
-                if (!_goodCorr[k])
-                    continue;
-
-                size_t l = _corr[k].first;
-                if(targetNDTN[l]->getMean() == meanFixed)
-                {
-
-                    Jdpdz.row(l+sourceNDTN.size()) = Jdpdz.row(l+sourceNDTN.size())+G.transpose();
-                    continue;
-                }
-            }
-
-            cell = NULL;
-        }
-    }
-
-
-    //cout<<Jdpdz.transpose()<<endl;
-
-    Eigen::MatrixXd JK(6,6);
-    JK = sigmaS*Jdpdz.transpose()*Jdpdz;
-
-    //cout<<"J*J'\n"<<JK<<endl;
-    //cout<<"H\n"<<cov<<endl;
-
-    cov = cov.inverse()*JK*cov.inverse();
-
-    for(unsigned int q=0; q<sourceNDTN.size(); q++)
-    {
-        delete sourceNDTN[q];
-    }
-    sourceNDTN.clear();
-    return true;
-}
-
-struct sort_scores
-{
-    bool operator()(const std::pair<unsigned int,double> &left, const std::pair<unsigned int,double> &right)
-    {
-        return left.second < right.second;
-    }
 };
 
+//DEPRECATED???
 template <typename PointSource, typename PointTarget>
 double
 NDTMatcherFeatureD2D<PointSource,PointTarget>::scoreNDT(std::vector<NDTCell<PointSource>*> &sourceNDT, NDTMap<PointTarget> &targetNDT,
@@ -363,14 +354,94 @@ NDTMatcherFeatureD2D<PointSource,PointTarget>::scoreNDT(std::vector<NDTCell<Poin
 }
 
 template <typename PointSource, typename PointTarget>
-void
-NDTMatcherFeatureD2D<PointSource,PointTarget>::derivativesNDT( std::vector<NDTCell<PointSource>*> &sourceNDT,
-        NDTMap<PointTarget> &targetNDT,
-        Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &transform,
-        Eigen::Matrix<double,6,1> &score_gradient,
-        Eigen::Matrix<double,6,6> &Hessian,
-        bool computeHessian )
+double
+NDTMatcherFeatureD2D<PointSource,PointTarget>::derivativesNDT( 
+    const std::vector<NDTCell<PointSource>*> &sourceNDT,
+    const NDTMap<PointTarget> &targetNDT,
+    Eigen::MatrixXd &score_gradient,
+    Eigen::MatrixXd &Hessian,
+    bool computeHessian
+)
 {
+
+    struct timeval tv_start, tv_end;
+    double score_here = 0;
+
+    gettimeofday(&tv_start,NULL);
+    NUMBER_OF_ACTIVE_CELLS = 0;
+    score_gradient.setZero();
+    Hessian.setZero();
+
+    PointTarget point;
+    Eigen::Vector3d transformed;
+    Eigen::Vector3d meanMoving, meanFixed;
+    Eigen::Matrix3d CMoving, CFixed, CSum, Cinv, R;
+    NDTCell<PointTarget> *cell;
+    bool exists = false;
+    double det = 0;
+    for (unsigned int j = 0; j < _corr.size(); j++)
+    {
+        if (!_goodCorr[j])
+            continue;
+
+        unsigned int i = _corr[j].second;
+        if (i >= sourceNDT.size())
+        {
+            std::cout << "sourceNDT.size() : " << sourceNDT.size() << ", i: " << i << std::endl;
+        }
+        assert(i < sourceNDT.size());
+        
+	meanMoving = sourceNDT[i]->getMean();
+        CMoving= sourceNDT[i]->getCov();
+        
+	this->computeDerivatives(meanMoving, CMoving, computeHessian);
+
+        point.x = meanMoving(0);
+        point.y = meanMoving(1);
+        point.z = meanMoving(2);
+       
+        cell = targetNDT.getCellIdx(_corr[j].first);
+	if(cell == NULL)
+	{
+	    continue;
+	}
+	if(cell->hasGaussian_)
+	{
+	    transformed = meanMoving - cell->getMean();
+	    CFixed = cell->getCov();
+	    CSum = (CFixed+CMoving);
+	    CSum.computeInverseAndDetWithCheck(Cinv,det,exists);
+	    if(!exists)
+	    {
+		//delete cell;
+		continue;
+	    }
+	    double l = (transformed).dot(Cinv*(transformed));
+	    if(l*0 != 0)
+	    {
+		//delete cell;
+		continue;
+	    }
+	    double sh = -lfd1*(exp(-lfd2*l/2));
+	    //std::cout<<"m1 = ["<<meanMoving.transpose()<<"]';\n m2 = ["<<cell->getMean().transpose()<<"]';\n";
+	    //std::cout<<"C1 = ["<<CMoving<<"];\n C2 = ["<<CFixed<<"];\n";
+	    //update score gradient
+	    if(!this->update_gradient_hessian(score_gradient,Hessian,transformed, Cinv, sh, computeHessian))
+	    {
+		continue;
+	    }
+	    score_here += sh;
+	    cell = NULL;
+	}
+    }
+    gettimeofday(&tv_end,NULL);
+
+    //double time_load = (tv_end.tv_sec-tv_start.tv_sec)*1000.+(tv_end.tv_usec-tv_start.tv_usec)/1000.;
+    //std::cout<<"time derivatives took is: "<<time_load<<std::endl;
+    return score_here;
+
+//TSV: these are the old derivatives, in case i messed something up
+#if 0
     NDTCell<PointTarget> *cell;
     Eigen::Vector3d transformed;
     Eigen::Vector3d meanMoving, meanFixed;
@@ -436,8 +507,11 @@ NDTMatcherFeatureD2D<PointSource,PointTarget>::derivativesNDT( std::vector<NDTCe
             }
         }
     }
+#endif
 }
 
+//TSV: use the standard ones
+#if 0
 template <typename PointSource, typename PointTarget>
 bool
 NDTMatcherFeatureD2D<PointSource,PointTarget>::update_gradient_hessian(
@@ -499,5 +573,6 @@ NDTMatcherFeatureD2D<PointSource,PointTarget>::update_gradient_hessian(
     return true;
 
 }
+#endif
 
 }

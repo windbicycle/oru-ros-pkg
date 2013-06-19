@@ -65,7 +65,8 @@ public:
     }
 
     virtual Cell<PointT>* getCellForPoint(const PointT &point) = 0;
-    virtual void addPoint(const PointT &point) = 0;
+    ///add a point and get back the pointer to the cell in which it ended up
+    virtual Cell<PointT>* addPoint(const PointT &point) = 0;
 
     ///iterator through all cells in index, points at the begining
     virtual CellVectorItr begin() = 0;

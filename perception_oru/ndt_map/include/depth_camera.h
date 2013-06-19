@@ -354,7 +354,7 @@ public:
             std::cerr<<"wrong depth image format - expected 32 bit floats\n";
             return 0;
         }
-        float nan = std::numeric_limits<float>::quiet_NaN();
+        //float nan = std::numeric_limits<float>::quiet_NaN(); //?
 
         size_t halfSize = support_size/2;
         int halfSizeI = (int)halfSize;
@@ -375,7 +375,7 @@ public:
         int vKey = static_cast<int>(keyPointCenter.pt.y+0.5);
         //int indexKey = vKey * depthImg.size().width + uKey;
 
-        int index, index_cloud, u, v;
+        int index, u, v;
         double depth = 0;
 
         double depth_mean = 0, depth_var = 0;

@@ -64,9 +64,9 @@ Cell<PointT>* CellVector<PointT>::getCellForPoint(const PointT &point)
 }
 
 template <typename PointT>
-void CellVector<PointT>::addPoint(const PointT &point)
+Cell<PointT>* CellVector<PointT>::addPoint(const PointT &point)
 {
-
+    return NULL;
     // Do nothing...
 }
 
@@ -240,7 +240,7 @@ std::vector<NDTCell<PointT>*> CellVector<PointT>::getClosestNDTCells(const Point
 
 template <typename PointT>
 NDTCell<PointT>*
-CellVector<PointT>::getCellIdx(unsigned int idx)
+CellVector<PointT>::getCellIdx(unsigned int idx) const
 {
     if (idx >= activeCells.size())
         return NULL;

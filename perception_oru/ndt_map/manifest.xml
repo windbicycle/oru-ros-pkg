@@ -9,7 +9,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_map</url>
-  <depend package="common_rosdeps" />
+  <!--depend package="common_rosdeps" /-->
   <rosdep name="eigen" />
   <depend package="pcl" />
   <depend package="pcl_ros" />
