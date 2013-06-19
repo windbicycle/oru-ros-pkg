@@ -38,9 +38,10 @@
 #include <spatial_index.h>
 #include <ndt_cell.h>
 #include <depth_camera.h>
+#include <set>
 
 #include <cstdlib>
-#include<lazy_grid.h>
+#include <lazy_grid.h>
 #include <cv.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -87,20 +88,8 @@ namespace lslgeneric
 * Afer this the map is updated. There are various methods to access the map elements documented in this header file that you may use.
 *
 * This class implements now the following papers, which you hopefully cite if you find this useful:
-* 	Jari Saarinen, Henrik Andreasson, Todor Stoyanov, and Achim J.
-* 	Lilienthal. Long-Term Mapping in Large-Scale Dynamic Environments
-* 	Using 3D Normal Distribution Maps. In review for IEEE
-* 	International Conference on Robotics and Automation (ICRA 2013), 2013.
-*
-*  Jari Saarinen, Henrik Andreasson, Todor Stoyanov, and Achim J.
-*	 Lilienthal. Long-Term Mapping in Large-Scale Dynamic Environments
-*  Using 3D Normal Distribution Maps.  In review for IEEE
-*  International Conference on Robotics and Automation (ICRA 2013), 2013.
-*
-*  There is also an implementation of modeling of the dynamics (edata structure in ndt_cell):
-*
-*  Jari Saarinen, Henrik Andreasson and Achim J Lilienthal,
-*  "Independent Markov chain occupancy grid maps for representation of dynamic environments,"
+*	Normal Distributions Transform Occupancy Maps: Application to Large-Scale Online 3D Mapping. IEEE International Conference on Robotics and Automation (ICRA 2013), 2013.
+*  There is also an implementation of modeling of the dynamics (edata structure in ndt_cell): "Independent Markov chain occupancy grid maps for representation of dynamic environments,"
 *  in IROS2012 Conference Proceedings, Vilamoura, Algarve, Portugal: IEEE, 2012, pp. 3489-3495.
 *
 * In addition, this class provide the basis for NDT registration, which is further discussed in the \ref ndt_registration package. The relevant publications are:
@@ -114,10 +103,11 @@ public:
     NDTMap()
     {
         index_ = NULL;
+	guess_size_ = true;
     }
     /** default constructor. The SpatialIndex sent as a paramter
-    	*		is used as a factory every time that loadPointCloud is called.
-    	*		it can/should be deallocated outside the class after the destruction of the NDTMap
+     *	is used as a factory every time that loadPointCloud is called.
+     *	it can/should be deallocated outside the class after the destruction of the NDTMap
     */
     NDTMap(SpatialIndex<PointT> *idx)
     {
@@ -130,13 +120,14 @@ public:
         map_sizey = -1.0;
         map_sizez = -1.0;
         is3D = true;
+				guess_size_ = true;
     }
 
     NDTMap(const NDTMap& other)
     {
         if(other.index_ != NULL)
         {
-            this->index_ = index_->copy();
+            this->index_ = other.index_->copy();
             isFirstLoad_ = false;
         }
     }
@@ -176,6 +167,7 @@ public:
             exit(1);
         }
         lz->initializeAll();
+				guess_size_ = false;
     }
 
     /**
@@ -202,6 +194,7 @@ public:
             exit(1);
         }
         lz->initializeAll();
+				guess_size_ = false;
     }
 
 
@@ -216,7 +209,9 @@ public:
         {
             //std::cout<<"DELETE INDEX\n";
             delete index_;
+						index_ = NULL;
         }
+        
     }
 
     void setMode(bool is3D_)
@@ -243,23 +238,45 @@ public:
     	*
     	* @param &origin is the position of the sensor, from where the scan has been taken from.
     	* @param &pc is the pointcloud to be added
-    	* @param classifierTh A treshold to judge if the ray passes through a gaussian
+    	* @param classifierTh A treshold to judge if the ray passes through a gaussian (obsolete)
     	* @param maxz threshold for the maximum z-coordinate value for the measurement point_cloud
     	* @param sensor_noise The expected standard deviation of the sensor noise
     	*/
-    void addPointCloud(const Eigen::Vector3d &origin, const pcl::PointCloud<PointT> &pc, double classifierTh=0.06, double maxz = 100.0, double sensor_noise = 0.25);
+    virtual void addPointCloud(const Eigen::Vector3d &origin, const pcl::PointCloud<PointT> &pc, double classifierTh=0.06, 
+																double maxz = 100.0, double sensor_noise = 0.25, double occupancy_limit = 255);
 
     /**
     * This interface updates only the end points into the map without raytracing
     */
     void addPointCloudSimple(const pcl::PointCloud<PointT> &pc,double maxz=100.0);
 
+
+    /**
+     * Add new pointcloud to map - Updates the occupancy using the mean values of 
+     * a local map generated from an observation
+     * 
+     * Performs raytracing, updates conflicts and adds points to cells
+     * computeNDTCells must be called after calling this
+     *
+     * @param &origin is the position of the sensor, from where the scan has been taken from.
+     * @param &pc is the pointcloud to be added
+     * @param &localmapsize The dimensions of the local map used for computing the gaussians
+     * @param maxnumpoints Defines the forgetting factor (default 100000) the smaller the value the faster the adaptation
+     * @param occupancy_limit Clamping threshold for log-odds value
+     * @param maxz threshold for the maximum z-coordinate value for the measurement point_cloud
+     * @param sensor_noise The expected standard deviation of the sensor noise
+     */
+    virtual void addPointCloudMeanUpdate(const Eigen::Vector3d &origin, 
+	    const pcl::PointCloud<PointT> &pc, 
+	    const Eigen::Vector3d &localmapsize,
+	    unsigned int maxnumpoints = 1e9, float occupancy_limit=255 ,double maxz = 100.0, double sensor_noise = 0.25);
+
     /**
     * Adds one measurement to the map using NDT-OM update step
     * @return true if an inconsistency was detected
     */
 
-    bool addMeasurement(const Eigen::Vector3d &origin,PointT endpoint, double classifierTh, double maxz, double sensor_noise);
+    virtual bool addMeasurement(const Eigen::Vector3d &origin,PointT endpoint, double classifierTh, double maxz, double sensor_noise);
 
 
     /**
@@ -267,8 +284,11 @@ public:
     * @param &ucov The covariance matrix to be added
     * @param &umean The mean of the normal distribution
     * @param numpointsindistribution The number of points used in computation of the sample mean and covariance
+    * @param r,g,b -- optional color parameters
+    * @param maxnumpoints -- optional adaptation of the gaussians
     */
-    void addDistributionToCell(Eigen::Matrix3d &ucov, Eigen::Vector3d &umean, unsigned int numpointsindistribution);
+    void addDistributionToCell(const Eigen::Matrix3d &ucov,const Eigen::Vector3d &umean, unsigned int numpointsindistribution, 
+															float r=0, float g=0,float b=0, unsigned int maxnumpoints=1e9, float max_occupancy=1024);
 
 
     /**
@@ -280,28 +300,47 @@ public:
     * \param pc the PointCloud that is to be loaded
     * \note every subsequent call will destroy the previous map!
     */
-    void loadPointCloud(const pcl::PointCloud<PointT> &pc, double range_limit = -1);
+    virtual void loadPointCloud(const pcl::PointCloud<PointT> &pc, double range_limit = -1);
     /// each entry in the indices vector contains a set of indices to a NDC cell.
 
 
-
     /// NOTE: These load functions are not supported by occupancy mapping
-    /// FIXME: Todor, add documentation
+    /**
+      * This function loads a point cloud around specific indeces for usage in NFT-feature based mapping.
+      *	\param &pc the Point Cloud to use as input
+      * \param &indices a vector of the indeces that will be added for each cell. We add indices.size() number of cells, 
+      * each cell c[i] contains the points, indexed by the vector indices[i] 
+      */
     void loadPointCloud(const pcl::PointCloud<PointT> &pc, const std::vector<std::vector<size_t> > &indices);
+
+    /**
+     * loadPointCloudCentroid - A special load function to enable the matching of centroids (create alligned maps)
+     * This is more efficient than the standard, but needs also the origin and size as parameters
+     * \param &pc the PointCloud that is to be loaded
+     * \param &origin The desired origin of the map (will be fitted acording to old_centroid)
+     * \param &old_centroid The centroid to which we want to align
+     * \param &map_size The size of the new map 
+     * \param range_limit The maximum range value for measurements
+     * \note every subsequent call will destroy the previous map!
+     */
+    void loadPointCloudCentroid(const pcl::PointCloud<PointT> &pc, const Eigen::Vector3d &origin, const Eigen::Vector3d &old_centroid, const Eigen::Vector3d &map_size, double range_limit);
+		
+		
     void loadDepthImage(const cv::Mat& depthImage, DepthCamera<PointT> &cameraParams);
     pcl::PointCloud<PointT> loadDepthImageFeatures(const cv::Mat& depthImage, std::vector<cv::KeyPoint> &keypoints,
             size_t &supportSize, double maxVar, DepthCamera<PointT> &cameraParams, bool estimateParamsDI=false, bool nonMean = false);
-
-
 
     /**
     * Computes the NDT-cells after a measurement has been added
     * @param cellupdatemode Defines the update mode (default CELL_UPDATE_MODE_SAMPLE_VARIANCE)
     * @param maxnumpoints Defines the forgetting factor (default 100000) the smaller the value the faster the adaptation
     */
-    void computeNDTCells(int cellupdatemode = CELL_UPDATE_MODE_SAMPLE_VARIANCE, unsigned int maxnumpoints = 100000, float occupancy_limit=255, Eigen::Vector3d origin = Eigen::Vector3d(0,0,0), double sensor_noise=0.1);
+    virtual void computeNDTCells(int cellupdatemode = CELL_UPDATE_MODE_SAMPLE_VARIANCE, unsigned int maxnumpoints = 1e9, float occupancy_limit=255, Eigen::Vector3d origin = Eigen::Vector3d(0,0,0), double sensor_noise=0.1);
 
-
+    /**
+     * Computes the Normaldistribution parameters without erasing the points
+     */
+    void computeNDTCellsSimple();
     /**
     * Stuff for saving things
     */
@@ -326,34 +365,34 @@ public:
     int getMyIndexInt() const;
 
     //computes the likelihood of a single observation
-    double getLikelihoodForPoint(PointT pt);
+    virtual double getLikelihoodForPoint(PointT pt);
 
     ///Get the cell for which the point fall into (not the closest cell)
-    bool getCellAtPoint(const PointT &refPoint, NDTCell<PointT> *&cell);
+    virtual bool getCellAtPoint(const PointT &refPoint, NDTCell<PointT> *&cell);
 
     /**
      * returns the closest cell to refPoint
      * Does not work with NDT-OM
      */
-    bool getCellForPoint(const PointT &refPoint, NDTCell<PointT> *&cell, bool checkForGaussian=true) const;
+    virtual bool getCellForPoint(const PointT &refPoint, NDTCell<PointT> *&cell, bool checkForGaussian=true) const;
     /**
      * Returns all the cells within radius
      * Does not work with NDT-OM
      */
-    std::vector<NDTCell<PointT>*> getCellsForPoint(const PointT pt, int n_neighbours, bool checkForGaussian=true) const;
+    virtual std::vector<NDTCell<PointT>*> getCellsForPoint(const PointT pt, int n_neighbours, bool checkForGaussian=true) const;
     /**
      * Returns all the cells within radius
      */
-    std::vector<NDTCell<PointT>*> getInitializedCellsForPoint(const PointT pt) const;
+    virtual std::vector<NDTCell<PointT>*> getInitializedCellsForPoint(const PointT pt) const;
 
 
     ///return the cell using a specific index (not available for all spatialindexes), will return NULL if the idx is not valid.
-    NDTCell<PointT>* getCellIdx(unsigned int idx);
+    NDTCell<PointT>* getCellIdx(unsigned int idx) const;
 
     /**
     * Returns a transformed NDT as a vector of NDT cells
     */
-    std::vector<NDTCell<PointT>*> pseudoTransformNDT(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T);
+    virtual std::vector<NDTCell<PointT>*> pseudoTransformNDT(Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> T);
 
     /**
      * Returns a transformed NDT as an NDT map with a CellVector data structure
@@ -363,18 +402,18 @@ public:
      * Returns all computed cells from the map
      * This method gives all the vectors that contain a gaussian within a cell (hasGaussian is true).
      */
-    std::vector<lslgeneric::NDTCell<PointT>*> getAllCells() const;
+    virtual std::vector<lslgeneric::NDTCell<PointT>*> getAllCells() const;
 
     /**
      * Returns all cells that have been initialized (including ones that do not contain gaussian at the moment).
      * This is useful if you want to use the empty cells or dynamic cells
      */
-    std::vector<lslgeneric::NDTCell<PointT>*> getAllInitializedCells();
+    virtual std::vector<lslgeneric::NDTCell<PointT>*> getAllInitializedCells();
 
 
     int numberOfActiveCells();
 
-    bool getCentroid(double &cx, double &cy, double &cz)
+    virtual bool getCentroid(double &cx, double &cy, double &cz)
     {
         LazyGrid<PointT> *lz = dynamic_cast<LazyGrid<PointT>*>(index_);
         if(lz == NULL) return false;
@@ -388,9 +427,28 @@ public:
         lz->getGridSizeInMeters(cx, cy, cz);
         return true;
     }
+    /**
+    * \param guess_size try to guess the size based on point cloud. Otherwise use pre-set map size
+    */
+    void guessSize(float cenx, float ceny, float cenz, float sizex, float sizey, float sizez) {
+			guess_size_ = true;
+			centerx=cenx;
+			centery=ceny;
+			centerz=cenz;
+			map_sizex=sizex;
+			map_sizey=sizey;
+			map_sizez=sizez;
+    }
 
     //tsv: temporary debug function
     void debugToVRML(const char* fname, pcl::PointCloud<PointT> &pc);
+    
+    /**
+    * Computes a maximum likelihood depth from the map, given a position and a view vector 
+    */
+    double getDepth(Eigen::Vector3d origin, Eigen::Vector3d dir, double maxDepth=100);
+    
+    
 protected:
     bool is3D;
     SpatialIndex<PointT> *index_;
@@ -398,6 +456,9 @@ protected:
     float map_sizex;
     float map_sizey;
     float map_sizez;
+    float centerx,centery,centerz;
+    bool guess_size_;
+    std::set<NDTCell<PointT>*> update_set;
 
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

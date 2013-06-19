@@ -22,25 +22,13 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
-#set( LIBRARY_SOURCES
-#        src/OctTree.cc	
-#	src/Cell.cc 
-#	src/NDTCell.cc
-#	src/NDTMap.cc
-#	src/NDTHistogram.cc
-#	src/AdaptiveOctTree.cc
-#	src/Pose.cc
-#	src/LazzyGrid.cc
-#	src/CellVector.cc
-#	)
-#make a library with the core functionalities (depends on eigen, tf and pcl)
-#rosbuild_add_library(${PROJECT_NAME} ${LIBRARY_SOURCES})
-#target_link_libraries(${PROJECT_NAME} another_library)
-
 #make a node that listens to point clouds and makes ndts
 
 #rosbuild_add_executable(oct_builder test/octTreeBuilder.cc)
-rosbuild_add_executable(ndt_builder test/ndtMapBuilder.cc)
+
+###REMOVED BY JARI -- BECAUSE IT DOES NOT COMPILE!
+#rosbuild_add_executable(ndt_builder test/ndtMapBuilder.cc)
+
 rosbuild_add_executable(histTest test/test_ndt_histogram.cc)
 rosbuild_add_executable(jffSaveTest test/jffLazyGridTest_saving.cc)
 rosbuild_add_executable(jffLoadTest test/jffLazyGridTest_loading.cc)
@@ -48,8 +36,7 @@ rosbuild_add_executable(jffLoadTest test/jffLazyGridTest_loading.cc)
 #rosbuild_add_executable(likelihood_test test/ndtLikelihoodTester.cc)
 #target_link_libraries(likelihood_test ${PROJECT_NAME}  pointcloud_vrml)
 
-#rosbuild_add_executable(ltest test/likelihoodSingleScan.cc)
-#target_link_libraries(ltest ${PROJECT_NAME}  pointcloud_vrml)
+rosbuild_add_executable(ltest test/likelihoodSingleScan.cc)
 
 #rosbuild_add_executable(batchTestHist test/batchTesterHistogramFPFH.cc)
 #target_link_libraries(batchTestHist ${PROJECT_NAME} pointcloud_vrml)

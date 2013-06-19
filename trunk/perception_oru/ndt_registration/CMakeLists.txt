@@ -25,11 +25,14 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_library(${PROJECT_NAME} ${LIBRARY_SOURCES})
 #target_link_libraries(${PROJECT_NAME} another_library)
 rosbuild_add_boost_directories()
-rosbuild_add_executable(ndt_registration_test test/ndt_registration_test.cc)
-rosbuild_add_openmp_flags(ndt_registration_test)
+#rosbuild_add_executable(ndt_registration_test test/ndt_registration_test.cc)
+#rosbuild_add_openmp_flags(ndt_registration_test)
 
 rosbuild_add_executable(simple_test test/simple.cc)
 rosbuild_add_openmp_flags(simple_test)
+
+rosbuild_add_executable(from_jff test/from_jff.cc)
+rosbuild_add_openmp_flags(from_jff)
 
 #target_link_libraries(ndt_registration_test ndt_map pointcloud_vrml)
 

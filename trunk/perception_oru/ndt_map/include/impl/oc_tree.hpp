@@ -148,13 +148,13 @@ OctTree<PointT>::~OctTree()
   \note at the moment root is not grown in case of points outside!
   */
 template <typename PointT>
-void OctTree<PointT>::addPoint(const PointT &point_c)
+Cell<PointT>* OctTree<PointT>::addPoint(const PointT &point_c)
 {
 
     PointT point = point_c;
     if(std::isnan(point.x) ||std::isnan(point.y) ||std::isnan(point.z))
     {
-        return;
+        return NULL;
     }
     leafsCached_ = false;
     if(this->leaf_)
@@ -169,7 +169,7 @@ void OctTree<PointT>::addPoint(const PointT &point_c)
             if(!myCell_->isInside(point))
             {
                 //DBG(1,"OctTree: addPoint (%lf,%lf,%lf) not in boundary!\n",point.x,point.y,point.z);
-                return;
+                return NULL;
             }
             myCell_->points_.push_back(point);
         }
@@ -182,10 +182,10 @@ void OctTree<PointT>::addPoint(const PointT &point_c)
                 if(!myCell_->isInside(point))
                 {
                     //DBG(1,"OctTree: addPoint (%lf,%lf,%lf) not in boundary!\n",point.x,point.y,point.z);
-                    return;
+                    return NULL;
                 }
                 myCell_->points_.push_back(point);
-                return;
+                return myCell_;
             }
 
             PointT myCenter = myCell_->getCenter();
@@ -213,16 +213,17 @@ void OctTree<PointT>::addPoint(const PointT &point_c)
             }
             //finally add the new point
             size_t ind = getIndexForPoint(point);
-            children_[ind]->addPoint(point);
+	    Cell<PointT>* ptcell = children_[ind]->addPoint(point);
             this->leaf_=false;
             this->myCell_->points_.clear();
+	    return ptcell;
         }
     }
     else
     {
         //pass down to correct child
         size_t ind = getIndexForPoint(point);
-        children_[ind]->addPoint(point);
+        return children_[ind]->addPoint(point);
     }
 }
 

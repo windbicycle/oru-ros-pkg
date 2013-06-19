@@ -100,7 +100,7 @@ public:
                       );
 
     ///add a point to the index
-    virtual void addPoint(const PointT &point);
+    virtual Cell<PointT>* addPoint(const PointT &point);
 
     ///returns a pointer to the cell containing the point or NULL if not found
     virtual Cell<PointT>* getCellForPoint(const PointT &point);

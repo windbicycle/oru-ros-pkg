@@ -56,7 +56,11 @@
 #define CELL_UPDATE_MODE_ERROR_REFINEMENT				2
 /// Estimate the surface (reduce the sensor noise)
 #define CELL_UPDATE_MODE_SAMPLE_VARIANCE_SURFACE_ESTIMATION 3
+///Student-T 
+#define CELL_UPDATE_MODE_STUDENT_T 4
 
+#define REFACTORED
+//#define ICRA_2013_NDT_OM_SIMPLE_MODE 
 namespace lslgeneric
 {
 
@@ -64,19 +68,21 @@ namespace lslgeneric
     \details The base class for all NDT indeces, contains
 mean, covariance matrix as well as eigen decomposition of covariance
 */
+
+
+    
+
 template<typename PointT>
 class NDTCell : public Cell<PointT>
 {
 public:
     bool hasGaussian_;	///< indicates if the cell has a gaussian in it
-    double cost; 				///FIXME:: Am I used in some context?
+    double cost; 				///FIXME:: Am I used in some context? --> yes, ndt_wavefront planner
     char isEmpty;				///<based on the most recent observation, is the cell seen empty (1), occupied (-1) or not at all (0)
     double consistency_score;
-
+		enum CellClass {HORIZONTAL=0, VERTICAL, INCLINED, ROUGH, UNKNOWN};
     std::vector<PointT> points_; ///The points falling into the cell - cleared after update
-
-    enum CellClass {HORIZONTAL=0, VERTICAL, INCLINED, ROUGH, UNKNOWN};
-
+		
     NDTCell()
     {
         hasGaussian_ = false;
@@ -95,6 +101,7 @@ public:
         emptydist = 0;
         max_occu_ = 1;
         consistency_score=0;
+	cost=INT_MAX;
     }
 
     virtual ~NDTCell()
@@ -120,6 +127,7 @@ public:
             setParameters();
         }
         consistency_score=0;
+	cost=INT_MAX;
     }
 
     NDTCell(const NDTCell& other):Cell<PointT>()
@@ -137,6 +145,12 @@ public:
         this->emptyval = other.emptyval;
         this->edata = other.edata;
         this->consistency_score=other.consistency_score;
+	this->isEmpty = other.isEmpty;
+	if(this->hasGaussian_) { 
+	    this->setMean(other.getMean());
+	    this->setCov(other.getCov());
+	}
+	this->cost=other.cost;
     }
 
     virtual Cell<PointT>* clone() const;
@@ -148,7 +162,8 @@ public:
     * which have been computed from @numpointsindistribution number of points
     */
 
-    inline void updateSampleVariance(Eigen::Matrix3d &cov2, Eigen::Vector3d &m2, unsigned int numpointsindistribution);
+    inline void updateSampleVariance(const Eigen::Matrix3d &cov2,const Eigen::Vector3d &m2, unsigned int numpointsindistribution, 
+																			bool updateOccupancyFlag=true,  float max_occu=1024, unsigned int maxnumpoints=1e9);
 
     /**
     * Fits and updates the sample mean and covariance for the cell after the scan has been added.
@@ -163,8 +178,12 @@ public:
     * @param sensor_noise A standard deviation of the sensor noise, used only by method CELL_UPDATE_MODE_SAMPLE_VARIANCE_SURFACE_ESTIMATION
     * if (maxnumpoints<=0) then the cell adaptation strategy is not used
     */
-    inline void computeGaussian(int mode=CELL_UPDATE_MODE_SAMPLE_VARIANCE, unsigned int maxnumpoints=1e6, float occupancy_limit=255, Eigen::Vector3d origin = Eigen::Vector3d(0,0,0), double sensor_noise=0.1);
-
+    inline void computeGaussian(int mode=CELL_UPDATE_MODE_SAMPLE_VARIANCE, unsigned int maxnumpoints=1e9, float occupancy_limit=255, Eigen::Vector3d origin = Eigen::Vector3d(0,0,0), double sensor_noise=0.1);
+		
+		/**
+		* just updates the parameters based on points and leaves the points to cell
+		*/
+		void computeGaussianSimple();
     /**
     * Calculates the average color for cell if the point type is pcl::PointXYZI or pcl::PointXYZRGB
     */
@@ -314,6 +333,14 @@ public:
     {
         edata = _ed;
     }
+    int getEmptyval()
+    {
+        return emptyval;
+    }
+    TEventData getEventData()
+    {
+        return edata;
+    }
     void setN(int N_)
     {
         N = N_;
@@ -333,7 +360,7 @@ public:
     * @param p2 second point along the ray (it must hold that p1 != p2);
     * @param &out Gives out the exact maximum likelihood point
     */
-    double computeMaximumLikelihoodAlongLine(PointT p1, PointT p2, Eigen::Vector3d &out);
+    inline double computeMaximumLikelihoodAlongLine(const PointT &p1,const PointT &p2, Eigen::Vector3d &out);
 
 private:
     Eigen::Matrix3d cov_;		/// Contains the covatiance of the normal distribution
@@ -356,8 +383,17 @@ private:
     float max_occu_;
     TEventData edata;
 
-
-
+		/**
+		* Cell estimation using student-t
+		*/
+		inline void studentT();
+		
+		double squareSum(const Eigen::Matrix3d &C,const Eigen::Vector3d &x){
+			double sum;
+			sum = C(0,0)*x(0)*x(0) + C(1,1)*x(1)*x(1) + C(2,2)*x(2)*x(2);
+			sum += 2.0*C(0,1)*x(0)*x(1) + 2.0*C(0,2)*x(0)*x(2) + 2.0*C(1,2)*x(1)*x(2);
+			return sum;
+		}
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

@@ -1,4 +1,4 @@
-#include <ndt_map.h>
+#include <ndt_map_hmt.h>
 #include <oc_tree.h>
 #include <lazy_grid.h>
 #include <cell_vector.h>
@@ -34,15 +34,16 @@ void ndtCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
               pcl::getFieldsList (*msg).c_str ());
 
     //lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::OctTree<pcl::PointXYZ>());
-    lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::LazyGrid<pcl::PointXYZ>(0.2));
+    //lslgeneric::NDTMap<pcl::PointXYZ> nd(new lslgeneric::LazyGrid<pcl::PointXYZ>(0.2));
+    lslgeneric::NDTMapHMT<pcl::PointXYZ> nd(new lslgeneric::LazyGrid<pcl::PointXYZ>(0.2),0,0,0,10,10,2,3.0);
 
-    nd.loadPointCloud(cloud);
+    Eigen::Affine3d T;
+    T.setIdentity();
+    nd.addPointCloud(T.translation(),cloud);
     nd.computeNDTCells();
 
     ROS_INFO("Loaded point cloud");
-    char fname[50];
-    snprintf(fname,49,"ndt_map%05d.wrl",ctr);
-    nd.writeToVRML(fname);
+    nd.writeTo("maps/");
     ctr++;
 
 }

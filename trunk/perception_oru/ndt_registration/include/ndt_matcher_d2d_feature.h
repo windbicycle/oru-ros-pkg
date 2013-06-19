@@ -83,22 +83,21 @@ public:
     //compute the score gradient & hessian of a point cloud + transformation to an NDT
     // input: moving, fixed, tr, computeHessian
     //output: score_gradient, Hessian
-    virtual void derivativesNDT(
-        std::vector<lslgeneric::NDTCell<PointSource>*> &source,
-        lslgeneric::NDTMap<PointTarget> &target,
-        Eigen::Transform<double,3,Eigen::Affine,Eigen::ColMajor> &transform,
-        Eigen::Matrix<double,6,1> &score_gradient,
-        Eigen::Matrix<double,6,6> &Hessian,
-        bool computeHessian
+    virtual double derivativesNDT(
+	    const std::vector<NDTCell<PointSource>*> &sourceNDT,
+	    const NDTMap<PointTarget> &targetNDT,
+	    Eigen::MatrixXd &score_gradient,
+	    Eigen::MatrixXd &Hessian,
+	    bool computeHessian
     );
-
+#if 0
     virtual bool update_gradient_hessian(
         Eigen::Matrix<double,6,1> &score_gradient,
         Eigen::Matrix<double,6,6> &Hessian,
 
         Eigen::Vector3d &m1,
         Eigen::Matrix3d &C1);
-
+#endif
 
     using NDTMatcherD2D<PointSource,PointTarget>::Jest;
     using NDTMatcherD2D<PointSource,PointTarget>::Hest;

@@ -1,8 +1,6 @@
-#include <NDTMap.hh>
-#include <NDTHistogram.hh>
-#include <OctTree.hh>
-#include <AdaptiveOctTree.hh>
-#include <PointCloudUtils.hh>
+#include <ndt_map.h>
+#include <oc_tree.h>
+#include <pointcloud_utils.h>
 
 #include "pcl/point_cloud.h"
 #include "sensor_msgs/PointCloud2.h"
@@ -10,7 +8,6 @@
 #include "pcl/features/feature.h"
 #include <cstdio>
 
-#include <LazzyGrid.hh>
 #include <pcl/filters/radius_outlier_removal.h>
 #include<iostream>
 
@@ -79,16 +76,31 @@ pcl::PointCloud<pcl::PointXYZ> Tester::filterRange(pcl::PointCloud<pcl::PointXYZ
 
 pcl::PointCloud<pcl::PointXYZ> Tester::filterDensity(pcl::PointCloud<pcl::PointXYZ> &rawCloud)
 {
+    pcl::KdTreeFLANN<pcl::PointXYZ> pointsTree;
     pcl::PointCloud<pcl::PointXYZ> pc;
-    pcl::RadiusOutlierRemoval<pcl::PointXYZ> filter;
-    filter.setRadiusSearch(1);
-    filter.setMinNeighborsInRadius(3);
+    double radius = 1;
+    int n_neigh = 3;
+    std::vector<int> id;
+    std::vector<float> dist;
+    id.reserve(n_neigh);
+    dist.reserve(n_neigh);
+
+    //pcl::RadiusOutlierRemoval<pcl::PointXYZ> filter;
+    //filter.setRadiusSearch(1);
+    //filter.setMinNeighborsInRadius(3);
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcptr(new pcl::PointCloud<pcl::PointXYZ>());
     *pcptr = rawCloud;
-    filter.setInputCloud(pcptr);
+    //filter.setInputCloud(pcptr);
+    pointsTree.setInputCloud(pcptr);
 
     std::cout<<"filtering on density....\n before: "<<pc.points.size()<<" "<<pcptr->points.size()<<std::endl;
-    filter.filter(pc);
+    for (int i=0; i<pcptr->points.size(); ++i) 
+    {
+	if(!pointsTree.nearestKSearch(pcptr->points[i],n_neigh,id,dist)) continue;
+	if(dist.back() > radius) continue;
+	pc.push_back(pcptr->points[i]);
+    }
+    //filter.filter(pc);
     std::cout<<"after: "<<pc.points.size()<<std::endl;
 
     return pc;
@@ -197,11 +209,14 @@ void Tester::runTestsNDTTree(pcl::PointCloud<pcl::PointXYZ> &rawCloud, pcl::Poin
 
     rawCloud = filterRange(rawCloud);
     //we construct one model from rawcloud and test on gt and negatives
-    lslgeneric::OctTree prototype;
-    lslgeneric::OctTree::SMALL_CELL_SIZE = resolutionMin;
-    lslgeneric::OctTree::BIG_CELL_SIZE = resolutionMax;
-    lslgeneric::OctTree::MAX_POINTS = 10;
-    lslgeneric::NDTMap map(&prototype);
+    lslgeneric::OctTree<pcl::PointXYZ> prototype;
+    prototype.setParameters(resolutionMax,resolutionMin,10);
+    /*
+    lslgeneric::OctTree<pcl::PointXYZ>::SMALL_CELL_SIZE = resolutionMin;
+    lslgeneric::OctTree<pcl::PointXYZ>::BIG_CELL_SIZE = resolutionMax;
+    lslgeneric::OctTree<pcl::PointXYZ>::MAX_POINTS = 10;
+    */
+    lslgeneric::NDTMap<pcl::PointXYZ> map(&prototype);
     map.loadPointCloud(rawCloud);
     map.computeNDTCells();
 
@@ -231,8 +246,8 @@ main (int argc, char** argv)
     pcl::PointCloud<pcl::PointXYZ> cloud, cloud2;
     pcl::PointCloud<pcl::PointXYZI> outCloud;
 
-    cloud = lslgeneric::readVRML(argv[1]);
-    cloud2 = lslgeneric::readVRML(argv[2]);
+    cloud = lslgeneric::readVRML<pcl::PointXYZ>(argv[1]);
+    cloud2 = lslgeneric::readVRML<pcl::PointXYZ>(argv[2]);
 
     OneTestResult res;
     int ndiscr = 100;
