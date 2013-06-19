@@ -11,7 +11,7 @@
     <cpp cflags="-I${prefix}/icrcpp/include" lflags="-L${prefix}/icrcpp/lib -Wl,-rpath,${prefix}/icrcpp/lib -licr"/>
   </export>
   <depend package="libobj"/>
-  <depend package="libqhull"/>
+  <depend package="libqhull-ours"/>
   <rosdep name="icrcpp"/>
 </package>
 
