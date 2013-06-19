@@ -6,7 +6,8 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <rosdep name="boost" />
-  <depend package="libqhull"/>
+  <rosdep name="eigen" />
+  <depend package="libqhull-ours"/>
   <depend package="libobj"/>
   <depend package="libicr"/>
   <depend package="roscpp"/>
@@ -15,7 +16,6 @@
   <depend package="icr_msgs"/>
   <depend package="std_msgs"/>
   <depend package="std_srvs"/>
-  <depend package="eigen"/>
   <depend package="urdf_interface"/>
   <depend package="urdf"/>
   <depend package="tf"/>
