@@ -101,6 +101,7 @@ void SDFTracker::Init(SDF_Parameters &parameters)
   for (int i = 0; i < parameters_.image_height; ++i)
   {
     validityMask_[i] = new bool[parameters_.image_width];
+    memset(validityMask_[i],0,parameters_.image_width);
   }   
 
   myGrid_ = new float**[parameters_.XSize];
