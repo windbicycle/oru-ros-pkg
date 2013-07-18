@@ -157,7 +157,11 @@ class SDFTracker
 
   /// Constructor with custom parameters
   SDFTracker(SDF_Parameters &parameters);
-  virtual ~SDFTracker();    
+  virtual ~SDFTracker();   
+
+  ///Checks if gradient is valid at a point
+  bool validGradient(const Eigen::Vector4d &location);
+
 };
 
 #endif
