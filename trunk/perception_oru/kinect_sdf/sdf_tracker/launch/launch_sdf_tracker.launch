@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <launch>
   <node name="SDF" pkg="sdf_tracker" type="sdf_tracker_node">
     <param name="c_name" value="camera"/>
