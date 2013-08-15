@@ -4,7 +4,7 @@
      ndt_fuser
 
   </description>
-  <author>Todor Stoyanov</author>
+  <author>Todor Stoyanov and Jari Saarinen</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ndt_fuser</url>

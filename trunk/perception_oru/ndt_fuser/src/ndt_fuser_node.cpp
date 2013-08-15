@@ -20,6 +20,7 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <std_srvs/Empty.h>
 
 #ifndef SYNC_FRAMES
 #define SYNC_FRAMES 20
@@ -52,7 +53,7 @@ class NDTFuserNode {
 	
 	boost::mutex m, message_m;
 	lslgeneric::NDTFuserHMT<pcl::PointXYZ> *fuser;
-	std::string points_topic, laser_topic, map_dir, odometry_topic;
+	std::string points_topic, laser_topic, map_dir, map_name, odometry_topic;
 	double size_x, size_y, size_z, resolution, sensor_range;
 	bool visualize, match2D, matchLaser, beHMT, useOdometry;
 
@@ -67,6 +68,7 @@ class NDTFuserNode {
 	
 	message_filters::Synchronizer< PointsOdomSync > *sync_po_;
 	message_filters::Synchronizer< PointsPoseSync > *sync_pp_;
+	ros::ServiceServer save_map_;
 
 	Eigen::Affine3d last_odom, this_odom;
     public:
@@ -82,6 +84,7 @@ class NDTFuserNode {
 	    ///a word of warning: if you run multiple times with the same directory, 
 	    ///the old maps are loaded automatically
 	    param_nh.param<std::string>("map_directory",map_dir,"map");
+	    param_nh.param<std::string>("map_name_prefix",map_name,"");
 	    
 	    ///initial pose of the vehicle with respect to the map
 	    param_nh.param("pose_init_x",pose_init_x,0.);
@@ -136,7 +139,7 @@ class NDTFuserNode {
 
 	    if(matchLaser) match2D=true;
 	    fuser = new lslgeneric::NDTFuserHMT<pcl::PointXYZ>(resolution,size_x,size_y,size_z,
-		    sensor_range, visualize,match2D, false, false, 30, "", beHMT, map_dir, true);
+		    sensor_range, visualize,match2D, false, false, 30, map_name, beHMT, map_dir, true);
 
 	    fuser->setSensorPose(sensor_pose_);
 
@@ -160,6 +163,8 @@ class NDTFuserNode {
 		    laser_sub_->registerCallback(boost::bind( &NDTFuserNode::laserCallback, this, _1));
 		}
 	    }
+	    save_map_ = param_nh.advertiseService("save_map", &NDTFuserNode::save_map_callback, this);
+
 	}
 
 	~NDTFuserNode()
@@ -192,6 +197,19 @@ class NDTFuserNode {
 	    tf_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "test"));
 
 	}
+	
+	bool save_map_callback(std_srvs::Empty::Request  &req,
+		std_srvs::Empty::Response &res ) {
+
+	    bool ret = false;
+	    ROS_INFO("Saving current map to map directory %s", map_dir.c_str());
+	    m.lock();
+	    ret = fuser->saveMap(); 
+	    m.unlock();
+
+	    return ret;
+	}
+
 
 	// Callback
 	void points2Callback(const sensor_msgs::PointCloud2::ConstPtr& msg_in)
