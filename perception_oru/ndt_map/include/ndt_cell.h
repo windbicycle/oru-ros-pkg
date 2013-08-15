@@ -394,6 +394,15 @@ private:
 			sum += 2.0*C(0,1)*x(0)*x(1) + 2.0*C(0,2)*x(0)*x(2) + 2.0*C(1,2)*x(1)*x(2);
 			return sum;
 		}
+
+
+		void writeJFFMatrix(FILE * jffout, Eigen::Matrix3d &mat);
+		void writeJFFVector(FILE * jffout, Eigen::Vector3d &vec);
+		void writeJFFEventData(FILE * jffout, TEventData &evdata);
+		int loadJFFMatrix(FILE * jffin, Eigen::Matrix3d &mat);
+		int loadJFFVector(FILE * jffin, Eigen::Vector3d &vec);
+		int loadJFFEventData(FILE * jffin, TEventData &evdata);
+
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

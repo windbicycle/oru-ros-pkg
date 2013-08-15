@@ -949,7 +949,8 @@ void NDTCell<PointT>::writeToVRML(FILE *fout, Eigen::Vector3d color)
 
 /** helper function for writeToJFF()
   */
-void writeJFFMatrix(FILE * jffout, Eigen::Matrix3d &mat)
+template<typename PointT>
+void NDTCell<PointT>::writeJFFMatrix(FILE * jffout, Eigen::Matrix3d &mat)
 {
 
     double dtemp[6];
@@ -967,7 +968,8 @@ void writeJFFMatrix(FILE * jffout, Eigen::Matrix3d &mat)
 
 /** another helper function for writeToJFF()
   */
-void writeJFFVector(FILE * jffout, Eigen::Vector3d &vec)
+template<typename PointT>
+void NDTCell<PointT>::writeJFFVector(FILE * jffout, Eigen::Vector3d &vec)
 {
 
     double dtemp[3];
@@ -983,7 +985,8 @@ void writeJFFVector(FILE * jffout, Eigen::Vector3d &vec)
 
 /** yet another helper function for writeToJFF()
   */
-void writeJFFEventData(FILE * jffout, TEventData &evdata)
+template<typename PointT>
+void NDTCell<PointT>::writeJFFEventData(FILE * jffout, TEventData &evdata)
 {
 
     float    ftemp[4];
@@ -1035,7 +1038,8 @@ int NDTCell<PointT>::writeToJFF(FILE * jffout)
 
 /** helper function for loadFromJFF()
   */
-int loadJFFMatrix(FILE * jffin, Eigen::Matrix3d &mat)
+template<typename PointT>
+int NDTCell<PointT>::loadJFFMatrix(FILE * jffin, Eigen::Matrix3d &mat)
 {
 
     double dtemp[6];
@@ -1059,7 +1063,8 @@ int loadJFFMatrix(FILE * jffin, Eigen::Matrix3d &mat)
 
 /** another helper function for loadFromJFF()
   */
-int loadJFFVector(FILE * jffin, Eigen::Vector3d &vec)
+template<typename PointT>
+int NDTCell<PointT>::loadJFFVector(FILE * jffin, Eigen::Vector3d &vec)
 {
 
     double dtemp[3];
@@ -1075,7 +1080,8 @@ int loadJFFVector(FILE * jffin, Eigen::Vector3d &vec)
 
 /** yet another helper function for loadFromJFF()
   */
-int loadJFFEventData(FILE * jffin, TEventData &evdata)
+template<typename PointT>
+int NDTCell<PointT>::loadJFFEventData(FILE * jffin, TEventData &evdata)
 {
 
     float    ftemp[4];

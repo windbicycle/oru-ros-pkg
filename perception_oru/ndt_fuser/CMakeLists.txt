@@ -35,14 +35,18 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 rosbuild_add_boost_directories()
 
 #common commands for building c++ executables and libraries
-rosbuild_add_library(${PROJECT_NAME} src/CMyEllipsoid.cpp)
-target_link_libraries(${PROJECT_NAME} ${LIBXML2_LIBRARIES} ${GLUT_LIBRARIES} ${JPEG_LIBRARIES} ${OPENGL_LIBRARIES} ${MRPT_LIBS})
-
-rosbuild_add_executable(ndt_viewer src/ndt_viewer.cc)
-target_link_libraries(ndt_viewer ${LIBXML2_LIBRARIES} ${GLUT_LIBRARIES} ${JPEG_LIBRARIES} ${OPENGL_LIBRARIES} ${MRPT_LIBS} ${PROJECT_NAME})
-rosbuild_link_boost(ndt_viewer program_options)
-
+#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
+rosbuild_add_executable(ndt_fuser src/ndt_fuser_node.cpp)
+target_link_libraries(ndt_fuser ${LIBXML2_LIBRARIES} ${GLUT_LIBRARIES} ${JPEG_LIBRARIES} ${OPENGL_LIBRARIES} ${MRPT_LIBS})
+rosbuild_add_openmp_flags(ndt_fuser)
+
+rosbuild_add_executable(test_ndt_fuser src/ndt_fuser_from_depth.cpp)
+target_link_libraries(test_ndt_fuser ${LIBXML2_LIBRARIES} ${GLUT_LIBRARIES} ${JPEG_LIBRARIES} ${OPENGL_LIBRARIES} ${MRPT_LIBS})
+rosbuild_link_boost(test_ndt_fuser signals program_options thread)
+rosbuild_add_openmp_flags(test_ndt_fuser)
+
+
 #target_link_libraries(example ${PROJECT_NAME})

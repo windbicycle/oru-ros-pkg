@@ -447,7 +447,13 @@ public:
     * Computes a maximum likelihood depth from the map, given a position and a view vector 
     */
     double getDepth(Eigen::Vector3d origin, Eigen::Vector3d dir, double maxDepth=100);
-    
+    double getDepthSmooth(Eigen::Vector3d origin,
+                          Eigen::Vector3d dir,
+                          double maxDepth = 20,
+                          int n_neigh = 1,
+                          double weight = 5.0,
+                          double threshold = 0.2,
+                          Eigen::Vector3d *hit = NULL);
     
 protected:
     bool is3D;
