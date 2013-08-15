@@ -10,6 +10,7 @@
 
 #include <Eigen/Eigen>
 #include <pcl/point_cloud.h>
+
 //#define BASELINE
 
 namespace lslgeneric {
@@ -93,6 +94,20 @@ class NDTFuserHMT{
 	bool wasInit()
 	{
 	    return isInit;
+	}
+
+	bool saveMap() {
+	    if(!isInit) return false;
+	    if(map == NULL) return false;
+	    if(beHMT) {
+		lslgeneric::NDTMapHMT<PointT> *map_hmt = dynamic_cast<lslgeneric::NDTMapHMT<PointT>*> (map);
+		if(map_hmt==NULL) return false;
+		return (map_hmt->writeTo()==0);
+	    } else {
+		char fname[1000];
+		snprintf(fname,999,"%s/%s_map.jff",hmt_map_dir.c_str(),prefix.c_str());
+		return (map->writeToJFF(fname) == 0);
+	    }
 	}
 
 	/**

@@ -41,6 +41,7 @@ rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 rosbuild_add_executable(ndt_fuser src/ndt_fuser_node.cpp)
 target_link_libraries(ndt_fuser ${LIBXML2_LIBRARIES} ${GLUT_LIBRARIES} ${JPEG_LIBRARIES} ${OPENGL_LIBRARIES} ${MRPT_LIBS})
+rosbuild_link_boost(ndt_fuser signals thread)
 rosbuild_add_openmp_flags(ndt_fuser)
 
 rosbuild_add_executable(test_ndt_fuser src/ndt_fuser_from_depth.cpp)
