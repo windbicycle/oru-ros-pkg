@@ -1092,6 +1092,76 @@ double NDTMap<PointT>::getDepth(Eigen::Vector3d origin, Eigen::Vector3d dir, dou
 	return (maxDepth+1.0);
 }
 
+
+template<typename PointT>
+double NDTMap<PointT>::getDepthSmooth(Eigen::Vector3d origin,
+                                      Eigen::Vector3d dir,
+                                      double maxDepth,
+                                      int n_neigh,
+                                      double weight,
+                                      double threshold,
+                                      Eigen::Vector3d *hit)
+{
+	Eigen::Vector3d ray_endpos=origin + dir * maxDepth;
+	std::vector< NDTCell<PointT>*> cells, surr; 
+	
+	Eigen::Vector3d diff = ray_endpos - origin;
+	PointT endP;
+	endP.x = ray_endpos(0);
+	endP.y = ray_endpos(1);
+	endP.z = ray_endpos(2);
+	
+	LazyGrid<PointT> *lz = dynamic_cast<LazyGrid<PointT>*>(index_);
+	if(lz==NULL){
+		fprintf(stderr,"NOT LAZY GRID!!!\n");
+		exit(1);
+	}
+	
+	if(!lz->traceLine(origin, endP,diff,1000.0, cells)){
+		return maxDepth+1.0;
+	}
+	
+	PointT startP, p;
+	startP.x = origin(0);
+	startP.y = origin(1);
+	startP.z = origin(2);
+	
+	Eigen::Vector3d out;
+	bool hasML = false;
+
+	for(unsigned int i = 0; i < cells.size(); i++)
+	{
+		if(cells[i]->hasGaussian_)
+		{
+		    surr = lz->getClosestNDTCells(cells[i]->getCenter(), n_neigh, true);
+			double like = cells[i]->computeMaximumLikelihoodAlongLine(startP, endP, out);
+			p.x = out(0);
+            p.y = out(1);
+            p.z = out(2);
+            for (unsigned int k = 1u; k < surr.size(); ++k)
+			{
+			    like += weight * surr[k]->getLikelihood(p);
+			}			
+			if(like > threshold)
+			{
+				hasML = true;
+				break;
+			}
+		} 
+	}
+	
+	if (hasML)
+	{
+	    if (hit != NULL)
+	    {
+	        *hit = out;
+	    }
+	    return (out - origin).norm();
+	}
+	
+	return (maxDepth+1.0);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
