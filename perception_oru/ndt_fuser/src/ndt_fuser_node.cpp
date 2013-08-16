@@ -50,11 +50,12 @@ class NDTFuserNode {
 	Eigen::Affine3d pose_, T, sensor_pose_;
 
 	unsigned int nb_added_clouds_;
+	double varz;
 	
 	boost::mutex m, message_m;
 	lslgeneric::NDTFuserHMT<pcl::PointXYZ> *fuser;
 	std::string points_topic, laser_topic, map_dir, map_name, odometry_topic;
-	double size_x, size_y, size_z, resolution, sensor_range;
+	double size_x, size_y, size_z, resolution, sensor_range, min_laser_range_;
 	bool visualize, match2D, matchLaser, beHMT, useOdometry;
 
 	double pose_init_x,pose_init_y,pose_init_z,
@@ -109,9 +110,12 @@ class NDTFuserNode {
 	    
 	    ///range to cutoff sensor measurements
 	    param_nh.param("sensor_range",sensor_range,3.);
+	    ///range to cutoff sensor measurements
+	    param_nh.param("min_laser_range",min_laser_range_,0.1);
 	    
 	    //map resolution
 	    param_nh.param("resolution",resolution,0.10);
+	    param_nh.param("laser_variance_z",varz,resolution/4);
 
 	    ///visualize in a local window
 	    param_nh.param("visualize",visualize,true);
@@ -263,17 +267,21 @@ class NDTFuserNode {
 	void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg_in)
 	{
 	    // Add to a queue
-	    double varz = 0.1;
 	    sensor_msgs::PointCloud2 cloud;
-	    pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
+	    pcl::PointCloud<pcl::PointXYZ> pcl_cloud_unfiltered, pcl_cloud;
 	    message_m.lock();
 	    projector_.projectLaser(*msg_in, cloud);
 	    message_m.unlock();
-	    pcl::fromROSMsg (cloud, pcl_cloud);
+	    pcl::fromROSMsg (cloud, pcl_cloud_unfiltered);
 
+	    pcl::PointXYZ pt;
 	    //add some variance on z
-	    for(int i=0; i<pcl_cloud.points.size(); i++) {
-		pcl_cloud.points[i].z += varz*((double)rand())/(double)INT_MAX;
+	    for(int i=0; i<pcl_cloud_unfiltered.points.size(); i++) {
+		pt = pcl_cloud_unfiltered.points[i];
+		if(sqrt(pt.x*pt.x+pt.y*pt.y) > min_laser_range_) {
+		    pt.z += varz*((double)rand())/(double)INT_MAX;
+		    pcl_cloud.points.push_back(pt);
+		}
 	    }
 	    ROS_INFO("Got laser points");
 
@@ -286,10 +294,9 @@ class NDTFuserNode {
 	void laserOdomCallback(const sensor_msgs::LaserScan::ConstPtr& msg_in,
 		  const nav_msgs::Odometry::ConstPtr& odo_in)
 	{
-	    double varz = 0.1;
 	    Eigen::Quaterniond qd;
 	    sensor_msgs::PointCloud2 cloud;
-	    pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
+	    pcl::PointCloud<pcl::PointXYZ> pcl_cloud, pcl_cloud_unfiltered;
 	    Eigen::Affine3d Tm;
 
 	    message_m.lock();
@@ -319,11 +326,16 @@ class NDTFuserNode {
 	    projector_.projectLaser(*msg_in, cloud);
 	    message_m.unlock();
 	    
-	    pcl::fromROSMsg (cloud, pcl_cloud);
+	    pcl::fromROSMsg (cloud, pcl_cloud_unfiltered);
 
+	    pcl::PointXYZ pt;
 	    //add some variance on z
-	    for(int i=0; i<pcl_cloud.points.size(); i++) {
-		pcl_cloud.points[i].z += varz*((double)rand())/(double)INT_MAX;
+	    for(int i=0; i<pcl_cloud_unfiltered.points.size(); i++) {
+		pt = pcl_cloud_unfiltered.points[i];
+		if(sqrt(pt.x*pt.x+pt.y*pt.y) > min_laser_range_) {
+		    pt.z += varz*((double)rand())/(double)INT_MAX;
+		    pcl_cloud.points.push_back(pt);
+		}
 	    }
 	    ROS_INFO("Got laser and odometry!");
 
