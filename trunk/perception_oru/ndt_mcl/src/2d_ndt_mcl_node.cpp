@@ -41,9 +41,11 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <ndt_map.h>
 #include <tf/transform_broadcaster.h>
-
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "geometry_msgs/Pose.h"
 #include "ndt_mcl.hpp"
 
 
@@ -53,10 +55,134 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef USE_VISUALIZATION_DEBUG
 #include "mcl_visualization.hpp" ///< here is a punch of visualization code based on the MRPT's GUI components
-
 #endif
+ros::Publisher ndtmap_pub; 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// RVIZ NDT-MAP Visualization stuff
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+void sendMapToRviz(lslgeneric::NDTMap<pcl::PointXYZ> &map){
+
+	std::vector<lslgeneric::NDTCell<pcl::PointXYZ>*> ndts;
+	ndts = map.getAllCells();
+	fprintf(stderr,"SENDING MARKER ARRAY MESSAGE (%d components)\n",ndts.size());
+	visualization_msgs::MarkerArray marray;
+	
+	for(unsigned int i=0;i<ndts.size();i++){
+		Eigen::Matrix3d cov = ndts[i]->getCov();
+		Eigen::Vector3d m = ndts[i]->getMean();
+		
+		Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> Sol (cov);
+
+    Eigen::Matrix3d evecs;
+    Eigen::Vector3d evals;
+
+    evecs = Sol.eigenvectors().real();
+    evals = Sol.eigenvalues().real();
+    
+    Eigen::Quaternion<double> q(evecs);
+	
+		visualization_msgs::Marker marker;
+		marker.header.frame_id = "world";
+		marker.header.stamp = ros::Time();
+		marker.ns = "NDT";
+		marker.id = i;
+		marker.type = visualization_msgs::Marker::SPHERE;
+		marker.action = visualization_msgs::Marker::ADD;
+		marker.pose.position.x = m[0];
+		marker.pose.position.y = m[1];
+		marker.pose.position.z = m[2];
+		
+		marker.pose.orientation.x = q.x();
+		marker.pose.orientation.y = q.y();
+		marker.pose.orientation.z = q.z();
+		marker.pose.orientation.w = q.w();
+		
+		marker.scale.x = 100.0*evals(0);
+		marker.scale.y = 100.0*evals(1);
+		marker.scale.z = 100.0*evals(2);
+		/*
+		marker.pose.orientation.x = 0;
+		marker.pose.orientation.y = 0;
+		marker.pose.orientation.z = 0;
+		marker.pose.orientation.w = 1;
+
+		marker.scale.x = 1;
+		marker.scale.y = 1;
+		marker.scale.z = 1;
+	*/	
+		
+		marker.color.a = 1.0;
+		marker.color.r = 0.0;
+		marker.color.g = 1.0;
+		marker.color.b = 0.0;
+		
+		marray.markers.push_back(marker);
+	}
+	
+	ndtmap_pub.publish(marray);
+	
+	for(unsigned int i=0;i<ndts.size();i++){
+		delete ndts[i];
+	}
+
+}
 
 
+
+/*
+ * enter code here
+(eigValues,eigVectors) = numpy.linalg.eig (covMat)
+
+eigx_n=-PyKDL.Vector(eigVectors[0,0],eigVectors[1,0],eigVectors[2,0])
+eigy_n=-PyKDL.Vector(eigVectors[0,1],eigVectors[1,1],eigVectors[2,1])
+eigz_n=-PyKDL.Vector(eigVectors[0,2],eigVectors[1,2],eigVectors[2,2])
+
+rot = PyKDL.Rotation (eigx_n,eigy_n,eigz_n)
+quat = rot.GetQuaternion ()
+
+#painting the Gaussian Ellipsoid Marker
+marker.pose.orientation.x =quat[0]
+marker.pose.orientation.y = quat[1]
+marker.pose.orientation.z = quat[2]
+marker.pose.orientation.w = quat[3]
+marker.scale.x = eigValues[0]
+marker.scale.y = eigValues[1]
+marker.scale.z =eigValues[2]
+*/ 
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Initial pose stuff (quick and dirty as always)
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+bool userInitialPose = false;
+bool hasNewInitialPose = false;
+
+double ipos_x=0,ipos_y=0,ipos_yaw=0;
+double ivar_x=0,ivar_y=0,ivar_yaw=0;
+
+ros::Subscriber initial_pose_sub_;
+
+void initialPoseReceived(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg){
+	tf::Pose ipose;
+  tf::poseMsgToTF(msg->pose.pose, ipose);
+  ipos_x = ipose.getOrigin().x();
+  ipos_y = ipose.getOrigin().y();
+  double pitch, roll;
+  ipose.getBasis().getEulerYPR(ipos_yaw,pitch,roll);
+  
+  ivar_x = msg->pose.covariance[0];
+  ivar_x = msg->pose.covariance[6];
+  ivar_x = msg->pose.covariance[35];
+  
+  hasNewInitialPose=true;
+}
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * Convert x,y,yaw to Eigen::Affine3d 
  */ 
@@ -244,13 +370,19 @@ void callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 	Eigen::Affine3d T = getAsAffine(x,y,yaw);
 	Eigen::Affine3d Tgt = getAsAffine(gx,gy,gyaw);
 	
+	if(userInitialPose && hasNewInitialPose){
+		gx = ipos_x;
+		gy = ipos_y;
+		gyaw = ipos_yaw;
+	}
 	
-	if(isFirstLoad){
+	if(isFirstLoad || hasNewInitialPose){
 		fprintf(stderr,"Initializing to (%lf, %lf, %lf)\n",gx,gy,gyaw);
 		/// Initialize the particle filter
 		ndtmcl->initializeFilter(gx, gy,gyaw,0.2, 0.2, 2.0*M_PI/180.0, 150);
 		Told = T;
 		Todo = Tgt;
+		hasNewInitialPose = false;
 	}
 	
 	///Calculate the differential motion from the last frame
@@ -308,6 +440,10 @@ void callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	sendROSOdoMessage(dm,cov, scan->header.stamp); ///Spit out the pose estimate
+	
+	if(counter%50==0){
+		sendMapToRviz(ndtmcl->map);
+	}
 	
 	///This is all for visualization
 #ifdef USE_VISUALIZATION_DEBUG
@@ -392,6 +528,14 @@ int main(int argc, char **argv){
 	paramHandle.param<double>("map_resolution", resolution , 0.2);
 	bool forceSIR=false;
 	paramHandle.param<bool>("forceSIR", forceSIR, false);
+		
+	paramHandle.param<bool>("set_initial_pose", userInitialPose, false);
+	paramHandle.param<double>("initial_pose_x", ipos_x, 0.);
+	paramHandle.param<double>("initial_pose_y", ipos_y, 0.);
+	paramHandle.param<double>("initial_pose_yaw", ipos_yaw, 0.);
+	
+	if(userInitialPose==true) hasNewInitialPose=true;
+	
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////
 	/// Prepare the map
@@ -416,14 +560,17 @@ int main(int argc, char **argv){
 	///Set up our output
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////
-	mcl_pub = nh.advertise<nav_msgs::Odometry>("sauna_mcl",10);
+	mcl_pub = nh.advertise<nav_msgs::Odometry>("ndt_mcl",10);
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////
 	/// Set the subscribers and setup callbacks and message filters
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////
 	ros::Subscriber scansub=nh.subscribe(input_laser_topic, 1, callback);
-
+	
+	ndtmap_pub = nh.advertise<visualization_msgs::MarkerArray>( "NDTMAP", 0 );
+	
+	initial_pose_sub_ = nh.subscribe("initialpose", 1, initialPoseReceived);
 
 	offa = sensor_pose_th;
 	offx = sensor_pose_x;
