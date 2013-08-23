@@ -1386,13 +1386,13 @@ SDFTracker::Render(void)
           {  
             for(int ii=0; ii<3; ++ii)
             {
-              normal_vector(ii) = fabs(SDFGradient(camera + p*scaling,1,ii));            
+              normal_vector(ii) = SDFGradient(camera + p*scaling,1,ii);            
             }   
             normal_vector.normalize();
 
-            preview.at<cv::Vec3b>(u,v)[0]=normal_vector(0)*255;
-            preview.at<cv::Vec3b>(u,v)[1]=normal_vector(1)*255;
-            preview.at<cv::Vec3b>(u,v)[2]=normal_vector(2)*255;
+            preview.at<cv::Vec3b>(u,v)[1]=128-rint(normal_vector(0)*127);
+            preview.at<cv::Vec3b>(u,v)[2]=128-rint(normal_vector(1)*127);
+            preview.at<cv::Vec3b>(u,v)[0]=128-rint(normal_vector(2)*127);
           }
           
           depthImage_out.at<float>(u,v)=scaling*(viewAxis.dot(p));
