@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.4.6)
 SET(PROJECT_NAME sdf_tracker)
 
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)
@@ -25,23 +25,39 @@ set(CMAKE_CXX_FLAGS "-O3 -fopenmp")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fopenmp")
 
+
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 include_directories(/usr/include/vtk-5.8)
-include_directories(./include)
-
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OPENCV_INCLUDE_DIRS})
+
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 link_directories(${OPENCV_LIBRARY_DIRS})
 add_definitions(${OPENCV_DEFINITIONS})
 
+###############################################################################
 add_library(${PROJECT_NAME} src/sdf_tracker.cpp)
 
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} vtkIO vtkFiltering vtkCommon)
+target_link_libraries(${PROJECT_NAME} 
+  ${OpenCV_LIBS} 
+  vtkIO 
+  vtkFiltering 
+  vtkCommon
+  boost_system
+)
 
+
+###############################################################################
 add_executable(
-	sdf_tracker_app
-	src/tracker_app.cpp)
+  sdf_tracker_app
+  src/tracker_app.cpp)
   
-target_link_libraries(sdf_tracker_app ${OpenCV_LIBS} ${PROJECT_NAME})
-	
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/openni)
+target_link_libraries(sdf_tracker_app 
+  ${PROJECT_NAME}
+  ${OpenCV_LIBS} 
+  OpenNI2
+)
+  
