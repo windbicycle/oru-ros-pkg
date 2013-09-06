@@ -152,6 +152,7 @@ void SDFTracker::DeleteGrids(void)
     if (myGrid_[i]!=NULL)
     delete[] myGrid_[i];   
   }
+  if(myGrid_!=NULL)
   delete[] myGrid_;
 }
 
@@ -1532,6 +1533,7 @@ void SDFTracker::LoadSDF(const std::string &filename)
 
   vtkSmartPointer<vtkImageData> sdf_volume = vtkSmartPointer<vtkImageData>::New();
   sdf_volume = reader->GetOutput();
+  this->DeleteGrids();
 
   //will segfault if not specified
   int* sizes = sdf_volume->GetDimensions();
@@ -1542,7 +1544,6 @@ void SDFTracker::LoadSDF(const std::string &filename)
   double* cell_sizes = sdf_volume->GetSpacing();
   parameters_.resolution = float(cell_sizes[0]);  //TODO add support for different scalings along x,y,z. 
 
-  this->DeleteGrids();
   this->Init(parameters_);
 
   vtkFloatArray *distance =vtkFloatArray::New();
