@@ -1351,8 +1351,8 @@ SDFTracker::Render(void)
   
   const Eigen::Matrix4d camToWorld = Transformation_;
   const Eigen::Vector4d camera = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
-  const Eigen::Vector4d viewAxis = (camToWorld * Eigen::Vector4d(0.0,0.0,1.0,0.0)).normalized();
-  const double max_ray_length = 5.0;
+  const Eigen::Vector4d viewAxis = (camToWorld * Eigen::Vector4d(0.0,0.0,1.0+1e-12,0.0) - camera).normalized();
+  const double max_ray_length = 15.0;
   
   //Rendering loop
  #pragma omp parallel for 
@@ -1365,7 +1365,7 @@ SDFTracker::Render(void)
       Eigen::Vector4d p = camToWorld*To3D(u,v,1.0,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy) - camera;
       p.normalize();
             
-      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.7 : parameters_.Dmax;
+      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.8 : parameters_.Dmax;
       
       double scaling_prev=0;
       int steps=0;
@@ -1567,84 +1567,3 @@ void SDFTracker::LoadSDF(const std::string &filename)
     }
   }
 }
-
-bool 
-SDFTracker::validGradient(const Eigen::Vector4d &location)
-{
-    /* 
-       The function tests the current location and its adjacent
-       voxels for valid values (NOT TRUNCATED) to 
-       determine if derivatives at this location are 
-       computable in all three directions.
-
-       Since the function SDF(Eigen::Vector4d &location) is a 
-       trilinear interpolation between neighbours, testing the
-       validity of the gradient involves looking at all the 
-       values that would contribute to the final  gradient. 
-       If any of these have a weight equal to zero, the result
-       is false.
-       X--------X
-       /        / |
-       X--------X   ----X
-       |        |   | / |
-       X----        |   X-------X
-       /     |        | /       / |
-       X-------X--------X-------X   |
-       |     /        / |       |   |
-       |   X--------X   |       |   |
-       J    |   |        |   |       | /
-       ^    X----        |   X-------X
-       |        |        | / |  |
-       --->I   X--------X   |  X
-       /             |        | /
-       v              X--------X
-       K                                                */
-
-    float eps = 1e-6; 
-    double i,j,k;
-    modf(location(0)/parameters_.resolution + parameters_.XSize/2, &i);
-    modf(location(1)/parameters_.resolution + parameters_.YSize/2, &j);  
-    modf(location(2)/parameters_.resolution + parameters_.ZSize/2, &k);
-
-    if(std::isnan(i) || std::isnan(j) || std::isnan(k)) return false;
-
-    int I = int(i)-1; int J = int(j)-1;   int K = int(k)-1;  
-
-    if(I>=parameters_.XSize-4 || J>=parameters_.YSize-3 || K>=parameters_.ZSize-3 || I<=1 || J<=1 || K<=1)return false;
-
-    float* D10 = &myGrid_[I+1][J+0][K];
-    float* D20 = &myGrid_[I+2][J+0][K];
-
-    float* D01 = &myGrid_[I+0][J+1][K];
-    float* D11 = &myGrid_[I+1][J+1][K];
-    float* D21 = &myGrid_[I+2][J+1][K];
-    float* D31 = &myGrid_[I+3][J+1][K];
-
-    float* D02 = &myGrid_[I+0][J+2][K];
-    float* D12 = &myGrid_[I+1][J+2][K];
-    float* D22 = &myGrid_[I+2][J+2][K];
-    float* D32 = &myGrid_[I+3][J+2][K];
-
-    float* D13 = &myGrid_[I+1][J+3][K];
-    float* D23 = &myGrid_[I+2][J+3][K];
-
-
-    if( fabsf(D10[1]-parameters_.Dmax) < eps || fabsf(D10[2]-parameters_.Dmax) < eps || 
-	    fabsf(D20[1]-parameters_.Dmax) < eps || fabsf(D20[2]-parameters_.Dmax) < eps || 
-
-	    fabsf(D01[1]-parameters_.Dmax) < eps || fabsf(D01[2]-parameters_.Dmax) < eps ||
-	    fabsf(D11[0]-parameters_.Dmax) < eps || fabsf(D11[1]-parameters_.Dmax) < eps || fabsf(D11[2]-parameters_.Dmax) < eps || fabsf(D11[3]-parameters_.Dmax) < eps ||
-	    fabsf(D21[0]-parameters_.Dmax) < eps || fabsf(D21[1]-parameters_.Dmax) < eps || fabsf(D21[2]-parameters_.Dmax) < eps || fabsf(D21[3]-parameters_.Dmax) < eps ||
-	    fabsf(D31[1]-parameters_.Dmax) < eps || fabsf(D31[2]-parameters_.Dmax) < eps ||
-
-	    fabsf(D02[1]-parameters_.Dmax) < eps || fabsf(D02[2]-parameters_.Dmax) < eps ||
-	    fabsf(D12[0]-parameters_.Dmax) < eps || fabsf(D12[1]-parameters_.Dmax) < eps || fabsf(D12[2]-parameters_.Dmax) < eps || fabsf(D12[3]-parameters_.Dmax) < eps ||
-	    fabsf(D22[0]-parameters_.Dmax) < eps || fabsf(D22[1]-parameters_.Dmax) < eps || fabsf(D22[2]-parameters_.Dmax) < eps || fabsf(D22[3]-parameters_.Dmax) < eps ||
-	    fabsf(D32[1]-parameters_.Dmax) < eps || fabsf(D32[2]-parameters_.Dmax) < eps ||
-
-	    fabsf(D13[1]-parameters_.Dmax) < eps || fabsf(D13[2]-parameters_.Dmax) < eps ||
-	    fabsf(D23[1]-parameters_.Dmax) < eps || fabsf(D23[2]-parameters_.Dmax) < eps 
-      ) return false;
-    else return true;
-};
-
