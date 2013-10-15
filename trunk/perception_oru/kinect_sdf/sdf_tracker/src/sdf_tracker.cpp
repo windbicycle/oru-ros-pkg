@@ -1365,7 +1365,7 @@ SDFTracker::Render(void)
       Eigen::Vector4d p = camToWorld*To3D(u,v,1.0,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy) - camera;
       p.normalize();
             
-      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.8 : parameters_.Dmax;
+      double scaling = validityMask_[u][v] ? double(depthImage_->ptr<float>(u)[v])*0.7 : parameters_.Dmax;
       
       double scaling_prev=0;
       int steps=0;

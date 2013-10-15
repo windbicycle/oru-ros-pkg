@@ -33,12 +33,14 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 include_directories(/usr/include/vtk-5.8)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OPENCV_INCLUDE_DIRS})
+include_directories(./)
+
 
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 link_directories(${OPENCV_LIBRARY_DIRS})
 add_definitions(${OPENCV_DEFINITIONS})
   
-link_directories( ${OPENNI2_LIBRARY_DIR} )
+link_directories( ${OPENNI2_LIBRARIES} )
 include_directories( ${OPENNI2_INCLUDE_DIR} )
 
 ###############################################################################
@@ -60,9 +62,10 @@ add_executable(
 
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/openni)
 
+SET_TARGET_PROPERTIES(sdf_tracker_app PROPERTIES INSTALL_RPATH "${OPENNI2_INCLUDE_DIR}/Redist/")
 target_link_libraries(sdf_tracker_app 
   ${PROJECT_NAME}
   ${OpenCV_LIBS} 
-  OpenNI2
+  ${OPENNI2_LIBRARIES} #OpenNI2
 )
   
