@@ -27,22 +27,28 @@ int main(int argc, char* argv[])
   //Parameters for an SDFtracker object 
   SDF_Parameters myParameters;
 
+  myParameters.interactive_mode = true;
+  myParameters.resolution = 0.025;
+  myParameters.Dmax = 0.2;
+  myParameters.Dmin = -0.2;
+  myParameters.XSize = 400;
+  myParameters.YSize = 150;
+  myParameters.ZSize = 400;
+  
+  //QVGA for slow computers 
+  myParameters.image_width = 320;
+  myParameters.image_height = 240;
+  
+
   //Pose Offset as a transformation matrix
   Eigen::Matrix4d initialTransformation = 
   Eigen::MatrixXd::Identity(4,4);
 
   //define translation offsets in x y z
-
-  myParameters.interactive_mode = true;
-  myParameters.resolution = 0.01;
-  myParameters.XSize = 200;
-  myParameters.YSize = 200;
-  myParameters.ZSize = 200;
-  
   initialTransformation(0,3) = 0.0;  //x 
   initialTransformation(1,3) = 0.0;  //y
-  initialTransformation(2,3) = -0.5*myParameters.ZSize*myParameters.resolution;//z
-  myParameters.pose_offset = initialTransformation;
+  //initialTransformation(2,3) = -0.5*myParameters.ZSize*myParameters.resolution;//z
+  //myParameters.pose_offset = initialTransformation;
 
   //create the tracker object
   SDFTracker_app myTracker(myParameters);
