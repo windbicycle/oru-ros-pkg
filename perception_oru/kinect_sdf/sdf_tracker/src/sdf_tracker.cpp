@@ -268,6 +268,7 @@ SDFTracker::To2D(const Eigen::Vector4d &location, double fx, double fy, double c
   return pixel;  
 };
 
+bool
 SDFTracker::ValidGradient(const Eigen::Vector4d &location)
 {
  /* 
@@ -312,37 +313,38 @@ SDFTracker::ValidGradient(const Eigen::Vector4d &location)
   
   if(I>=parameters_.XSize-4 || J>=parameters_.YSize-3 || K>=parameters_.ZSize-3 || I<=1 || J<=1 || K<=1)return false;
 
-  float* D10 = &myGrid_[I+1][J+0][K+1];
-  float* D20 = &myGrid_[I+2][J+0][K+1];
+  // 2*K because weights and distances are packed into the same array
+  float* D10 = &myGrid_[I+1][J+0][2*(K+1)];
+  float* D20 = &myGrid_[I+2][J+0][2*(K+1)];
  
-  float* D01 = &myGrid_[I+0][J+1][K+1];
-  float* D11 = &myGrid_[I+1][J+1][K+0];
-  float* D21 = &myGrid_[I+2][J+1][K+0];
-  float* D31 = &myGrid_[I+3][J+1][K+1];
+  float* D01 = &myGrid_[I+0][J+1][2*(K+1)];
+  float* D11 = &myGrid_[I+1][J+1][2*(K+0)];
+  float* D21 = &myGrid_[I+2][J+1][2*(K+0)];
+  float* D31 = &myGrid_[I+3][J+1][2*(K+1)];
   
-  float* D02 = &myGrid_[I+0][J+2][K+1];
-  float* D12 = &myGrid_[I+1][J+2][K+0];
-  float* D22 = &myGrid_[I+2][J+2][K+0];
-  float* D32 = &myGrid_[I+3][J+2][K+1];
+  float* D02 = &myGrid_[I+0][J+2][2*(K+1)];
+  float* D12 = &myGrid_[I+1][J+2][2*(K+0)];
+  float* D22 = &myGrid_[I+2][J+2][2*(K+0)];
+  float* D32 = &myGrid_[I+3][J+2][2*(K+1)];
 
-  float* D13 = &myGrid_[I+1][J+3][K+1];
-  float* D23 = &myGrid_[I+2][J+3][K+1];
+  float* D13 = &myGrid_[I+1][J+3][2*(K+1)];
+  float* D23 = &myGrid_[I+2][J+3][2*(K+1)];
 
-  if( D10[0] > parameters_.Dmax-eps || D10[1] > parameters_.Dmax-eps || 
-      D20[0] > parameters_.Dmax-eps || D20[1] > parameters_.Dmax-eps || 
+  if( D10[0] > parameters_.Dmax-eps || D10[2*1] > parameters_.Dmax-eps || 
+      D20[0] > parameters_.Dmax-eps || D20[2*1] > parameters_.Dmax-eps || 
       
-      D01[0] > parameters_.Dmax-eps || D01[1] > parameters_.Dmax-eps ||
-      D11[0] > parameters_.Dmax-eps || D11[1] > parameters_.Dmax-eps || D11[2] > parameters_.Dmax-eps || D11[3] > parameters_.Dmax-eps ||
-      D21[0] > parameters_.Dmax-eps || D21[1] > parameters_.Dmax-eps || D21[2] > parameters_.Dmax-eps || D21[3] > parameters_.Dmax-eps ||
-      D31[0] > parameters_.Dmax-eps || D31[1] > parameters_.Dmax-eps ||
+      D01[0] > parameters_.Dmax-eps || D01[2*1] > parameters_.Dmax-eps ||
+      D11[0] > parameters_.Dmax-eps || D11[2*1] > parameters_.Dmax-eps || D11[2*2] > parameters_.Dmax-eps || D11[2*3] > parameters_.Dmax-eps ||
+      D21[0] > parameters_.Dmax-eps || D21[2*1] > parameters_.Dmax-eps || D21[2*2] > parameters_.Dmax-eps || D21[2*3] > parameters_.Dmax-eps ||
+      D31[0] > parameters_.Dmax-eps || D31[2*1] > parameters_.Dmax-eps ||
       
-      D02[0] > parameters_.Dmax-eps || D02[1] > parameters_.Dmax-eps ||
-      D12[0] > parameters_.Dmax-eps || D12[1] > parameters_.Dmax-eps || D12[2] > parameters_.Dmax-eps || D12[3] > parameters_.Dmax-eps ||
-      D22[0] > parameters_.Dmax-eps || D22[1] > parameters_.Dmax-eps || D22[2] > parameters_.Dmax-eps || D22[3] > parameters_.Dmax-eps ||
-      D32[0] > parameters_.Dmax-eps || D32[1] > parameters_.Dmax-eps ||
+      D02[0] > parameters_.Dmax-eps || D02[2*1] > parameters_.Dmax-eps ||
+      D12[0] > parameters_.Dmax-eps || D12[2*1] > parameters_.Dmax-eps || D12[2*2] > parameters_.Dmax-eps || D12[2*3] > parameters_.Dmax-eps ||
+      D22[0] > parameters_.Dmax-eps || D22[2*1] > parameters_.Dmax-eps || D22[2*2] > parameters_.Dmax-eps || D22[2*3] > parameters_.Dmax-eps ||
+      D32[0] > parameters_.Dmax-eps || D32[2*1] > parameters_.Dmax-eps ||
       
-      D13[0] > parameters_.Dmax-eps || D13[1] > parameters_.Dmax-eps ||
-      D23[0] > parameters_.Dmax-eps || D23[1] > parameters_.Dmax-eps 
+      D13[0] > parameters_.Dmax-eps || D13[2*1] > parameters_.Dmax-eps ||
+      D23[0] > parameters_.Dmax-eps || D23[2*1] > parameters_.Dmax-eps 
       ) return false;
   else return true;
 }

@@ -28,12 +28,12 @@ int main(int argc, char* argv[])
   SDF_Parameters myParameters;
 
   myParameters.interactive_mode = true;
-  myParameters.resolution = 0.025;
+  myParameters.resolution = 0.02;
   myParameters.Dmax = 0.2;
-  myParameters.Dmin = -0.05;
-  myParameters.XSize = 400;
-  myParameters.YSize = 150;
-  myParameters.ZSize = 400;
+  myParameters.Dmin = -0.1;
+  myParameters.XSize = 250;
+  myParameters.YSize = 250;
+  myParameters.ZSize = 250;
   
   //QVGA for slow computers 
   myParameters.image_width = 320;
