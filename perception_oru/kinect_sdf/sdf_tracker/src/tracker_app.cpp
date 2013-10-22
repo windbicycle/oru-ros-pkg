@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
   myParameters.interactive_mode = true;
   myParameters.resolution = 0.025;
   myParameters.Dmax = 0.2;
-  myParameters.Dmin = -0.2;
+  myParameters.Dmin = -0.05;
   myParameters.XSize = 400;
   myParameters.YSize = 150;
   myParameters.ZSize = 400;
