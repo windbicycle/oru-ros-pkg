@@ -268,7 +268,6 @@ SDFTracker::To2D(const Eigen::Vector4d &location, double fx, double fy, double c
   return pixel;  
 };
 
-bool 
 SDFTracker::ValidGradient(const Eigen::Vector4d &location)
 {
  /* 
@@ -291,7 +290,7 @@ SDFTracker::ValidGradient(const Eigen::Vector4d &location)
             /     |        | /       / |
           X-------X--------X-------X   |
           |     /        / |       |   |
-          |   X--------X   |       |   |
+          |   X--------X   |       |   X
      J    |   |        |   |       | /
      ^    X----        |   X-------X
      |        |        | / |  |
@@ -313,37 +312,37 @@ SDFTracker::ValidGradient(const Eigen::Vector4d &location)
   
   if(I>=parameters_.XSize-4 || J>=parameters_.YSize-3 || K>=parameters_.ZSize-3 || I<=1 || J<=1 || K<=1)return false;
 
-  float* W10 = &myGrid_[I+1][J+0][K*2+1];
-  float* W20 = &myGrid_[I+2][J+0][K*2+1];
+  float* D10 = &myGrid_[I+1][J+0][K+1];
+  float* D20 = &myGrid_[I+2][J+0][K+1];
  
-  float* W01 = &myGrid_[I+0][J+1][K*2+1];
-  float* W11 = &myGrid_[I+1][J+1][K*2+1];
-  float* W21 = &myGrid_[I+2][J+1][K*2+1];
-  float* W31 = &myGrid_[I+3][J+1][K*2+1];
+  float* D01 = &myGrid_[I+0][J+1][K+1];
+  float* D11 = &myGrid_[I+1][J+1][K+0];
+  float* D21 = &myGrid_[I+2][J+1][K+0];
+  float* D31 = &myGrid_[I+3][J+1][K+1];
   
-  float* W02 = &myGrid_[I+0][J+2][K*2+1];
-  float* W12 = &myGrid_[I+1][J+2][K*2+1];
-  float* W22 = &myGrid_[I+2][J+2][K*2+1];
-  float* W32 = &myGrid_[I+3][J+2][K*2+1];
+  float* D02 = &myGrid_[I+0][J+2][K+1];
+  float* D12 = &myGrid_[I+1][J+2][K+0];
+  float* D22 = &myGrid_[I+2][J+2][K+0];
+  float* D32 = &myGrid_[I+3][J+2][K+1];
 
-  float* W13 = &myGrid_[I+1][J+3][K*2+1];
-  float* W23 = &myGrid_[I+2][J+3][K*2+1];
+  float* D13 = &myGrid_[I+1][J+3][K+1];
+  float* D23 = &myGrid_[I+2][J+3][K+1];
 
-  if( W10[1*2] < eps || W10[2*2] < eps || 
-      W20[1*2] < eps || W20[2*2] < eps || 
+  if( D10[0] > parameters_.Dmax-eps || D10[1] > parameters_.Dmax-eps || 
+      D20[0] > parameters_.Dmax-eps || D20[1] > parameters_.Dmax-eps || 
       
-      W01[1*2] < eps || W01[2*2] < eps ||
-      W11[0] < eps || W11[1*2] < eps || W11[2*2] < eps || W11[3*2] < eps ||
-      W21[0] < eps || W21[1*2] < eps || W21[2*2] < eps || W21[3*2] < eps ||
-      W31[1*2] < eps || W31[2*2] < eps ||
+      D01[0] > parameters_.Dmax-eps || D01[1] > parameters_.Dmax-eps ||
+      D11[0] > parameters_.Dmax-eps || D11[1] > parameters_.Dmax-eps || D11[2] > parameters_.Dmax-eps || D11[3] > parameters_.Dmax-eps ||
+      D21[0] > parameters_.Dmax-eps || D21[1] > parameters_.Dmax-eps || D21[2] > parameters_.Dmax-eps || D21[3] > parameters_.Dmax-eps ||
+      D31[0] > parameters_.Dmax-eps || D31[1] > parameters_.Dmax-eps ||
       
-      W02[1*2] < eps || W02[2*2] < eps ||
-      W12[0] < eps || W12[1*2] < eps || W12[2*2] < eps || W12[3*2] < eps ||
-      W22[0] < eps || W22[1*2] < eps || W22[2*2] < eps || W22[3*2] < eps ||
-      W32[1*2] < eps || W32[2*2] < eps ||
+      D02[0] > parameters_.Dmax-eps || D02[1] > parameters_.Dmax-eps ||
+      D12[0] > parameters_.Dmax-eps || D12[1] > parameters_.Dmax-eps || D12[2] > parameters_.Dmax-eps || D12[3] > parameters_.Dmax-eps ||
+      D22[0] > parameters_.Dmax-eps || D22[1] > parameters_.Dmax-eps || D22[2] > parameters_.Dmax-eps || D22[3] > parameters_.Dmax-eps ||
+      D32[0] > parameters_.Dmax-eps || D32[1] > parameters_.Dmax-eps ||
       
-      W13[1*2] < eps || W13[2*2] < eps ||
-      W23[1*2] < eps || W23[2*2] < eps 
+      D13[0] > parameters_.Dmax-eps || D13[1] > parameters_.Dmax-eps ||
+      D23[0] > parameters_.Dmax-eps || D23[1] > parameters_.Dmax-eps 
       ) return false;
   else return true;
 }
