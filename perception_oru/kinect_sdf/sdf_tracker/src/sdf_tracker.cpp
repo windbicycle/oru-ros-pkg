@@ -202,7 +202,7 @@ SDFTracker::VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,
     {
       p <<  p1d(0) - parameters_.XSize/2*parameters_.resolution,
             p1d(1) - parameters_.YSize/2*parameters_.resolution,
-            p1d(2) - parameters_.ZSize/2*parameters_.resolution; 
+            p1d(2) - parameters_.ZSize/2*parameters_.resolution, 
             p1d(3); 
       return(p);
     }
@@ -210,7 +210,7 @@ SDFTracker::VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,
     {
       p <<  p2d(0) - parameters_.XSize/2*parameters_.resolution,
             p2d(1) - parameters_.YSize/2*parameters_.resolution,
-            p2d(2) - parameters_.ZSize/2*parameters_.resolution; 
+            p2d(2) - parameters_.ZSize/2*parameters_.resolution, 
             p2d(3); 
       return(p);
     }
@@ -218,7 +218,7 @@ SDFTracker::VertexInterp(double iso, Eigen::Vector4d &p1d, Eigen::Vector4d &p2d,
     {
       p <<  p1d(0) - parameters_.XSize/2*parameters_.resolution,
             p1d(1) - parameters_.YSize/2*parameters_.resolution,
-            p1d(2) - parameters_.ZSize/2*parameters_.resolution; 
+            p1d(2) - parameters_.ZSize/2*parameters_.resolution, 
             p1d(3); 
       return(p);
     }
