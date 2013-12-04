@@ -52,7 +52,6 @@ class SDFTracker
   protected:
   // variables
   std::vector<Eigen::Matrix4d,Eigen::aligned_allocator<Eigen::Matrix4d> > transformations_;
-  std::vector<Eigen::Vector4d,Eigen::aligned_allocator<Eigen::Vector4d> > interest_points_;
   std::vector<Eigen::Vector4d,Eigen::aligned_allocator<Eigen::Vector4d> > Points_;
 
   Eigen::Matrix4d Transformation_;
