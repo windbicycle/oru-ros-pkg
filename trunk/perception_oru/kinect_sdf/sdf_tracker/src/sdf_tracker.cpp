@@ -881,7 +881,7 @@ SDFTracker::FuseDepth(void)
               
             double D = std::min(Eta,parameters_.Dmax);
 
-            float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
+            float W = ((D - 1e-6) < parameters_.Dmax) ? (1.0f) : (Wslope*(D - parameters_.Dmin) + 1e-6);
                 
             previousD[z*2] = (previousD[z*2] * previousW[z*2] + float(D) * W) /
                       (previousW[z*2] + W);
@@ -1001,7 +1001,7 @@ SDFTracker::FusePoints()
         float* previousW = &myGrid_[I][J][K*2+1];   
 
         
-        float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
+        float W = ((D - 1e-6) < parameters_.Dmax) ? (1.0f) : (Wslope*(D - parameters_.Dmin) + 1e-6);
 
         previousD[0] = (previousD[0] * previousW[0] + float(D) * W) / (previousW[0] + W);
         previousW[0] = std::min(previousW[0] + W , float(parameters_.Wmax));
@@ -1085,7 +1085,7 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
               
             double D = std::min(Eta,parameters_.Dmax);
          
-            float W = ((D - 1e-6) < parameters_.Dmax) ? 1.0f : Wslope*D - Wslope*parameters_.Dmin;
+            float W = ((D - 1e-6) < parameters_.Dmax) ? (1.0f) : (Wslope*(D - parameters_.Dmin) + 1e-6);
 
             W *= 1/((1+Di[j])*(1+Di[j]));
 
