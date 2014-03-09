@@ -137,8 +137,6 @@ class SDFTracker
   /// Dumps the zero level set as triangles to an OBJ file. SaveTriangles must be preceded by a call to MakeTriangles.
   void SaveTriangles(const std::string filename = std::string("triangles.obj"));
 
-  /// Dumps the zero level set as triangles to an STL file. This method also computes the triangles so there is no need to call MakeTriangles.
-  void SaveTrianglesSTL(const std::string filename = std::string("triangles.stl"));
   /// gets the denoised image produced by Render.
   void GetDenoisedImage(cv::Mat &img); 
 
