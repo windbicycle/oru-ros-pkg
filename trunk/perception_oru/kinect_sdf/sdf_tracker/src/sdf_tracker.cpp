@@ -273,7 +273,7 @@ SDFTracker::ValidGradient(const Eigen::Vector4d &location)
 {
  /* 
  The function tests the current location and its adjacent
- voxels for valid values (written at least once) to 
+ voxels for valid values (not truncated) to 
  determine if derivatives at this location are 
  computable in all three directions.
 
@@ -281,8 +281,7 @@ SDFTracker::ValidGradient(const Eigen::Vector4d &location)
  trilinear interpolation between neighbours, testing the
  validity of the gradient involves looking at all the 
  values that would contribute to the final  gradient. 
- If any of these have a weight equal to zero, the result
- is false.
+ If any of these  are truncated, the result is false.
                       X--------X
                     /        / |
                   X--------X   ----X
@@ -313,7 +312,7 @@ SDFTracker::ValidGradient(const Eigen::Vector4d &location)
   
   if(I>=parameters_.XSize-4 || J>=parameters_.YSize-3 || K>=parameters_.ZSize-3 || I<=1 || J<=1 || K<=1)return false;
 
-  // 2*K because weights and distances are packed into the same array
+  // 2* because weights and distances are packed into the same array
   float* D10 = &myGrid_[I+1][J+0][2*(K+1)];
   float* D20 = &myGrid_[I+2][J+0][2*(K+1)];
  
@@ -863,8 +862,8 @@ SDFTracker::FuseDepth(void)
         cv::Point2d uv;
         uv=To2D(ray,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy );
         
-        int j=floor(uv.x);
-        int i=floor(uv.y);      
+        int j=floor(uv.x+0.5);
+        int i=floor(uv.y+0.5);      
         
         //if the projected coordinate is within image bounds
         if(i>0 && i<depthImage_->rows-1 && j>0 && j <depthImage_->cols-1 && validityMask_[i][j] &&    
@@ -1067,8 +1066,8 @@ SDFTracker::FuseDepth(const cv::Mat& depth)
         cv::Point2d uv;
         uv=To2D(ray,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy );
         
-        int j=floor(uv.x);
-        int i=floor(uv.y);      
+        int j=floor(uv.x+0.5);
+        int i=floor(uv.y+0.5);      
         
         //if the projected coordinate is within image bounds
         if(i>0 && i<depthImage_->rows-1 && j>0 && j <depthImage_->cols-1 && validityMask_[i][j] &&    
@@ -1352,7 +1351,6 @@ SDFTracker::Render(void)
   
   const Eigen::Matrix4d camToWorld = Transformation_;
   const Eigen::Vector4d camera = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
-  const Eigen::Vector4d viewAxis = (camToWorld * Eigen::Vector4d(0.0,0.0,1.0+1e-12,0.0) - camera).normalized();
   const double max_ray_length = 15.0;
   
   //Rendering loop
@@ -1397,7 +1395,7 @@ SDFTracker::Render(void)
             preview.at<cv::Vec3b>(u,v)[0]=128-rint(normal_vector(2)*127);
           }
           
-          depthImage_out.at<float>(u,v)=scaling*(viewAxis.dot(p));
+          depthImage_out.at<float>(u,v)=scaling*(camToWorld.inverse()*p)(2);
           break;
         }
         scaling_prev = scaling;
@@ -1567,4 +1565,56 @@ void SDFTracker::LoadSDF(const std::string &filename)
       }
     }
   }
+}
+
+Eigen::Vector3d 
+SDFTracker::shootSingleRay(int row, int col, Eigen::Matrix4d pose = Transformation_)
+{
+  const Eigen::Matrix4d camToWorld = pose;
+  const Eigen::Vector4d camera = camToWorld * Eigen::Vector4d(0.0,0.0,0.0,1.0);
+  
+  if(col<0 || col>=parameters_.image_width || row<0 || row>parameters_.image_height) 
+    return Eigen::Vector3d(1,1,1)*std::numeric_limits<double>::signaling_NaN();
+  
+  bool hit = false;
+  Eigen::Vector4d p = camToWorld*To3D(row,col,1.0,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy) - camera;
+  p.normalize();
+        
+  double scaling = parameters_.Dmax+parameters_.Dmin;
+  double scaling_prev=0;
+  int steps=0;
+  double D = parameters_.resolution;
+  
+  while(steps<parameters_.raycast_steps*2 && !hit)
+  { 
+    double D_prev = D;
+    D = SDF(camera + p*scaling);
+ 
+    if(D < 0.0) //hit
+    {
+      double i,j,k;  
+
+      scaling = scaling_prev + (scaling-scaling_prev)*D_prev/(D_prev - D);
+      hit = true;
+      Eigen::Vector4d currentPoint = camera + p*scaling;
+
+      modf(currentPoint(0)/params.resolution + params.XSize/2, &i);
+      modf(currentPoint(1)/params.resolution + params.YSize/2, &j);  
+      modf(currentPoint(2)/params.resolution + params.ZSize/2, &k);
+      int I = static_cast<int>(i);
+      int J = static_cast<int>(j);
+      int K = static_cast<int>(k);
+
+      //If raycast terminates within the reconstructed volume, keep the surface point.
+      if(I>=0 && I<params.XSize && J>=0 && J<params.YSize && K>=0 && K<params.ZSize)
+      {   
+        return currentPoint.head<3>();   
+      }
+      else return Eigen::Vector3d(1,1,1)*std::numeric_limits<double>::quiet_NaN();
+    }
+    scaling_prev = scaling;
+    scaling += std::max(parameters_.resolution,D);  
+    ++steps;        
+  }
+  return Eigen::Vector3d(1,1,1)*std::numeric_limits<double>::infinity();
 }
