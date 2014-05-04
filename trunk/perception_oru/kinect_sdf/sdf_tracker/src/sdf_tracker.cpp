@@ -841,7 +841,6 @@ SDFTracker::FuseDepth(void)
   
   const float Wslope = 1/(parameters_.Dmax - parameters_.Dmin);
   Eigen::Matrix4d worldToCam = Transformation_.inverse();
-  Eigen::Vector4d camera = worldToCam * Eigen::Vector4d(0.0,0.0,0.0,1.0);
   
   //Main 3D reconstruction loop
   for(int x = 0; x<parameters_.XSize; ++x)
@@ -857,7 +856,7 @@ SDFTracker::FuseDepth(void)
         //define a ray and point it into the center of a node
         Eigen::Vector4d ray((x-parameters_.XSize/2)*parameters_.resolution, (y- parameters_.YSize/2)*parameters_.resolution , (z- parameters_.ZSize/2)*parameters_.resolution, 1);        
         ray = worldToCam*ray;
-        if(ray(2)-camera(2) < 0) continue;
+        if(ray(2) < 0) continue;
         
         cv::Point2d uv;
         uv=To2D(ray,parameters_.fx,parameters_.fy,parameters_.cx,parameters_.cy );

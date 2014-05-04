@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.4.6)
-SET(PROJECT_NAME sdf_tracker)
+project(sdf_tracker)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
